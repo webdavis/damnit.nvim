@@ -74,9 +74,9 @@ function M.write(buf)
     return notify("this buffer is not holding a task any more", vim.log.levels.WARN)
   end
 
-  local header, description, err = format.parse(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
-  if err then
-    return notify(err, vim.log.levels.WARN)
+  local header, description, parse_err = format.parse(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  if parse_err then
+    return notify(parse_err, vim.log.levels.WARN)
   end
 
   local fields, invalid = format.changes(task, header, description)
@@ -91,8 +91,8 @@ function M.write(buf)
 
   local sent = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-  client.update_task(task.id, fields, function(updated, failed)
-    if failed or not vim.api.nvim_buf_is_valid(buf) then
+  client.update_task(task.id, fields, function(updated, err)
+    if err or not vim.api.nvim_buf_is_valid(buf) then
       -- The client has already raised the API's own message.
       return
     end
