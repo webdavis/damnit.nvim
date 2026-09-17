@@ -1,4 +1,4 @@
--- `:Todoist task <id>`
+-- `:Todoist`, `:Todoist <view>` and `:Todoist task <id>`
 --
 -- The command lives here rather than behind `setup` so that entering Neovim on
 -- it works, which is how the herdr pane and every list view open a task:
@@ -9,12 +9,42 @@ if vim.g.loaded_todoist then
 end
 vim.g.loaded_todoist = true
 
-local USAGE = "usage is :Todoist task <id>"
+local USAGE = "usage is :Todoist, :Todoist <view> or :Todoist task <id>"
+
+---@param lead string what has been typed of the argument being completed
+---@return string[]
+local function complete(lead)
+  local candidates = vim.tbl_keys(require("todoist").options.views or {})
+  table.insert(candidates, "task")
+  table.sort(candidates)
+
+  return vim.tbl_filter(function(candidate)
+    return vim.startswith(candidate, lead)
+  end, candidates)
+end
 
 vim.api.nvim_create_user_command("Todoist", function(cmd)
-  if #cmd.fargs ~= 2 or cmd.fargs[1] ~= "task" then
+  local args = cmd.fargs
+
+  if #args == 0 then
+    return require("todoist").open()
+  end
+
+  if args[1] == "task" then
+    if #args ~= 2 then
+      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+    end
+
+    return require("todoist.task_buffer").open(args[2])
+  end
+
+  if #args ~= 1 then
     return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
   end
 
-  require("todoist.task_buffer").open(cmd.fargs[2])
-end, { nargs = "*", desc = "Todoist: open one task as a buffer" })
+  require("todoist").open(args[1])
+end, {
+  nargs = "*",
+  complete = complete,
+  desc = "Todoist: a list of tasks, a named view, or one task as a buffer",
+})
