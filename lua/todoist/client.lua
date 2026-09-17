@@ -171,12 +171,13 @@ function M.retry_delay(err)
 end
 
 ---@param err todoist.Error
-local function notify(err)
+---@param retried boolean? whether a retry was actually spent on this failure
+local function notify(err, retried)
   local message = "todoist.nvim: " .. err.message
 
   if err.kind == "unauthorized" then
     message = message .. ". Check the token_command or token_env named in setup"
-  elseif M.is_transient(err) then
+  elseif retried then
     message = message .. " (retried once)"
   end
 
@@ -237,18 +238,18 @@ end
 function M.request(spec, callback)
   local options = require("todoist").options
 
-  local function fail(err)
+  local function fail(err, retried)
     vim.schedule(function()
       if not spec.quiet then
-        notify(err)
+        notify(err, retried)
       end
       callback(nil, err)
     end)
   end
 
   local attempt
-  attempt = function(token, retries_left)
-    local spawned, reason = spawn(options, spec, token, function(out)
+  attempt = function(token, retries_left, is_retry)
+    local spawned = spawn(options, spec, token, function(out)
       local data, err = M.interpret(out)
 
       vim.schedule(function()
@@ -264,16 +265,18 @@ function M.request(spec, callback)
 
         if retries_left > 0 and M.is_transient(err) then
           return vim.defer_fn(function()
-            attempt(token, retries_left - 1)
+            attempt(token, retries_left - 1, true)
           end, M.retry_delay(err))
         end
 
-        fail(err)
+        fail(err, is_retry)
       end)
     end)
 
     if not spawned then
-      fail({ kind = "network", message = ("%s could not be run: %s"):format(options.curl, tostring(reason)) })
+      -- The pcall error carries an internal Neovim source location, which
+      -- means nothing to a user; only the executable and a hint do.
+      fail({ kind = "network", message = ("%s could not be run. Check the curl option"):format(options.curl) })
     end
   end
 
