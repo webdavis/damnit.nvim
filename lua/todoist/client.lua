@@ -238,10 +238,12 @@ function M.request(spec, callback)
   local options = require("todoist").options
 
   local function fail(err)
-    if not spec.quiet then
-      notify(err)
-    end
-    callback(nil, err)
+    vim.schedule(function()
+      if not spec.quiet then
+        notify(err)
+      end
+      callback(nil, err)
+    end)
   end
 
   local attempt
