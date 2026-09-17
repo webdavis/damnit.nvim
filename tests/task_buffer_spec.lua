@@ -252,6 +252,32 @@ return {
     forget(other_buf)
   end,
 
+  ["show() called again on the same task does not add a second BufWriteCmd"] = function()
+    local written = vim.tbl_extend("force", TASK, { content = "Buy oat milk and bread" })
+    local port, requests = serve({
+      { status = 200, body = vim.json.encode(TASK) },
+      { status = 200, body = vim.json.encode(written) },
+    })
+    configure(port)
+
+    local buf = opened()
+    task_buffer.show(TASK)
+    task_buffer.show(TASK)
+
+    local autocmds = vim.api.nvim_get_autocmds({ event = "BufWriteCmd", buffer = buf })
+    assert(#autocmds == 1, ("expected one BufWriteCmd, got %d"):format(#autocmds))
+
+    vim.api.nvim_buf_set_lines(buf, 1, 2, false, { "content: Buy oat milk and bread" })
+    vim.cmd("write")
+    until_true(function()
+      return not vim.bo[buf].modified
+    end)
+
+    assert(#requests == 2, ("expected exactly one write POST, got %d requests total"):format(#requests))
+
+    forget(buf)
+  end,
+
   ["refuses anything but `task <id>`"] = function()
     local said = notifications(function()
       vim.cmd("Todoist")

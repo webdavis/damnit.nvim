@@ -119,32 +119,33 @@ function M.show(task)
   if buf == -1 then
     buf = vim.api.nvim_create_buf(true, false)
     vim.api.nvim_buf_set_name(buf, name)
+
+    vim.bo[buf].buftype = "acwrite"
+    vim.bo[buf].swapfile = false
+    vim.bo[buf].filetype = "markdown"
+
+    -- Registered once per buffer: a second `show` on the same buffer would
+    -- otherwise add a second `BufWriteCmd`, and `:w` would fire every one.
+    vim.api.nvim_create_autocmd("BufWriteCmd", {
+      group = GROUP,
+      buffer = buf,
+      desc = "write one Todoist task back",
+      callback = function()
+        M.write(buf)
+      end,
+    })
+
+    vim.api.nvim_create_autocmd("BufWipeout", {
+      group = GROUP,
+      buffer = buf,
+      desc = "forget the task a wiped buffer held",
+      callback = function()
+        rendered[buf] = nil
+      end,
+    })
   end
 
-  vim.bo[buf].buftype = "acwrite"
-  vim.bo[buf].swapfile = false
-  vim.bo[buf].filetype = "markdown"
-
   draw(buf, task)
-
-  vim.api.nvim_create_autocmd("BufWriteCmd", {
-    group = GROUP,
-    buffer = buf,
-    desc = "write one Todoist task back",
-    callback = function()
-      M.write(buf)
-    end,
-  })
-
-  vim.api.nvim_create_autocmd("BufWipeout", {
-    group = GROUP,
-    buffer = buf,
-    desc = "forget the task a wiped buffer held",
-    callback = function()
-      rendered[buf] = nil
-    end,
-  })
-
   vim.api.nvim_win_set_buf(0, buf)
 
   return buf
