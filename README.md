@@ -1,8 +1,8 @@
 # todoist.nvim
 
-Todoist from inside Neovim. This first release is the part everything else stands on: an async
-client for the Todoist API, a token that never touches your configuration, and a health check that
-proves both without printing the token.
+Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
+your configuration, a health check that proves both without printing the token, and one task as an
+editable buffer.
 
 ## Requirements
 
@@ -19,6 +19,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
   "webdavis/todoist.nvim",
+  cmd = "Todoist",
   opts = {
     token_command = { "keepassxc-cli", "show", "--attributes", "Password", "<database>", "<entry>" },
   },
@@ -131,6 +132,62 @@ wording:
 | `malformed`    | A 2xx body that is not JSON.                                      |
 
 `message` is always safe to show a user.
+
+## One task as a buffer
+
+```vim
+:Todoist task 6XGgmFVcrG5RRjVr
+```
+
+The task arrives as a buffer: a header of `key: value` lines between two `---` fences, and the
+description as the markdown body below them.
+
+```markdown
+---
+content: Buy oat milk
+due: tomorrow 9am
+priority: 3
+labels: errands, home
+project: 2203306141
+section:
+---
+
+The kind in the grey carton.
+
+- [ ] check the date
+```
+
+That is markdown frontmatter, so the body highlights as markdown and the header is a block you can
+retype by hand without guessing. `priority` is the API's own scale, where 4 is the most urgent and 1
+is none. `labels` is a comma-separated list. `due` is the string Todoist parses, which is why a due
+date it turned into a calendar date shows up as that date after a write.
+
+`project` and `section` are the ids the task lives under, and they are shown rather than editable:
+moving a task is a different call than editing one, so changing either is refused instead of
+silently ignored.
+
+`:w` writes it back. It sends only the fields that changed, so an unchanged `due` is left out
+entirely rather than reparsed, which is what would otherwise drop a recurrence. A write that needs
+nothing says so and marks the buffer written. `:q` on a buffer you have edited and not written goes
+through Neovim's own unsaved-changes path, which is the `E37` refusal, or the prompt when you have
+`'confirm'` set.
+
+Two kinds of refusal, in the two places they belong. A header this plugin can be sure about is
+refused here, before any request: an unknown or repeated field, a missing one, a header with no
+fence, an empty `content`, a priority that is not 1 to 4, or a changed project or section. Each says
+which line. Everything else is the API's to judge, the due string above all, and what comes back is
+reported in the API's own wording.
+
+The write is the same async request as every other, so nothing blocks while it is out. The buffer
+stays modified until the API answers, which means an edit that has not landed still reads as
+unwritten, and a rejected one leaves your text where you can fix it.
+
+It works as the only thing in a fresh Neovim, which is how the herdr pane and the list views enter
+it:
+
+```bash
+nvim +"Todoist task 6XGgmFVcrG5RRjVr"
+```
 
 ## Health
 
