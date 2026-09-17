@@ -292,6 +292,72 @@ function M.ping(callback)
   M.request({ method = "GET", path = "/projects", query = { limit = 1 }, quiet = true }, callback)
 end
 
+--- Every page of a list endpoint, gathered into one array.
+---
+--- The v1 API answers a list with `{ results, next_cursor }` and hands back a
+--- page at a time, so a list of more tasks than one page holds is several
+--- requests. They run one after another because the cursor for the next page is
+--- in the answer to the last one.
+---@param spec todoist.Request
+---@param callback fun(items: table[]?, err: todoist.Error?)
+function M.collect(spec, callback)
+  local items = {}
+
+  local function page(cursor)
+    local query = vim.tbl_extend("force", spec.query or {}, cursor and { cursor = cursor } or {})
+
+    M.request(vim.tbl_extend("force", spec, { query = query }), function(data, err)
+      if err then
+        return callback(nil, err)
+      end
+
+      if type(data) ~= "table" or type(data.results) ~= "table" then
+        return callback(nil, { kind = "malformed", message = "the API answered without a page of results" })
+      end
+
+      vim.list_extend(items, data.results)
+
+      local next_cursor = data.next_cursor
+      if type(next_cursor) == "string" and next_cursor ~= "" then
+        return page(next_cursor)
+      end
+
+      callback(items)
+    end)
+  end
+
+  page(nil)
+end
+
+--- Every open task.
+---@param callback fun(tasks: table[]?, err: todoist.Error?)
+function M.get_tasks(callback)
+  M.collect({ method = "GET", path = "/tasks" }, callback)
+end
+
+--- Every open task a Todoist filter query matches.
+---
+--- The query is Todoist's own filter language, the one the app's Filters use, so
+--- whatever the app accepts works here and whatever it refuses comes back as the
+--- API's own message.
+---@param filter string
+---@param callback fun(tasks: table[]?, err: todoist.Error?)
+function M.get_tasks_matching(filter, callback)
+  M.collect({ method = "GET", path = "/tasks/filter", query = { query = filter } }, callback)
+end
+
+--- Every project, which is what names a group in a list.
+---@param callback fun(projects: table[]?, err: todoist.Error?)
+function M.get_projects(callback)
+  M.collect({ method = "GET", path = "/projects" }, callback)
+end
+
+--- Every section, which is what names a group inside a project.
+---@param callback fun(sections: table[]?, err: todoist.Error?)
+function M.get_sections(callback)
+  M.collect({ method = "GET", path = "/sections" }, callback)
+end
+
 --- One task, whole.
 ---@param id string
 ---@param callback fun(task: table?, err: todoist.Error?)

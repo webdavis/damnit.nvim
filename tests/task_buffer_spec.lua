@@ -296,16 +296,15 @@ return {
     forget(buf)
   end,
 
-  ["refuses anything but `task <id>`"] = function()
+  ["refuses `task` with anything but one id"] = function()
     local said = notifications(function()
-      vim.cmd("Todoist")
-      vim.cmd("Todoist today")
+      vim.cmd("Todoist task")
       vim.cmd("Todoist task 1 2")
     end)
 
-    assert(#said == 3, vim.inspect(said))
+    assert(#said == 2, vim.inspect(said))
     for _, message in ipairs(said) do
-      assert(message:find("usage is :Todoist task <id>", 1, true), message)
+      assert(message:find("usage is :Todoist, :Todoist <view> or :Todoist task <id>", 1, true), message)
     end
   end,
 }
