@@ -1,8 +1,8 @@
 # todoist.nvim
 
 Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
-your configuration, a health check that proves both without printing the token, and one task as an
-editable buffer.
+your configuration, a health check that proves both without printing the token, one task as an
+editable buffer, and every open task as a list you can name your own views of.
 
 ## Requirements
 
@@ -22,6 +22,14 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
   cmd = "Todoist",
   opts = {
     token_command = { "keepassxc-cli", "show", "--attributes", "Password", "<database>", "<entry>" },
+    views = {
+      today = "today | overdue",
+      work = "#Work & !@waiting",
+    },
+  },
+  keys = {
+    { "<leader>tt", function() require("todoist").open() end, desc = "Todoist: every open task" },
+    { "<leader>td", function() require("todoist").open("today") end, desc = "Todoist: today" },
   },
 }
 ```
@@ -66,6 +74,7 @@ quoted, in case a program printed the secret on the stream the error was read fr
 | `base_url`      | `https://api.todoist.com/api/v1` | The API root requests are built against.      |
 | `curl`          | `"curl"`                         | The curl to run, found on `PATH` if bare.     |
 | `timeout`       | `15`                             | Seconds a request may take before curl stops. |
+| `views`         | `{}`                             | Named Todoist filter queries. See below.      |
 
 Options are read when a request is made, so a later `setup` call changes the next request.
 
@@ -189,6 +198,89 @@ it:
 nvim +"Todoist task 6XGgmFVcrG5RRjVr"
 ```
 
+## Lists and named views
+
+```vim
+:Todoist                " every open task, grouped by project and section
+:Todoist today          " one named view
+```
+
+```lua
+require("todoist").open()         -- every open task
+require("todoist").open("today")  -- one named view
+```
+
+`require("todoist").open` is the stable way in, so a keymap calls it rather than a command string.
+It returns the buffer the list is in.
+
+A view is a name and a Todoist filter query, declared in `setup`:
+
+```lua
+require("todoist").setup({
+  views = {
+    today = "today | overdue",
+    work = "#Work & !@waiting",
+  },
+})
+```
+
+The query is Todoist's own
+[filter language](https://www.todoist.com/help/todoist/features/introduction-to-filters-V98wIH), the
+one the app's Filters use, so whatever the app accepts is a view here. Nothing is parsed locally:
+the query is sent as it is written, which is why a filter the API refuses comes back in the API's own
+wording.
+
+A name the plugin was never given is refused before any request, and the refusal says which names
+are declared. `:Todoist` completes them, alongside `task`.
+
+The list is a plain unlisted buffer in the current window, so every window command, search and motion
+works on it. Two keys are bound in it:
+
+| Key    | What it does                                     |
+| ------ | ------------------------------------------------ |
+| `<CR>` | Opens the task on this line as a task buffer.    |
+| `R`    | Asks the API again for the view being shown.     |
+
+A line maps back to its task through a table this plugin keeps, not by reading an id out of the text,
+so the line can say whatever reads best. Headings hold no task and say so rather than opening the
+nearest one.
+
+```text
+Todoist: today  (today | overdue)
+
+Errands
+  - Buy oat milk  (2026-09-17)  p3  @home
+  Saturday
+    - Collect the parcel  (2026-09-17)
+
+Work
+  - Review the branch  (2026-09-18)  p4
+```
+
+A task carries a bullet and a heading does not. `p3` is the API's own priority scale, the same one the
+task buffer shows, where 4 is the most urgent; priority 1 is no priority and is left off.
+
+A view that matched nothing says `No tasks.`, which is a success. A filter the API refused says so
+and quotes the API, so the two cannot be confused:
+
+```text
+Todoist: broken  (due befor: tomorrow)
+
+The API refused this view:
+
+  Invalid query
+```
+
+### The same names in the herdr pane
+
+[herdr-todoist](https://github.com/webdavis/herdr-todoist) declares its views as `[[views]]` entries
+with a `name` and a `filter` in its plugin config, and this plugin declares them as the keys and
+values of `views`. They are the same two things under different syntax, so the two configurations can
+be read side by side: every `name` there is a key here, and the `filter` beside it is that key's
+value, character for character. Keeping them equal is a convention rather than a mechanism, because
+neither plugin reads the other's configuration, and the point of it is that one word opens one list
+whichever of the two you are in.
+
 ## Health
 
 ```vim
@@ -208,7 +300,8 @@ nvim --headless --clean -l tests/run.lua
 
 No spec talks to Todoist. Most drive the client through a fake `vim.system`; the rest run the real
 curl against a loopback server the spec starts itself, which is what proves the command line is one
-curl accepts. A run needs no token and reaches no network.
+curl accepts and that a refused filter and an empty view come out different. A run needs no token and
+reaches no network.
 
 ## License
 
