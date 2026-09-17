@@ -17,10 +17,6 @@ local M = {}
 
 local token_source = require("todoist.token")
 
---- The API root, for reference. Overridden per install through the `base_url`
---- option, which is also what points the tests at a loopback double.
-M.DEFAULT_BASE_URL = "https://api.todoist.com/api/v1"
-
 --- How long to wait before the one retry of a transient failure. Todoist sends
 --- `Retry-After` on a rate limit and that value wins; this is the fallback for
 --- a network failure or a server error, which carry no such advice.
