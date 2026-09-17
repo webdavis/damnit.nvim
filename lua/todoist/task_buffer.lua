@@ -145,8 +145,13 @@ function M.show(task)
     })
   end
 
-  draw(buf, task)
   vim.api.nvim_win_set_buf(0, buf)
+
+  -- A modified buffer holds text the operator has not saved; reopening the
+  -- same task must not throw it away.
+  if not vim.bo[buf].modified then
+    draw(buf, task)
+  end
 
   return buf
 end

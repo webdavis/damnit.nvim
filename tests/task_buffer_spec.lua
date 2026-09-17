@@ -278,6 +278,24 @@ return {
     forget(buf)
   end,
 
+  ["show() leaves a modified buffer alone instead of overwriting unsaved edits"] = function()
+    local port = serve({ { status = 200, body = vim.json.encode(TASK) } })
+    configure(port)
+
+    local buf = opened()
+    vim.api.nvim_buf_set_lines(buf, 1, 2, false, { "content: my unsaved edit" })
+    assert(vim.bo[buf].modified, "an edited buffer should read as modified")
+
+    local returned = task_buffer.show(TASK)
+
+    assert(returned == buf, "show reopened a different buffer for the same task")
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert(lines[2] == "content: my unsaved edit", vim.inspect(lines))
+    assert(vim.bo[buf].modified, "reopening a modified buffer cleared modified")
+
+    forget(buf)
+  end,
+
   ["refuses anything but `task <id>`"] = function()
     local said = notifications(function()
       vim.cmd("Todoist")
