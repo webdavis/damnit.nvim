@@ -243,6 +243,77 @@ return {
     assert(quiet.err.kind == "forbidden", vim.inspect(quiet.err))
   end,
 
+  ["retries a transient failure once, then succeeds"] = function()
+    configure()
+
+    local real_system, real_notify, real_defer_fn = vim.system, vim.notify, vim.defer_fn
+    local spawns = 0
+
+    vim.system = function(_, _, callback)
+      spawns = spawns + 1
+      local out = spawns == 1 and { code = 0, stdout = response(503, {}, "") }
+        or { code = 0, stdout = response(200, {}, '{"content":"ok"}') }
+
+      vim.schedule(function()
+        callback(out)
+      end)
+
+      return { pid = 0 }
+    end
+    -- Runs the retry immediately: the delay itself belongs to retry_delay's
+    -- own test, not to this one.
+    vim.defer_fn = function(fn)
+      fn()
+    end
+    vim.notify = function() end
+
+    local answered, data, err
+    local ok, e = pcall(client.request, GET_TASK, function(d, failure)
+      answered, data, err = true, d, failure
+    end)
+
+    vim.wait(2000, function()
+      return answered == true
+    end, 5)
+
+    vim.system, vim.notify, vim.defer_fn = real_system, real_notify, real_defer_fn
+    assert(ok, e)
+    assert(spawns == 2, ("curl was spawned %d times"):format(spawns))
+    assert(err == nil, vim.inspect(err))
+    assert(data.content == "ok", vim.inspect(data))
+  end,
+
+  ["never retries a refused token"] = function()
+    configure()
+
+    local real_system, real_notify = vim.system, vim.notify
+    local spawns = 0
+
+    vim.system = function(_, _, callback)
+      spawns = spawns + 1
+      vim.schedule(function()
+        callback({ code = 0, stdout = response(401, {}, '{"error":"Unauthorized"}') })
+      end)
+
+      return { pid = 0 }
+    end
+    vim.notify = function() end
+
+    local answered, err
+    local ok, e = pcall(client.request, GET_TASK, function(_, failure)
+      answered, err = true, failure
+    end)
+
+    vim.wait(2000, function()
+      return answered == true
+    end, 5)
+
+    vim.system, vim.notify = real_system, real_notify
+    assert(ok, e)
+    assert(spawns == 1, ("curl was spawned %d times"):format(spawns))
+    assert(err.kind == "unauthorized", vim.inspect(err))
+  end,
+
   ["forgets a refused token so the next request asks the source again"] = function()
     -- The token comes from a command here, so the number of times the source
     -- ran is visible: a cached token would show one run across two requests.
