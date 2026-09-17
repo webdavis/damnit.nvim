@@ -38,6 +38,10 @@ end
 ---@param id string
 ---@return string
 local function heading(names, id)
+  if id == "" then
+    return "(no project)"
+  end
+
   local name = names[id]
   if name == nil or name == "" then
     return id

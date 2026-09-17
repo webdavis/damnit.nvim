@@ -116,6 +116,15 @@ return {
     assert(vim.tbl_contains(vim.tbl_values(ids), "z"), vim.inspect(ids))
   end,
 
+  ["heads a task with no project_id at all with a literal, not a blank line"] = function()
+    local lines, ids = format.render({ title = "t" }, {
+      { id = "z", content = "Orphan" },
+    }, {}, {})
+
+    assert(joined(lines):find("(no project)\n  - Orphan", 1, true), joined(lines))
+    assert(ids[line_of(lines, "Orphan")] == "z", vim.inspect(ids))
+  end,
+
   ["says a view matched nothing rather than rendering nothing"] = function()
     local lines, ids = format.render({ title = "today", filter = "today" }, {}, PROJECTS, SECTIONS)
 
