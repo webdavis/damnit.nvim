@@ -7,6 +7,7 @@
 -- and no token are involved.
 
 local todoist = require("todoist")
+local task_buffer = require("todoist.task_buffer")
 
 -- `--clean -l` sources no plugin directory, so the command this spec drives is
 -- loaded the way Neovim would load it, out of the file that declares it.
@@ -232,6 +233,23 @@ return {
     assert(not vim.bo[buf].modified, "an unchanged buffer stayed modified")
 
     forget(buf)
+  end,
+
+  ["show() does not confuse a task whose id is a substring of another's"] = function()
+    local port = serve({ { status = 200, body = vim.json.encode(TASK) } })
+    configure(port)
+
+    local buf = opened()
+
+    local other_id = TASK.id:sub(1, 4)
+    local other_task = vim.tbl_extend("force", TASK, { id = other_id, content = "Different task" })
+    local other_buf = task_buffer.show(other_task)
+
+    assert(other_buf ~= buf, "a substring id reused the other task's buffer")
+    assert(vim.api.nvim_buf_get_name(other_buf) == "todoist://task/" .. other_id, vim.api.nvim_buf_get_name(other_buf))
+
+    forget(buf)
+    forget(other_buf)
   end,
 
   ["refuses anything but `task <id>`"] = function()

@@ -32,6 +32,20 @@ local function buffer_name(id)
   return "todoist://task/" .. id
 end
 
+--- `vim.fn.bufnr` matches by substring, which lets one task's id hijack
+--- another's buffer when one id contains another. This matches the name
+--- exactly.
+---@param name string
+---@return integer buf or -1
+local function find_buffer(name)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buf) == name then
+      return buf
+    end
+  end
+  return -1
+end
+
 ---@param message string
 ---@param level integer?
 local function notify(message, level)
@@ -100,7 +114,7 @@ end
 ---@return integer buf
 function M.show(task)
   local name = buffer_name(task.id)
-  local buf = vim.fn.bufnr(name)
+  local buf = find_buffer(name)
 
   if buf == -1 then
     buf = vim.api.nvim_create_buf(true, false)
