@@ -147,7 +147,7 @@ function M.open(spec)
   draw(buf, { format.title(spec), "", "Loading..." })
 
   fetch(spec.filter, function(data, err)
-    if not vim.api.nvim_buf_is_valid(buf) then
+    if not vim.api.nvim_buf_is_valid(buf) or shown ~= spec then
       return
     end
 

@@ -57,11 +57,19 @@ local function serve(routes)
         "Connection: close",
       }
 
-      socket:write(table.concat(head, "\r\n") .. "\r\n\r\n" .. route.body, function()
-        double.answered = double.answered + 1
-        socket:read_stop()
-        socket:close()
-      end)
+      local function answer()
+        socket:write(table.concat(head, "\r\n") .. "\r\n\r\n" .. route.body, function()
+          double.answered = double.answered + 1
+          socket:read_stop()
+          socket:close()
+        end)
+      end
+
+      if route.delay_ms then
+        vim.defer_fn(answer, route.delay_ms)
+      else
+        answer()
+      end
     end)
   end)
 
@@ -214,5 +222,37 @@ return {
     assert(has_line_with(lines, "Invalid query: unexpected token"), vim.inspect(lines))
     assert(not has_line_with(lines, "No tasks."), vim.inspect(lines))
     assert(has_line_with(notifications, "Invalid query: unexpected token"), vim.inspect(notifications))
+  end,
+
+  ["a slow answer for a view that is no longer shown does not overwrite the one now on screen"] = function()
+    local double = serve({
+      ["/api/v1/tasks/filter"] = {
+        status = 200,
+        delay_ms = 150,
+        body = '{"results":[{"id":"old","content":"Stale task","project_id":"1"}],"next_cursor":null}',
+      },
+      ["/api/v1/tasks"] = {
+        status = 200,
+        body = '{"results":[{"id":"new","content":"Fresh task","project_id":"1"}],"next_cursor":null}',
+      },
+      ["/api/v1/projects"] = { status = 200, body = '{"results":[{"id":"1","name":"Errands"}],"next_cursor":null}' },
+      ["/api/v1/sections"] = { status = 200, body = EMPTY_PAGE },
+    })
+    point_at(double)
+
+    local buf = todoist.open("today")
+    vim.wait(30)
+    todoist.open()
+
+    -- Let the fast (all-open) view draw, then let the slow (today) answer,
+    -- which is still in flight, land after it.
+    assert(vim.wait(2000, function()
+      return has_line_with(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "Fresh task")
+    end, 5))
+    double.close()
+
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert(has_line_with(lines, "Fresh task"), vim.inspect(lines))
+    assert(not has_line_with(lines, "Stale task"), vim.inspect(lines))
   end,
 }
