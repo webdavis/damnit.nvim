@@ -167,6 +167,9 @@ local function ensure_buffer()
   vim.keymap.set("n", "za", M.toggle_fold, { buffer = buf, desc = "Todoist: fold or unfold this task's subtasks" })
   vim.keymap.set("n", ">", M.indent, { buffer = buf, desc = "Todoist: make this task a subtask of the one above" })
   vim.keymap.set("n", "<", M.promote, { buffer = buf, desc = "Todoist: move this task out from under its parent" })
+  vim.keymap.set("n", "S", function()
+    require("todoist.send").send()
+  end, { buffer = buf, desc = "Todoist: send this task to the agent" })
   require("todoist.quick_edit").attach(buf)
 
   return buf

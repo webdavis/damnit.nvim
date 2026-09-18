@@ -261,6 +261,7 @@ works on it. These keys are bound in it:
 | `m`    | Moves the task to a project or section.             |
 | `a`    | Adds a task from a line of Quick Add syntax.        |
 | `u`    | Undoes the last complete or reopen.                 |
+| `S`    | Sends this task to the agent, or to the clipboard.  |
 | `za`   | Folds or unfolds the subtasks of this task.         |
 | `>`    | Makes this task a subtask of the task above it.     |
 | `<`    | Moves this task out from under its parent.          |
@@ -378,6 +379,67 @@ are and says what the API said.
 `u` in the completed history reopens the task on the line, which is the same word for the same act
 from the other side: there, every line is already completed, so reopening one is what undoing means.
 They are two buffers with their own keys, so neither shadows the other.
+
+### Sending a task to the agent
+
+`S` hands the task under the cursor to the agent working in this workspace. It asks for an optional
+note first, through `vim.ui.input`: `<CR>` sends, `<Esc>` cancels, and an empty line sends the brief
+with no note rather than refusing. Nothing here happens on its own.
+
+The brief is plain text, because an agent pane is a shell rather than a structure. It is the same
+text [herdr-todoist](https://github.com/webdavis/herdr-todoist) sends, character for character:
+
+```text
+Todoist task: file taxes
+url: https://app.todoist.com/app/task/6cfCrxxxxxxxxxxx
+due: 2026-09-20
+priority: p1
+labels: home, slow
+
+receipts are in the drawer
+
+note: start with the receipts
+```
+
+A field the task has nothing for is left out rather than written empty, so the brief carries no line
+an agent has to discount. The URL is built from the task id: the v1 task object has no `url` field,
+and `https://app.todoist.com/app/task/<id>` is the form the vendor documents in its place.
+
+Inside herdr (`HERDR_ENV` set) the brief reaches the agent pane through `herdr pane send-text`, which
+writes literal text into a pane's input without a return, so the agent holds the brief until you
+submit it; `herdr agent focus` then puts the cursor there. It is sent as one bracketed paste, so a
+multi-line brief is inserted verbatim instead of being read key by key, and a paste terminator inside
+the text cannot end the frame early. A refused focus does not fail the send, since the brief is
+already delivered.
+
+WHICH pane is the agent pane comes from `herdr agent list`: a pane herdr names an agent for, in this
+workspace, other than this one. The name it reports is the pane's name, then the agent running in it;
+`display_agent` is the auth profile a pane signed in with, which two panes running different agents
+can share, so it decides nothing.
+
+A comment on the task then records the hand-off (`Handed to the agent <name> from the Neovim Todoist
+list.`). It names the agent rather than its pane, which means nothing a day later, and WHEN is the
+comment's own posted date, which Todoist stamps. A refused comment says `sent to <name>, comment
+refused` rather than pretending the send failed: the agent has the work either way.
+
+### When the agent pane cannot take it
+
+Outside herdr, and whenever herdr cannot take the brief, the same text goes to the clipboard instead:
+both the unnamed register and `+`, so it can be pasted with `p` here and with the system paste
+anywhere else. Four cases reach it, and each says which in the notification:
+
+| What happened                             | What you get                                            |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `HERDR_ENV` is unset                      | The brief in the registers, at info level.              |
+| `herdr` is missing, or the listing failed | The same, at warning level, with the command's message. |
+| No agent pane in this workspace           | The same, saying so.                                    |
+| herdr refused the send                    | The same, naming the pane it refused.                   |
+
+The clipboard is a copy rather than a hand-off, so it writes no comment, and every one of those
+notifications ends in `no hand-off comment written` so the two paths can never be confused. A build
+with no clipboard provider, which is the normal state of a bare server, has no `+` register to write:
+the brief goes to the unnamed register and the notification says `no clipboard provider` rather than
+reading like a whole copy.
 
 ### The same names in the herdr pane
 

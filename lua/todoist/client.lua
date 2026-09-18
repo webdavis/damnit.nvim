@@ -430,6 +430,15 @@ function M.quick_add(text, callback)
   M.request({ method = "POST", path = "/tasks/quick", body = { text = text } }, callback)
 end
 
+--- Comment on one task. The API stamps the comment's own posted date, which is
+--- the WHEN of anything the comment records.
+---@param id string
+---@param content string
+---@param callback fun(comment: table?, err: todoist.Error?)
+function M.add_comment(id, content, callback)
+  M.request({ method = "POST", path = "/comments", body = { task_id = id, content = content } }, callback)
+end
+
 --- Every label the account has, which is what the label picker offers.
 ---@param callback fun(labels: table[]?, err: todoist.Error?)
 function M.get_labels(callback)
