@@ -1,13 +1,12 @@
 -- The token boundary.
 --
 -- A Todoist token is a password: it opens the whole account. So it enters this
--- plugin by exactly two doors, both named by the user, and leaves by none. It
--- is never a value in a configuration file, never read from a well-known path,
--- and never part of a message, a log line or a health report. Failures here
--- name the SOURCE that failed and say nothing about what it produced, which is
--- why a failed command's own output is dropped rather than quoted: a program
--- that prints a secret on the wrong stream must not have it copied into a
--- notification.
+-- plugin by exactly three doors, every one of them named by the user, and
+-- leaves by none. It is never read from a well-known path, and never part of a
+-- message, a log line or a health report. Failures here name the SOURCE that
+-- failed and say nothing about what it produced, which is why a failed
+-- command's own output is dropped rather than quoted: a program that prints a
+-- secret on the wrong stream must not have it copied into a notification.
 
 local M = {}
 
@@ -90,6 +89,14 @@ function M.resolve(options, callback)
     return callback(cached)
   end
 
+  if options.token then
+    if type(options.token) ~= "string" then
+      return callback(nil, "token must be the token as a string")
+    end
+
+    return accept(first_line(options.token), callback)
+  end
+
   if options.token_command then
     if type(options.token_command) ~= "table" or not options.token_command[1] then
       return callback(nil, 'token_command must be a command as a list, for example { "pass", "todoist" }')
@@ -109,7 +116,7 @@ function M.resolve(options, callback)
 
   callback(
     nil,
-    "no token source: set token_command to a command that prints the token, or token_env to the name of a variable holding it"
+    "no token source: set token_command to a command that prints the token, token_env to the name of a variable holding it, or token to the token itself"
   )
 end
 

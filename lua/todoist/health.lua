@@ -59,6 +59,14 @@ local function check_curl(options)
 end
 
 local function check_token_source(options)
+  if options.token then
+    vim.health.warn("the token is a value in the configuration", {
+      "Anyone who can read the configuration file can read the token.",
+      "Prefer token_command, which names a vault or keychain call instead.",
+    })
+    return true
+  end
+
   if options.token_command then
     vim.health.ok("the token comes from token_command")
     return true
@@ -72,7 +80,7 @@ local function check_token_source(options)
   vim.health.error("no token source is configured", {
     'setup({ token_command = { "keepassxc-cli", "show", "--attributes", "Password", "<database>", "<entry>" } })',
     'or setup({ token_env = "TODOIST_API_TOKEN" })',
-    "A token is never a value in a configuration file.",
+    'or setup({ token = "<the token>" }), which puts it in the file in clear text.',
   })
 
   return false

@@ -1,9 +1,8 @@
 -- todoist.nvim: Todoist from inside Neovim.
 --
--- This module is options and nothing else. The two things worth knowing about
--- them are that a token is never one of them, and that they are read when a
--- request is made rather than copied into the client, so a `setup` call later
--- in a session changes the next request.
+-- This module is options and nothing else. The one thing worth knowing about
+-- them is that they are read when a request is made rather than copied into the
+-- client, so a `setup` call later in a session changes the next request.
 
 local M = {}
 
@@ -14,11 +13,13 @@ local M = {}
 --- names are meant to match the herdr plugin's `[[views]]` entries, so the same
 --- word opens the same list in the pane and in the editor.
 ---
---- `token_command` and `token_env` are both nil, which is not a working
---- configuration: one of them has to be set, because those are the only two
---- ways a token reaches this plugin. There is deliberately no third way and no
---- default path to read one from.
+--- The three token options are all nil, which is not a working configuration:
+--- one of them has to be set, because those are the only three ways a token
+--- reaches this plugin. There is no default path to read one from. When more
+--- than one is set they are tried in the order `token`, `token_command`,
+--- `token_env`.
 ---@class todoist.Options
+---@field token string? the token itself, for a machine with no vault or keychain
 ---@field token_command string[]? a command whose standard output is the token
 ---@field token_env string? the name of an environment variable holding the token
 ---@field base_url string the API root every request is built against
@@ -30,6 +31,7 @@ local M = {}
 ---@field refresh_interval integer seconds between the background fetches behind `status()`
 ---@field reminders boolean whether a task with a time raises a notification when it comes due
 M.options = {
+  token = nil,
   token_command = nil,
   token_env = nil,
   base_url = "https://api.todoist.com/api/v1",
