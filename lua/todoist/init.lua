@@ -104,6 +104,15 @@ function M.open(name)
   return require("todoist.list").open(spec)
 end
 
+--- Open the completed history, newest first.
+---
+--- The third function a keymap calls:
+--- `vim.keymap.set("n", "<leader>td", require("todoist").completed)`.
+---@return integer buf the buffer the history is in
+function M.completed()
+  return require("todoist.completed").open()
+end
+
 --- Open the sidebar, or close the one this tabpage already has.
 ---
 --- The other function a keymap calls:
