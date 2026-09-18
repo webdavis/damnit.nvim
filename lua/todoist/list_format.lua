@@ -286,7 +286,7 @@ function M.render(spec, tasks, projects, sections, collapsed)
   local function write_task(task, indent)
     local where = location.parse(task.description)
     local id = text(task.id)
-    local hidden = folds[id] and tree.child_count(forest, id) or 0
+    local hidden = folds[id] and tree.descendant_count(forest, id) or 0
 
     write(M.task_line(task, indent, where, hidden), task, where)
     rendered = rendered + 1

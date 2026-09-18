@@ -223,7 +223,7 @@ return {
 
     local lines, ids = format.render({ title = "t" }, tasks, PROJECTS, SECTIONS, { p = true })
 
-    assert(joined(lines):find("  - Ship the release  (+1)", 1, true), joined(lines))
+    assert(joined(lines):find("  - Ship the release  (+2)", 1, true), joined(lines))
     assert(not joined(lines):find("Tag it", 1, true), joined(lines))
     assert(not joined(lines):find("Sign the tag", 1, true), joined(lines))
 

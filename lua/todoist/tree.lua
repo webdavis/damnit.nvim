@@ -70,6 +70,22 @@ function M.child_count(tree, id)
   return #(tree.children[id] or {})
 end
 
+--- How many tasks sit under a task in this view, at every depth.
+---
+--- What a fold hides: `descend` stops at a collapsed node, so the badge on a
+--- folded line has to count the whole subtree, not the one level of it
+--- `child_count` gives.
+---@param tree todoist.Tree
+---@param id string
+---@return integer
+function M.descendant_count(tree, id)
+  local count = 0
+  for _, child in ipairs(tree.children[id] or {}) do
+    count = count + 1 + M.descendant_count(tree, tostring(child.id))
+  end
+  return count
+end
+
 --- Walk a task and its descendants, deepest last, calling `visit` with each
 --- task and how far under the root it sits.
 ---

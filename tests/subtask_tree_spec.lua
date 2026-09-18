@@ -124,7 +124,7 @@ return {
 
       assert(not drawn(seen, "Tag it"), table.concat(lines(seen), "\n"))
       assert(not drawn(seen, "Sign the tag"), "a fold takes the whole subtree, not one level")
-      assert(drawn(seen, "Ship the release  (+2)"), table.concat(lines(seen), "\n"))
+      assert(drawn(seen, "Ship the release  (+3)"), table.concat(lines(seen), "\n"))
       assert(drawn(seen, "Buy milk"), "folding one task hid another")
 
       list.toggle_fold()
@@ -152,7 +152,7 @@ return {
 
       list.refresh()
 
-      assert(drawn(seen, "Ship the release  (+2)"), table.concat(lines(seen), "\n"))
+      assert(drawn(seen, "Ship the release  (+3)"), table.concat(lines(seen), "\n"))
       assert(not drawn(seen, "Tag it"), "the refresh unfolded the tree")
     end)
   end,
