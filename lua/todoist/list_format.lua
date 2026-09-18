@@ -12,6 +12,8 @@
 
 local M = {}
 
+local location = require("todoist.location")
+
 --- The indent each kind of line carries. Two spaces per level, so a task under
 --- a section is four in and a task directly under a project is two.
 local PROJECT_INDENT = ""
@@ -90,10 +92,15 @@ end
 --- what separates a section's name from a task sitting at the same indent. `p4` is the API's own priority scale, the same one the task
 --- buffer shows, where 4 is the most urgent. Priority 1 is no priority and is
 --- left off rather than written out.
+---
+--- A task captured from code ends with the location icon. It goes last, beside
+--- the other badges, so a narrow sidebar truncates the icon rather than the
+--- content: the columns the content starts at do not move.
 ---@param task table
 ---@param indent string
+---@param where todoist.Location? the location its description holds
 ---@return string
-function M.task_line(task, indent)
+function M.task_line(task, indent, where)
   local parts = { indent .. "  - " .. text(task.content) }
 
   local due = due_of(task)
@@ -108,6 +115,10 @@ function M.task_line(task, indent)
 
   for _, label in ipairs(task.labels or {}) do
     parts[#parts + 1] = "@" .. text(label)
+  end
+
+  if where then
+    parts[#parts + 1] = location.ICON
   end
 
   return table.concat(parts, "  ")
@@ -221,6 +232,7 @@ end
 ---@param sections table[] every section, for the headings
 ---@return string[] lines
 ---@return table<integer, string> task id by line number
+---@return table<integer, todoist.Location> location by line number, where one was captured
 function M.render(spec, tasks, projects, sections)
   local project_names, project_order = names_by_id(projects)
   local section_names = names_by_id(sections)
@@ -229,13 +241,23 @@ function M.render(spec, tasks, projects, sections)
   local buckets, project_ids = bucket(tasks or {}, project_order)
 
   local lines = { M.title(spec), "" }
-  local ids = {}
+  local ids, locations = {}, {}
 
-  local function write(line, task)
+  local function write(line, task, where)
     lines[#lines + 1] = line
     if task then
       ids[#lines] = text(task.id)
+      locations[#lines] = where
     end
+  end
+
+  --- A task's own line and the location it holds, parsed once for both the icon
+  --- and the jump.
+  ---@param task table
+  ---@param indent string
+  local function write_task(task, indent)
+    local where = location.parse(task.description)
+    write(M.task_line(task, indent, where), task, where)
   end
 
   local rendered = 0
@@ -249,14 +271,14 @@ function M.render(spec, tasks, projects, sections)
       write(PROJECT_INDENT .. heading(project_names, project_id))
 
       for _, task in ipairs(project_tasks) do
-        write(M.task_line(task, PROJECT_INDENT), task)
+        write_task(task, PROJECT_INDENT)
         rendered = rendered + 1
       end
 
       for _, section_id in ipairs(order) do
         write(SECTION_INDENT .. heading(section_names, section_id))
         for _, task in ipairs(present[section_id]) do
-          write(M.task_line(task, SECTION_INDENT), task)
+          write_task(task, SECTION_INDENT)
           rendered = rendered + 1
         end
       end
@@ -271,7 +293,7 @@ function M.render(spec, tasks, projects, sections)
     write("No tasks.")
   end
 
-  return lines, ids
+  return lines, ids, locations
 end
 
 return M

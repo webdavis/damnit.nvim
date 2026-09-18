@@ -116,6 +116,19 @@ return {
     assert(received.request:find('{"content":"Pay rent"}', 1, true), received.request)
   end,
 
+  ["makes one task with its content and its location over the wire"] = function()
+    local port, received = serve(200, '{"id":"6XGg","content":"hold the width"}')
+
+    local task, err = against(port, function(done)
+      client.create_task({ content = "hold the width", description = "todoist.nvim lua/list.lua:42" }, done)
+    end)
+
+    assert(err == nil, vim.inspect(err))
+    assert(task.id == "6XGg", vim.inspect(task))
+    assert(received.request:find("POST /api/v1/tasks ", 1, true), received.request)
+    assert(received.request:find('"description":"todoist.nvim lua/list.lua:42"', 1, true), received.request)
+  end,
+
   ["reports a refused token as unauthorized and says nothing about it"] = function()
     local port = serve(401, '{"error":"Unauthorized","error_code":477}')
 
