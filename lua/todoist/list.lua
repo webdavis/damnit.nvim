@@ -2,9 +2,9 @@
 --
 -- The buffer is an unlisted scratch buffer put in the current window, which is
 -- the plainest thing that works: it is a normal buffer, so every window command,
--- search and motion applies to it, and it needs no layout of its own. The fixed
--- side split is a different job (a `toggle` command), and it will open this same
--- buffer rather than a second rendering of it.
+-- search and motion applies to it, and it needs no layout of its own. The
+-- sidebar puts this same buffer in a window of its own rather than a second
+-- rendering of it.
 --
 -- There is one list buffer, reused, because a second one would be a second thing
 -- to refresh. Opening another view redraws it.

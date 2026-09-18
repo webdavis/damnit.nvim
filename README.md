@@ -2,7 +2,8 @@
 
 Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
 your configuration, a health check that proves both without printing the token, one task as an
-editable buffer, and every open task as a list you can name your own views of.
+editable buffer, every open task as a list you can name your own views of, and one of those views
+as a sidebar beside your work.
 
 ## Requirements
 
@@ -30,6 +31,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
   keys = {
     { "<leader>tt", function() require("todoist").open() end, desc = "Todoist: every open task" },
     { "<leader>td", function() require("todoist").open("today") end, desc = "Todoist: today" },
+    { "<leader>tb", function() require("todoist").toggle() end, desc = "Todoist: toggle the sidebar" },
   },
 }
 ```
@@ -75,6 +77,7 @@ quoted, in case a program printed the secret on the stream the error was read fr
 | `curl`          | `"curl"`                         | The curl to run, found on `PATH` if bare.     |
 | `timeout`       | `15`                             | Seconds a request may take before curl stops. |
 | `views`         | `{}`                             | Named Todoist filter queries. See below.      |
+| `sidebar`       | see below                        | The side, width and view of the sidebar.      |
 
 Options are read when a request is made, so a later `setup` call changes the next request.
 
@@ -241,6 +244,8 @@ works on it. Two keys are bound in it:
 | `<CR>` | Opens the task on this line as a task buffer.    |
 | `R`    | Asks the API again for the view being shown.     |
 
+In the sidebar `<CR>` opens the task in the window beside it, so the list stays where it is.
+
 A line maps back to its task through a table this plugin keeps, not by reading an id out of the text,
 so the line can say whatever reads best. Headings hold no task and say so rather than opening the
 nearest one.
@@ -280,6 +285,61 @@ be read side by side: every `name` there is a key here, and the `filter` beside 
 value, character for character. Keeping them equal is a convention rather than a mechanism, because
 neither plugin reads the other's configuration, and the point of it is that one word opens one list
 whichever of the two you are in.
+
+## The sidebar
+
+```vim
+:Todoist toggle
+```
+
+```lua
+require("todoist").toggle()
+```
+
+A fixed-width vertical split on one edge of the tabpage, holding one view. A second call closes it.
+
+```lua
+require("todoist").setup({
+  views = { today = "today | overdue" },
+  sidebar = {
+    side = "left",   -- or "right"
+    width = 40,      -- columns
+    view = "today",  -- a name from `views`
+  },
+})
+```
+
+`view` names a view, not a filter, so the same word opens the same list in the sidebar, in
+`:Todoist today` and in the herdr pane. It has to be declared in `views`: a name this plugin was
+never given is refused before the split is made, so a typo leaves your layout exactly as it was.
+`today` is the default because it is the view worth having open while you work, and the default side
+is the left at 40 columns, which is a file tree's width and reads the same way.
+
+### How the width survives your layout
+
+`winfixwidth`, which is what [nvim-tree](https://github.com/nvim-tree/nvim-tree.lua) and
+[neo-tree](https://github.com/nvim-neo-tree/neo-tree.nvim) both put on their windows. A new split, a
+closed window, `wincmd =`, `<C-w>=` and a resized terminal all leave a window carrying it at the
+width it had. The sidebar also carries `winfixbuf`, so a command that opens a file cannot put that
+file in the sidebar, and `<CR>` on a task opens the task in the window beside it instead.
+
+One case `winfixwidth` cannot cover is the sidebar being the only window in its tabpage, where
+Neovim has nowhere else to put the columns. A `WinNew` and `WinResized` autocommand puts the
+configured width back the moment there is a second window to take the rest.
+
+### Open, closed, and who decides
+
+The sidebar is a window carrying a window-local flag, and that is the whole of what this plugin
+remembers about it. Closing it with `:q`, `:close` or `<C-w>c` takes the flag with the window, so
+the next toggle opens a new one rather than arguing that a sidebar is already there.
+
+It is per tabpage. A toggle acts on the tabpage you are in: a sidebar in another tabpage is that
+tabpage's window and is left alone, so every tabpage can have one, none, or its own.
+
+While the first fetch is out the sidebar says which view it is holding and `Loading...` underneath,
+the same as any list, so a slow network reads as a slow network rather than an empty window. Lines
+are not wrapped, because a task belongs on one line even when the line is longer than the sidebar is
+wide.
 
 ## Health
 
