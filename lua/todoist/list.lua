@@ -31,6 +31,13 @@ local ids = {}
 ---@type table<integer, todoist.Location>
 local locations = {}
 
+--- The tasks the API last gave, by id. A quick edit needs more of a task than
+--- its id: its content for a confirm, its priority to cycle and its labels to
+--- toggle. The line tables map a line to an id and this maps that id back to
+--- the task, so nothing is parsed out of the text on screen.
+---@type table<string, table>
+local tasks = {}
+
 --- What the buffer was last opened with, which is what a refresh repeats.
 ---@type todoist.ListSpec?
 local shown = nil
@@ -57,6 +64,23 @@ function M.open_task_under_cursor()
   end
 
   require("todoist.task_buffer").open(id)
+end
+
+--- The task the cursor is on, or nil after saying there is none.
+---
+--- This is what every quick edit acts on, and it answers with the task the API
+--- gave rather than with the line, so a key never reads the rendering.
+---@return table?
+function M.task_under_cursor()
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  local task = tasks[ids[line] or ""]
+
+  if not task then
+    vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+    return nil
+  end
+
+  return task
 end
 
 --- Jump to the code the task on the cursor's line was captured from.
@@ -101,6 +125,7 @@ local function ensure_buffer()
     buffer = buf,
     desc = "Todoist: jump to the code this task was captured from",
   })
+  require("todoist.quick_edit").attach(buf)
 
   return buf
 end
@@ -109,13 +134,19 @@ end
 ---@param lines string[]
 ---@param line_ids table<integer, string>?
 ---@param line_locations table<integer, todoist.Location>?
-local function draw(buf, lines, line_ids, line_locations)
+---@param shown_tasks table[]? the tasks those lines were drawn from
+local function draw(buf, lines, line_ids, line_locations, shown_tasks)
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
 
   ids = line_ids or {}
   locations = line_locations or {}
+
+  tasks = {}
+  for _, task in ipairs(shown_tasks or {}) do
+    tasks[tostring(task.id)] = task
+  end
 end
 
 --- Ask for the tasks and the two things that name their groups at once.
@@ -185,7 +216,7 @@ function M.open(spec)
     end
 
     local lines, line_ids, line_locations = format.render(spec, data.tasks, data.projects, data.sections)
-    draw(buf, lines, line_ids, line_locations)
+    draw(buf, lines, line_ids, line_locations, data.tasks)
   end)
 
   return buf
