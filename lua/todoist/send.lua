@@ -120,16 +120,16 @@ function M.pasted(brief)
   return PASTE_START .. body .. PASTE_END
 end
 
---- What the hand-off calls the agent. `name` is the name herdr was given for
---- the pane; `agent` is what is running in it; `display_agent` is the auth
---- profile it signed in with, which two panes running different agents can
---- share, so it is the last thing asked and never the thing that decides.
+--- What the hand-off calls the agent. `agent` is what is running in the pane;
+--- `display_agent` is the auth profile it signed in with, which two panes
+--- running different agents can share, so it is asked only once `agent` has
+--- nothing.
 ---@param listed table
 ---@return string
 local function named(listed)
-  -- Read one at a time: a table literal of these three stops at the first
-  -- absent one, and the pane name is absent until herdr is given one.
-  for _, field in ipairs({ "name", "agent", "display_agent" }) do
+  -- Read one at a time: a table literal of these two stops at the first
+  -- absent one.
+  for _, field in ipairs({ "agent", "display_agent" }) do
     if text(listed[field]) ~= "" then
       return text(listed[field])
     end
