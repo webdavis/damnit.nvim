@@ -328,8 +328,9 @@ project when it does not. Todoist moves a task's own subtasks with it, so a bran
 Neither is undoable. `u` reverses a complete or a reopen and nothing else, so a `>` pressed by
 mistake is put back with `<`, and a `<` with `>` on the row above where the task was.
 
-Three cases send nothing and say why: `>` on the first task in the view, which has no row above it,
-`>` on a task already under the task above it, and `<` on a task that is already at the top level.
+Four cases send nothing and say why: `>` on the first task in the view, which has no row above it,
+`>` on a task already under the task above it, `>` on the first task of a project or section other
+than the one above it, and `<` on a task that is already at the top level.
 
 ### Completing a parent
 

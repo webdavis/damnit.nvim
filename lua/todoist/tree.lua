@@ -86,6 +86,20 @@ function M.descendant_count(tree, id)
   return count
 end
 
+--- A task's project or section id, or the empty string when the field is
+--- absent. Same null guard as `parent_of`: `vim.NIL` reads as absent.
+---@param task table?
+---@param field string
+---@return string
+local function field_of(task, field)
+  local value = task and task[field]
+  if value == nil or value == vim.NIL then
+    return ""
+  end
+
+  return tostring(value)
+end
+
 --- Walk a task and its descendants, deepest last, calling `visit` with each
 --- task and how far under the root it sits.
 ---
@@ -115,6 +129,12 @@ end
 --- The row above is whatever task is drawn there, at whatever depth, which is
 --- how the app's own indent behaves: the task becomes that task's child and
 --- takes its own children with it, because Todoist moves a subtree whole.
+---
+--- Refused across a project or a section, even though the rows sit next to
+--- each other on screen: the row above the first task of a later group is
+--- that group's own heading's neighbour, not a task to indent under, and
+--- indenting under it would move the whole subtree into a project or section
+--- it was never in.
 ---@param task table
 ---@param above table? the task on the nearest row above holding one
 ---@return table? destination a move body, or nil with a reason
@@ -126,6 +146,14 @@ function M.indent_to(task, above)
 
   if M.parent_of(task) == tostring(above.id) then
     return nil, "already under " .. tostring(above.content)
+  end
+
+  if field_of(task, "project_id") ~= field_of(above, "project_id") then
+    return nil, "nothing above this task in its project"
+  end
+
+  if field_of(task, "section_id") ~= field_of(above, "section_id") then
+    return nil, "nothing above this task in its section"
   end
 
   return { parent_id = tostring(above.id) }

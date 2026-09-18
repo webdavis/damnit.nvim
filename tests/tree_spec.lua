@@ -69,7 +69,7 @@ return {
   end,
 
   ["> puts a task under the one above it, whatever level that one is at"] = function()
-    local sibling = { id = "s", content = "Draft the notes", parent_id = vim.NIL }
+    local sibling = { id = "s", content = "Draft the notes", project_id = "1", section_id = "9", parent_id = vim.NIL }
 
     assert(vim.deep_equal(tree.indent_to(sibling, PARENT), { parent_id = "p" }))
     assert(vim.deep_equal(tree.indent_to(sibling, GRANDCHILD), { parent_id = "g" }))
@@ -87,6 +87,23 @@ return {
 
     assert(destination == nil)
     assert(refusal:find("already under Ship the release", 1, true), refusal)
+  end,
+
+  ["> on the first task of a later project moves nothing and says why"] = function()
+    local errand = { id = "e", content = "Buy milk", project_id = "2", section_id = vim.NIL, parent_id = vim.NIL }
+    local destination, refusal = tree.indent_to(PARENT, errand)
+
+    assert(destination == nil)
+    assert(refusal:find("project", 1, true), refusal)
+  end,
+
+  ["> on the first task of a later section moves nothing and says why"] = function()
+    local other_section =
+      { id = "o", content = "Draft the notes", project_id = "1", section_id = "8", parent_id = vim.NIL }
+    local destination, refusal = tree.indent_to(other_section, PARENT)
+
+    assert(destination == nil)
+    assert(refusal:find("section", 1, true), refusal)
   end,
 
   ["< sends a grandchild beside the parent it left"] = function()
