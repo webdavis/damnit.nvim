@@ -79,6 +79,16 @@ local function wrote(done, remember)
   end
 end
 
+--- Complete one task, wherever it was picked. `u` puts it back.
+---
+--- The picker completes through here rather than through its own call, so one
+--- complete is one code path and the undo remembers both of them.
+---@param task table
+function M.complete_task(task)
+  local content = text(task.content)
+  client.close_task(task.id, wrote("completed " .. content, { kind = "complete", id = task.id, content = content }))
+end
+
 --- Complete the task under the cursor. `u` puts it back.
 ---
 --- Todoist closes a task's subtasks with it, server side, so completing a
@@ -108,8 +118,7 @@ function M.complete()
     end
   end
 
-  local content = text(task.content)
-  client.close_task(task.id, wrote("completed " .. content, { kind = "complete", id = task.id, content = content }))
+  M.complete_task(task)
 end
 
 --- Reopen the task under the cursor, for a list whose filter shows completed
