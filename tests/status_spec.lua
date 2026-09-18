@@ -221,4 +221,23 @@ return {
       assert(not status.running(), "a timer that outlives the editor holds the loop open")
     end)
   end,
+
+  ["stopping and restarting the timer registers the VimLeavePre autocmd only once"] = function()
+    with({}, function()
+      status.status()
+      status.stop()
+      status.status()
+      status.stop()
+      status.status()
+
+      local count = 0
+      for _, autocmd in ipairs(vim.api.nvim_get_autocmds({ event = "VimLeavePre" })) do
+        if autocmd.desc == "Todoist: stop the refresh timer" then
+          count = count + 1
+        end
+      end
+
+      assert(count == 1, ("found %d, wanted 1"):format(count))
+    end)
+  end,
 }

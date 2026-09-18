@@ -48,6 +48,11 @@ local seeded = false
 ---@type uv.uv_timer_t?
 local timer = nil
 
+--- Whether the `VimLeavePre` autocmd has been registered. Checked instead of
+--- registering on every `M.start()`, so a stop/start cycle does not leave a
+--- second one behind to call `M.stop` twice.
+local autocmd_registered = false
+
 --- The counts as they stood at the last fetch.
 ---@return { due: integer, overdue: integer }
 function M.counts()
@@ -144,6 +149,12 @@ end
 --- statusline that never mentions this plugin and a configuration that never
 --- turns reminders on cost nothing.
 function M.start()
+  -- A redraw between VimLeavePre and exit would otherwise undo the stop that
+  -- autocmd just did.
+  if vim.v.exiting ~= vim.NIL then
+    return
+  end
+
   if timer then
     return
   end
@@ -153,8 +164,11 @@ function M.start()
   timer = vim.uv.new_timer()
   timer:start(0, interval, vim.schedule_wrap(M.refresh))
 
-  -- A timer that outlived the editor would keep the loop alive on `:qa`.
-  vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "Todoist: stop the refresh timer" })
+  if not autocmd_registered then
+    -- A timer that outlived the editor would keep the loop alive on `:qa`.
+    vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "Todoist: stop the refresh timer" })
+    autocmd_registered = true
+  end
 end
 
 --- Stop it, and forget that a fetch ever happened. Nothing is keeping the count
