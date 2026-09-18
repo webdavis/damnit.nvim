@@ -219,6 +219,37 @@ return {
     assert(seen.notifications[1]:find("already at the top level", 1, true), vim.inspect(seen.notifications))
   end,
 
+  ["x on a parent asks before completing, and completes once the answer is yes"] = function()
+    local seen = with_view({ confirm = 1 }, function(view)
+      cursor_on(view, "Ship the release")
+      quick_edit.complete()
+    end)
+
+    assert(#seen.asked == 1, vim.inspect(seen.asked))
+    assert(seen.asked[1]:find("its 2 open subtasks", 1, true), seen.asked[1])
+    assert(seen.calls[1].name == "close" and seen.calls[1].id == "p", vim.inspect(seen.calls))
+  end,
+
+  ["x on a parent sends nothing when the answer is no"] = function()
+    local seen = with_view({ confirm = 2 }, function(view)
+      cursor_on(view, "Ship the release")
+      quick_edit.complete()
+    end)
+
+    assert(#seen.asked == 1, vim.inspect(seen.asked))
+    assert(#seen.calls == 0, vim.inspect(seen.calls))
+  end,
+
+  ["x on a task with no open subtasks asks nothing"] = function()
+    local seen = with_view({}, function(view)
+      cursor_on(view, "Buy milk")
+      quick_edit.complete()
+    end)
+
+    assert(#seen.asked == 0, vim.inspect(seen.asked))
+    assert(seen.calls[1].name == "close" and seen.calls[1].id == "t", vim.inspect(seen.calls))
+  end,
+
   ["a key on an indented row acts on that row's own task"] = function()
     local seen = with_view({}, function(view)
       cursor_on(view, "Sign the tag")
