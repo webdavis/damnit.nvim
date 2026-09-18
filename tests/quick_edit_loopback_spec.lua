@@ -122,6 +122,9 @@ return {
       client.move_task("6XGg", { section_id = "9" }, done)
     end)
     ask(function(done)
+      client.move_task("6XGg", { parent_id = "p" }, done)
+    end)
+    ask(function(done)
       client.quick_add("Pay rent tomorrow 9am p1 #Finances @home", done)
     end)
 
@@ -136,6 +139,7 @@ return {
         'POST /api/v1/tasks/6XGg {"due_string":"next mon"}',
         'POST /api/v1/tasks/6XGg {"labels":["home"]}',
         'POST /api/v1/tasks/6XGg/move {"section_id":"9"}',
+        'POST /api/v1/tasks/6XGg/move {"parent_id":"p"}',
         'POST /api/v1/tasks/quick {"text":"Pay rent tomorrow 9am p1 #Finances @home"}',
       }),
       vim.inspect(double.seen)

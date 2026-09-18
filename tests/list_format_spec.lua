@@ -169,6 +169,71 @@ return {
     assert(#without > SIDEBAR_WIDTH, "the case needs a line longer than the sidebar to prove anything")
   end,
 
+  ["renders a flat list of top-level tasks exactly as it did before subtasks"] = function()
+    local nulled = {}
+    for index, task in ipairs(TASKS) do
+      nulled[index] = vim.tbl_extend("force", task, { parent_id = vim.NIL })
+    end
+
+    local plain = joined(format.render({ title = "all open tasks" }, TASKS, PROJECTS, SECTIONS))
+    local with_nulls = joined(format.render({ title = "all open tasks" }, nulled, PROJECTS, SECTIONS))
+
+    assert(plain == with_nulls, with_nulls)
+    assert(plain:find("Errands\n  - Buy milk", 1, true), plain)
+  end,
+
+  ["draws a parent's children under it, one level further in"] = function()
+    local lines, ids = format.render({ title = "t" }, {
+      { id = "p", content = "Ship the release", project_id = "1", parent_id = vim.NIL },
+      { id = "c1", content = "Tag it", project_id = "1", parent_id = "p" },
+      { id = "c2", content = "Write the notes", project_id = "1", parent_id = "p" },
+    }, PROJECTS, SECTIONS)
+
+    assert(joined(lines):find("  - Ship the release\n    - Tag it\n    - Write the notes", 1, true), joined(lines))
+    assert(ids[line_of(lines, "Tag it")] == "c1", vim.inspect(ids))
+    assert(ids[line_of(lines, "Write the notes")] == "c2", vim.inspect(ids))
+  end,
+
+  ["draws three levels, each one indent further in than the last"] = function()
+    local lines = format.render({ title = "t" }, {
+      { id = "p", content = "Ship the release", project_id = "2", section_id = "9", parent_id = vim.NIL },
+      { id = "c", content = "Tag it", project_id = "2", section_id = "9", parent_id = "p" },
+      { id = "g", content = "Sign the tag", project_id = "2", section_id = "9", parent_id = "c" },
+    }, PROJECTS, SECTIONS)
+
+    assert(joined(lines):find("    - Ship the release\n      - Tag it\n        - Sign the tag", 1, true), joined(lines))
+  end,
+
+  ["a subtask whose parent this view does not hold is drawn at the top level"] = function()
+    local lines, ids = format.render({ title = "today", filter = "today" }, {
+      { id = "c", content = "Tag it", project_id = "1", parent_id = "p" },
+    }, PROJECTS, SECTIONS)
+
+    assert(joined(lines):find("Errands\n  - Tag it", 1, true), joined(lines))
+    assert(ids[line_of(lines, "Tag it")] == "c", vim.inspect(ids))
+    assert(not joined(lines):find("No tasks.", 1, true), joined(lines))
+  end,
+
+  ["a collapsed task is drawn without its subtasks, and says how many went"] = function()
+    local tasks = {
+      { id = "p", content = "Ship the release", project_id = "1", parent_id = vim.NIL },
+      { id = "c", content = "Tag it", project_id = "1", parent_id = "p" },
+      { id = "g", content = "Sign the tag", project_id = "1", parent_id = "c" },
+    }
+
+    local lines, ids = format.render({ title = "t" }, tasks, PROJECTS, SECTIONS, { p = true })
+
+    assert(joined(lines):find("  - Ship the release  (+1)", 1, true), joined(lines))
+    assert(not joined(lines):find("Tag it", 1, true), joined(lines))
+    assert(not joined(lines):find("Sign the tag", 1, true), joined(lines))
+
+    local mapped = 0
+    for _ in pairs(ids) do
+      mapped = mapped + 1
+    end
+    assert(mapped == 1, vim.inspect(ids))
+  end,
+
   ["reports a refusal in the API's own wording"] = function()
     local lines = format.refusal(
       { title = "broken", filter = "due befor: tomorrow" },
