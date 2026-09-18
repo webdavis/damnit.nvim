@@ -94,6 +94,24 @@ function M.open()
   return win
 end
 
+--- Move out of a window that refuses a new buffer, so a task or a file opened
+--- from the sidebar lands in the work beside it rather than replacing the list.
+function M.leave_fixed_window()
+  if not vim.wo.winfixbuf then
+    return
+  end
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if not vim.wo[win].winfixbuf then
+      return vim.api.nvim_set_current_win(win)
+    end
+  end
+
+  -- Nowhere to put it. The far-side split takes its columns from the tabpage
+  -- rather than out of the fixed window.
+  vim.cmd("botright vsplit")
+end
+
 --- Close the sidebar, if this tabpage has one.
 ---@return boolean closed
 function M.close()
