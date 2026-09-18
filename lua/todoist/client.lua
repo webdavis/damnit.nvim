@@ -392,6 +392,49 @@ function M.update_task(id, fields, callback)
   M.request({ method = "POST", path = "/tasks/" .. id, body = fields }, callback)
 end
 
+--- Complete the task. Its answer carries nothing worth reading, so only a
+--- refusal matters and that arrives as an error.
+---@param id string
+---@param callback fun(data: any?, err: todoist.Error?)
+function M.close_task(id, callback)
+  M.request({ method = "POST", path = "/tasks/" .. id .. "/close" }, callback)
+end
+
+--- Delete the task, and every subtask under it. Todoist keeps no undo for this,
+--- which is why the list asks before calling it.
+---@param id string
+---@param callback fun(data: any?, err: todoist.Error?)
+function M.delete_task(id, callback)
+  M.request({ method = "DELETE", path = "/tasks/" .. id }, callback)
+end
+
+--- Move the task to a project or a section. The body names exactly one of
+--- `project_id` and `section_id`, and a task moved into a section follows that
+--- section into its project.
+---@param id string
+---@param destination table
+---@param callback fun(data: any?, err: todoist.Error?)
+function M.move_task(id, destination, callback)
+  M.request({ method = "POST", path = "/tasks/" .. id .. "/move", body = destination }, callback)
+end
+
+--- Make a task out of a line of Quick Add syntax.
+---
+--- Todoist parses the line, so the date, the project, the labels and the
+--- priority in it are its reading and not this plugin's, and the task it
+--- answers with is what the list reports.
+---@param text string
+---@param callback fun(task: table?, err: todoist.Error?)
+function M.quick_add(text, callback)
+  M.request({ method = "POST", path = "/tasks/quick", body = { text = text } }, callback)
+end
+
+--- Every label the account has, which is what the label picker offers.
+---@param callback fun(labels: table[]?, err: todoist.Error?)
+function M.get_labels(callback)
+  M.collect({ method = "GET", path = "/labels" }, callback)
+end
+
 --- One page of the tasks completed in `[since, until)`, both ISO 8601
 --- timestamps, `since` inclusive and `until` exclusive. The API caps that
 --- window at three months, so reading further back means asking again for an
