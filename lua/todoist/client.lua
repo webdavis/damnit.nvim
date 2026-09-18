@@ -358,6 +358,17 @@ function M.get_sections(callback)
   M.collect({ method = "GET", path = "/sections" }, callback)
 end
 
+--- Make one task.
+---
+--- Todoist takes the same partial object it takes for an update, so a capture
+--- sends a content and a description and nothing else: the task lands in Inbox,
+--- which is the API's own default for a task with no project.
+---@param fields table
+---@param callback fun(task: table?, err: todoist.Error?)
+function M.create_task(fields, callback)
+  M.request({ method = "POST", path = "/tasks", body = fields }, callback)
+end
+
 --- One task, whole.
 ---@param id string
 ---@param callback fun(task: table?, err: todoist.Error?)

@@ -305,7 +305,11 @@ return {
     assert(#said == 2, vim.inspect(said))
     for _, message in ipairs(said) do
       assert(
-        message:find("usage is :Todoist, :Todoist <view>, :Todoist toggle or :Todoist task <id>", 1, true),
+        message:find(
+          "usage is :Todoist, :Todoist <view>, :Todoist toggle, :Todoist capture or :Todoist task <id>",
+          1,
+          true
+        ),
         message
       )
     end
