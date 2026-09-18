@@ -33,6 +33,15 @@ local function text(value)
   return tostring(value)
 end
 
+--- The labels a task carries. A JSON null decodes to `vim.NIL`, which is
+--- truthy, so an absent list has to be recognised by its type rather than by
+--- falling back with `or`.
+---@param task table
+---@return string[]
+function M.labels_of(task)
+  return type(task.labels) == "table" and task.labels or {}
+end
+
 --- The name to head a group with, falling back to the id when the API listed a
 --- task under something it did not list itself: an id says less than a name but
 --- more than dropping the task.
@@ -113,7 +122,7 @@ function M.task_line(task, indent, where)
     parts[#parts + 1] = "p" .. priority
   end
 
-  for _, label in ipairs(task.labels or {}) do
+  for _, label in ipairs(M.labels_of(task)) do
     parts[#parts + 1] = "@" .. text(label)
   end
 

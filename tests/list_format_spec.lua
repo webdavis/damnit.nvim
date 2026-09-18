@@ -74,6 +74,10 @@ return {
     assert(format.task_line({ content = "Tidy up", priority = 1 }, "") == "  - Tidy up")
   end,
 
+  ["draws a task whose labels came back null"] = function()
+    assert(format.task_line({ content = "Tidy up", labels = vim.NIL }, "") == "  - Tidy up")
+  end,
+
   ["groups tasks by project and then by section, in the API's order"] = function()
     local lines = format.render({ title = "all open tasks" }, TASKS, PROJECTS, SECTIONS)
 
