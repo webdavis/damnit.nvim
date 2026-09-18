@@ -27,6 +27,8 @@ local M = {}
 ---@field views table<string, string> a view name to the Todoist filter it runs
 ---@field picker "auto"|"fzf-lua"|"select" which front end the task search uses
 ---@field sidebar todoist.SidebarOptions how `toggle` puts a view beside your work
+---@field refresh_interval integer seconds between the background fetches behind `status()`
+---@field reminders boolean whether a task with a time raises a notification when it comes due
 M.options = {
   token_command = nil,
   token_env = nil,
@@ -40,6 +42,8 @@ M.options = {
     width = 40,
     view = "today",
   },
+  refresh_interval = 60,
+  reminders = false,
 }
 
 --- The sidebar's own options.
@@ -60,6 +64,12 @@ function M.setup(opts)
   -- A token already resolved under the old options is not the one the new
   -- options name.
   require("todoist.token").forget()
+
+  -- Reminders are the one option that does something on its own, so turning
+  -- them on is what starts the fetching rather than the first statusline draw.
+  if M.options.reminders then
+    require("todoist.status").start()
+  end
 end
 
 --- The list a view name means, or nil after saying there is no such view.
@@ -124,6 +134,20 @@ end
 ---@return integer buf the buffer the history is in
 function M.completed()
   return require("todoist.completed").open()
+end
+
+--- What is due, in a few words, for a statusline.
+---
+--- `3 due, 1 overdue`, or an empty string when nothing is due, when no fetch has
+--- finished yet, or when this plugin has nothing to say. It is called on every
+--- redraw, so it never fetches and never counts: it hands back the string the
+--- last background fetch built, and the first call is what starts those
+--- fetches.
+---
+--- In lualine: `sections = { lualine_x = { require("todoist").status } }`.
+---@return string
+function M.status()
+  return require("todoist.status").status()
 end
 
 --- Open the sidebar, or close the one this tabpage already has.
