@@ -94,6 +94,7 @@ return {
     assert(location.parse(nil) == nil, "no description parsed as a location")
     assert(location.parse("lua/thing.lua:no-line") == nil, "a description with no line number parsed")
     assert(location.parse("lua/thing.lua:0") == nil, "line zero parsed")
+    assert(location.parse("Isaiah 40:31") == nil, "a bible verse parsed as a location")
   end,
 
   ["what a location is written as is what parses back"] = function()

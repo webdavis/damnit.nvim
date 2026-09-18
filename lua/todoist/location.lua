@@ -87,7 +87,9 @@ function M.parse(description)
     end
 
     local parsed = tonumber(number)
-    if path and parsed and parsed >= 1 then
+    -- A bare number rules out prose like "Isaiah 40:31", which otherwise
+    -- parses as a repository plus a path.
+    if path and parsed and parsed >= 1 and not path:match("^%d+$") then
       return { repo = repo, path = path, line = parsed }
     end
   end
