@@ -136,6 +136,15 @@ return {
     assert(line == "todoist !", line)
   end,
 
+  ["a failed fetch clears M.counts() too, not just the statusline"] = function()
+    local counts = with({}, function(fetch)
+      fetch({ task("1", "2026-09-17") })
+      fetch(nil, { kind = "network", message = "no route to host" })
+      return status.counts()
+    end)
+    assert(counts.due == 0 and counts.overdue == 0, vim.inspect(counts))
+  end,
+
   ["a token that will not resolve reads the same way"] = function()
     local line, notifications = with({}, function(fetch)
       fetch(nil, { kind = "token", message = "no token_command or token_env is set" })

@@ -122,6 +122,7 @@ end
 ---@param err todoist.Error?
 function M.apply(fetched, err)
   if err then
+    tasks = {}
     state = "failed"
     line = "todoist !"
 
