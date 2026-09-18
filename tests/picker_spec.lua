@@ -276,6 +276,18 @@ return {
     assert(seen.notifications[1]:find("fzf-lua is not installed", 1, true), vim.inspect(seen.notifications))
   end,
 
+  ["an unrecognised picker option falls back to auto and says so"] = function()
+    local seen = drive({ fzf = true, picker_option = "fzf" }, function()
+      picker.pick()
+    end)
+
+    assert(seen.fzf, "fzf-lua was not used")
+    assert(
+      seen.notifications[1]:find('picker "fzf" is not auto, fzf%-lua or select', 1, false),
+      vim.inspect(seen.notifications)
+    )
+  end,
+
   ["no open tasks says so instead of opening an empty picker"] = function()
     local seen = drive({ tasks = {}, fzf = true }, function()
       picker.pick()

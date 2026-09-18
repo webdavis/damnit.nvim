@@ -116,6 +116,11 @@ end
 function M.fzf_lua()
   local wanted = require("todoist").options.picker
 
+  if wanted ~= "auto" and wanted ~= "fzf-lua" and wanted ~= "select" then
+    say(("picker %q is not auto, fzf-lua or select; using auto"):format(wanted), vim.log.levels.WARN)
+    wanted = "auto"
+  end
+
   if wanted == "select" then
     return nil
   end
