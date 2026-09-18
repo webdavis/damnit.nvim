@@ -40,24 +40,6 @@ local function find_buffer()
   return -1
 end
 
---- Move out of a window that refuses a new buffer, so a task opened from the
---- sidebar lands in the work beside it rather than replacing the list.
-local function leave_fixed_window()
-  if not vim.wo.winfixbuf then
-    return
-  end
-
-  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if not vim.wo[win].winfixbuf then
-      return vim.api.nvim_set_current_win(win)
-    end
-  end
-
-  -- Nowhere to put it. The far-side split takes its columns from the tabpage
-  -- rather than out of the fixed window.
-  vim.cmd("botright vsplit")
-end
-
 --- Open the task on the cursor's line. A heading or a blank line holds none,
 --- and says so rather than opening whatever task is nearest.
 function M.open_task_under_cursor()
@@ -67,8 +49,6 @@ function M.open_task_under_cursor()
   if not id then
     return vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
   end
-
-  leave_fixed_window()
 
   require("todoist.task_buffer").open(id)
 end

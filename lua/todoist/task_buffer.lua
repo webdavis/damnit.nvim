@@ -46,6 +46,24 @@ local function find_buffer(name)
   return -1
 end
 
+--- Move out of a window that refuses a new buffer, so a task opened from the
+--- sidebar lands in the work beside it rather than replacing the list.
+local function leave_fixed_window()
+  if not vim.wo.winfixbuf then
+    return
+  end
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if not vim.wo[win].winfixbuf then
+      return vim.api.nvim_set_current_win(win)
+    end
+  end
+
+  -- Nowhere to put it. The far-side split takes its columns from the tabpage
+  -- rather than out of the fixed window.
+  vim.cmd("botright vsplit")
+end
+
 ---@param message string
 ---@param level integer?
 local function notify(message, level)
@@ -145,6 +163,7 @@ function M.show(task)
     })
   end
 
+  leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)
 
   -- A modified buffer holds text the operator has not saved; reopening the
