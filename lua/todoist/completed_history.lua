@@ -101,6 +101,7 @@ function M.new(now)
 
   return setmetatable({
     collected = {},
+    by_id = {},
     ends_at = ends_at,
     starts_at = ends_at - WINDOW_DAYS * SECONDS_PER_DAY,
     floor_at = ends_at - WINDOW_DAYS * WINDOWS * SECONDS_PER_DAY,
@@ -136,7 +137,11 @@ end
 ---@param page table as the endpoint answered, `items` and `next_cursor`
 function History:accept(page)
   for _, task in ipairs(page.items or {}) do
-    table.insert(self.collected, task)
+    local id = text(task.id)
+    if not self.by_id[id] then
+      self.by_id[id] = true
+      table.insert(self.collected, task)
+    end
   end
 
   -- The whole collection is sorted rather than appended to: an earlier window
@@ -169,6 +174,7 @@ function History:forget(id)
   self.collected = vim.tbl_filter(function(task)
     return text(task.id) ~= id
   end, self.collected)
+  self.by_id[id] = nil
 end
 
 --- The line under the list: how much of the history is on screen, and, at the

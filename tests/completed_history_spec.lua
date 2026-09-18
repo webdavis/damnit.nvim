@@ -178,6 +178,22 @@ return {
     assert(vim.deep_equal(task_lines(walk), { "2026-09-16  second" }), vim.inspect(task_lines(walk)))
   end,
 
+  ["an id the endpoint repeats across pages is kept once"] = function()
+    local walk = history.new(NOON)
+    walk:accept(page({ task("1", "first", "2026-09-17T06:00:00Z") }, "second-page"))
+
+    walk:accept(page({
+      task("1", "first", "2026-09-17T06:00:00Z"),
+      task("2", "second", "2026-09-16T06:00:00Z"),
+    }, nil))
+
+    assert(walk:len() == 2, vim.inspect(task_lines(walk)))
+    assert(
+      vim.deep_equal(task_lines(walk), { "2026-09-17  first", "2026-09-16  second" }),
+      vim.inspect(task_lines(walk))
+    )
+  end,
+
   ["every line maps back to its own task id"] = function()
     local walk = history.new(NOON)
     walk:accept(page({
