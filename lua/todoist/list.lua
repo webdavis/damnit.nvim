@@ -98,6 +98,28 @@ function M.jump_to_location_under_cursor()
   require("todoist.location").jump(locations[line])
 end
 
+--- The view the list buffer is showing, when it is on screen in this tabpage.
+---
+--- The picker asks so that a search made while a filtered view is up searches
+--- inside that filter. A buffer that exists but is in no window here is not
+--- what the operator is looking at, so it answers with nothing and the caller
+--- falls back to every open task.
+---@return todoist.ListSpec? spec
+function M.current_spec()
+  local buf = find_buffer()
+  if buf == -1 or not shown then
+    return nil
+  end
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_buf(win) == buf then
+      return shown
+    end
+  end
+
+  return nil
+end
+
 --- Ask the API again for the view the buffer is holding.
 function M.refresh()
   if shown then
@@ -157,7 +179,7 @@ end
 --- and the answers that arrive after it are dropped.
 ---@param filter string? a Todoist filter query, or nil for every open task
 ---@param callback fun(data: { tasks: table[], projects: table[], sections: table[] }?, err: todoist.Error?)
-local function fetch(filter, callback)
+function M.fetch(filter, callback)
   local data, pending, failed = {}, 3, false
 
   local function part(key)
@@ -204,7 +226,7 @@ function M.open(spec)
   shown = spec
   draw(buf, { format.title(spec), "", "Loading..." })
 
-  fetch(spec.filter, function(data, err)
+  M.fetch(spec.filter, function(data, err)
     if not vim.api.nvim_buf_is_valid(buf) or shown ~= spec then
       return
     end

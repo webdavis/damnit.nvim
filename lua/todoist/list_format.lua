@@ -64,7 +64,7 @@ end
 ---@param items table[]?
 ---@return table<string, string> name keyed by id
 ---@return string[] ids in the order the API gave them
-local function names_by_id(items)
+function M.names_by_id(items)
   local names, order = {}, {}
 
   for _, item in ipairs(items or {}) do
@@ -82,7 +82,7 @@ end
 --- over the string it was typed as: a list is read for when things are due.
 ---@param task table
 ---@return string
-local function due_of(task)
+function M.due_of(task)
   local due = task.due
   if type(due) ~= "table" then
     return ""
@@ -112,7 +112,7 @@ end
 function M.task_line(task, indent, where)
   local parts = { indent .. "  - " .. text(task.content) }
 
-  local due = due_of(task)
+  local due = M.due_of(task)
   if due ~= "" then
     parts[#parts + 1] = "(" .. due .. ")"
   end
@@ -243,8 +243,8 @@ end
 ---@return table<integer, string> task id by line number
 ---@return table<integer, todoist.Location> location by line number, where one was captured
 function M.render(spec, tasks, projects, sections)
-  local project_names, project_order = names_by_id(projects)
-  local section_names = names_by_id(sections)
+  local project_names, project_order = M.names_by_id(projects)
+  local section_names = M.names_by_id(sections)
   local section_order = sections_by_project(sections)
 
   local buckets, project_ids = bucket(tasks or {}, project_order)
