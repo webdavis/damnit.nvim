@@ -52,18 +52,37 @@ Or name an environment variable instead:
 }
 ```
 
+Or, on a machine with neither a vault nor a keychain, give it the token:
+
+```lua
+{
+  "webdavis/todoist.nvim",
+  opts = { token = "<the token>" },
+}
+```
+
 ## The token
 
-There are two ways a token reaches this plugin, and both of them are yours to name:
+There are three ways a token reaches this plugin, and every one of them is yours to name:
 
 | Option          | What it is                                                            |
 | --------------- | --------------------------------------------------------------------- |
 | `token_command` | A command, as a list. Its first line of standard output is the token. |
 | `token_env`     | The name of an environment variable holding the token.                |
+| `token`         | The token itself.                                                     |
 
-There is no third way. The plugin will not read a token out of a configuration value, will not look
-in a well-known file for one, and has no default location to fall back to, because a token in a file
-is a token in a backup, in a diff and eventually in a public repository.
+Set more than one and they are tried in the order `token`, `token_command`, `token_env`.
+
+`token_command` is the one to reach for. It names a vault or keychain call, so the token lives
+wherever you already keep passwords and the configuration holds only the way to ask for it. Any
+command works: the entry title, the database and the flags are words you write, and the plugin
+passes the list through untouched.
+
+`token` is the escape hatch, for a machine with no vault and no keychain. It puts the token in clear
+text in a file, which means the token is also in your backups, in a diff, and in a public repository
+the day that configuration is shared. The health report warns when it is set. There is still no
+fourth way: the plugin never looks in a well-known file for a token and has no default location to
+fall back to.
 
 A resolved token is remembered for the session, so a vault command runs once rather than once per
 request, and it is forgotten when `setup` runs again or when the API refuses it. It is handed to
@@ -78,6 +97,7 @@ quoted, in case a program printed the secret on the stream the error was read fr
 
 | Option             | Default                          | What it does                                   |
 | ------------------ | -------------------------------- | ---------------------------------------------- |
+| `token`            | unset                            | The token itself, in clear text. See above.    |
 | `token_command`    | unset                            | A command whose standard output is the token.  |
 | `token_env`        | unset                            | The name of an environment variable with it.   |
 | `base_url`         | `https://api.todoist.com/api/v1` | The API root requests are built against.       |
