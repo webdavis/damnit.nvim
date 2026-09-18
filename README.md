@@ -2,8 +2,9 @@
 
 Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
 your configuration, a health check that proves both without printing the token, one task as an
-editable buffer, every open task as a list you can name your own views of, and one of those views
-as a sidebar beside your work.
+editable buffer, every open task as a list you can name your own views of, one of those views as a
+sidebar beside your work, and a task captured from the code in front of you that `gd` takes you back
+to.
 
 ## Requirements
 
@@ -32,6 +33,12 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
     { "<leader>tt", function() require("todoist").open() end, desc = "Todoist: every open task" },
     { "<leader>td", function() require("todoist").open("today") end, desc = "Todoist: today" },
     { "<leader>tb", function() require("todoist").toggle() end, desc = "Todoist: toggle the sidebar" },
+    {
+      "<leader>tc",
+      function() require("todoist.capture").capture() end,
+      desc = "Todoist: capture a task from here",
+    },
+    { "<leader>tc", ":Todoist capture<CR>", mode = "x", desc = "Todoist: capture this selection" },
   },
 }
 ```
@@ -234,15 +241,16 @@ the query is sent as it is written, which is why a filter the API refuses comes 
 wording.
 
 A name the plugin was never given is refused before any request, and the refusal says which names
-are declared. `:Todoist` completes them, alongside `task`.
+are declared. `:Todoist` completes them, alongside `capture`, `task` and `toggle`.
 
 The list is a plain unlisted buffer in the current window, so every window command, search and motion
 works on it. Two keys are bound in it:
 
-| Key    | What it does                                     |
-| ------ | ------------------------------------------------ |
-| `<CR>` | Opens the task on this line as a task buffer.    |
-| `R`    | Asks the API again for the view being shown.     |
+| Key    | What it does                                        |
+| ------ | --------------------------------------------------- |
+| `<CR>` | Opens the task on this line as a task buffer.       |
+| `R`    | Asks the API again for the view being shown.        |
+| `gd`   | Jumps to the code the task was captured from.       |
 
 In the sidebar `<CR>` opens the task in the window beside it, so the list stays where it is.
 
@@ -285,6 +293,63 @@ be read side by side: every `name` there is a key here, and the `filter` beside 
 value, character for character. Keeping them equal is a convention rather than a mechanism, because
 neither plugin reads the other's configuration, and the point of it is that one word opens one list
 whichever of the two you are in.
+
+## Capture from code
+
+```vim
+:Todoist capture              " on the cursor's line
+:'<,'>Todoist capture         " from a visual selection
+```
+
+```lua
+require("todoist.capture").capture()
+```
+
+A `TODO` you were never going to get back to becomes a task in your Inbox, and the description says
+where it came from:
+
+```text
+todoist.nvim lua/todoist/sidebar.lua:112
+```
+
+That is the repository name, then the path inside it, then the line. The name is the directory the
+`.git` lives in, so a linked worktree reports the worktree's own name and `gd` follows it back into
+that worktree. The path is relative to the
+repository root and never absolute: a description syncs to Todoist and onto your phone, so an
+absolute path would put the layout of your machine there. A file in no repository goes out as its own
+name and its line, with no repository in front of it, for the same reason. A buffer that is not a
+file at all (a scratch buffer, a directory listing) has nowhere to point, so the task is made with no
+description.
+
+A visual selection becomes the content, by whole lines: the comment leader goes, a leading `TODO` or
+`FIXME` goes with the `(author)` and punctuation after it, several lines join into one with their
+space collapsed, and only the first line loses its marker. So this:
+
+```lua
+-- TODO(stephen): hold the width
+--   the way nvim-tree does
+```
+
+captures as `hold the width the way nvim-tree does`. With no selection you are asked for the content
+instead, on a prompt that starts on the current line's own words, so the common case is one key and
+`<CR>`, and an answer you clear captures nothing.
+
+Back in a list, a task carrying a location is marked with `⌖` at the end of its line, after the due
+date, the priority and the labels, so it never pushes the content out of a narrow sidebar. `gd` on
+such a task opens the file and puts the cursor on the line.
+
+A description is text you can edit on your phone, so `gd` treats it as text somebody may well have
+broken, and every case it cannot follow is a message rather than an error:
+
+| What it finds                                     | What it says                                     |
+| ------------------------------------------------- | ------------------------------------------------- |
+| No `path:line` anywhere in the description        | The task has no location.                         |
+| A repository that is not the one you have open    | Names the one it wants and the one you are in.    |
+| A file that has since moved or gone               | There is no file at that path.                    |
+| A line past the end of the file                   | Opens it on the last line and says how long it is. |
+
+The path is resolved against the repository the editor is in, which is the only base there is: the
+description carries no absolute path, on purpose.
 
 ## The sidebar
 
