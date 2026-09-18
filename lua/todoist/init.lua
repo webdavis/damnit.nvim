@@ -25,6 +25,7 @@ local M = {}
 ---@field curl string the curl executable, a bare name looked up on PATH or a path
 ---@field timeout integer seconds a request may take before curl gives up
 ---@field views table<string, string> a view name to the Todoist filter it runs
+---@field picker "auto"|"fzf-lua"|"select" which front end the task search uses
 ---@field sidebar todoist.SidebarOptions how `toggle` puts a view beside your work
 M.options = {
   token_command = nil,
@@ -33,6 +34,7 @@ M.options = {
   curl = "curl",
   timeout = 15,
   views = {},
+  picker = "auto",
   sidebar = {
     side = "left",
     width = 40,
@@ -102,6 +104,17 @@ function M.open(name)
   end
 
   return require("todoist.list").open(spec)
+end
+
+--- Fuzzy-search the open tasks.
+---
+--- Called with no name it searches the view on screen, so a filtered list stays
+--- filtered; with a name it searches that view. The fifth function a keymap
+--- calls:
+--- `vim.keymap.set("n", "<leader>tf", function() require("todoist").pick() end)`.
+---@param name string? a view declared in `setup`, or nil to follow the screen
+function M.pick(name)
+  return require("todoist.picker").pick(name)
 end
 
 --- Open the completed history, newest first.
