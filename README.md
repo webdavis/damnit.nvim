@@ -3,8 +3,8 @@
 Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
 your configuration, a health check that proves both without printing the token, one task as an
 editable buffer, every open task as a list you can name your own views of, one of those views as a
-sidebar beside your work, and a task captured from the code in front of you that `gd` takes you back
-to.
+sidebar beside your work, a task captured from the code in front of you that `gd` takes you back to,
+and the completed history a page at a time with `u` to reopen one.
 
 ## Requirements
 
@@ -241,7 +241,7 @@ the query is sent as it is written, which is why a filter the API refuses comes 
 wording.
 
 A name the plugin was never given is refused before any request, and the refusal says which names
-are declared. `:Todoist` completes them, alongside `capture`, `task` and `toggle`.
+are declared. `:Todoist` completes them, alongside `capture`, `completed`, `task` and `toggle`.
 
 The list is a plain unlisted buffer in the current window, so every window command, search and motion
 works on it. Three keys are bound in it:
@@ -350,6 +350,44 @@ broken, and every case it cannot follow is a message rather than an error:
 
 The path is resolved against the repository the editor is in, which is the only base there is: the
 description carries no absolute path, on purpose.
+
+## The completed history
+
+```vim
+:Todoist completed
+```
+
+```lua
+require("todoist").completed()
+```
+
+Completed tasks, newest first, a page at a time. Each line is the day it was finished and what it
+was, and the list is flat: a finished task is read for when it was done rather than for where it was
+filed. Two keys are bound in it:
+
+| Key | What it does                                            |
+| --- | ------------------------------------------------------- |
+| `u` | Reopens the task on this line.                          |
+| `R` | Reads the history again from today.                     |
+
+The buffer is not modifiable, so `u` has no undo to take. A reopened task stops being completed, so
+its line leaves the list at once; a refusal leaves every line where it is and reports the API's own
+wording, which is what reopening a task that was never completed answers with.
+
+### Paging, and why the first screen is one request
+
+The endpoint reads completed tasks by completion date in a window of at most three months, paged by
+cursor at fifty tasks a page. So the first screen is one page of the newest window, and the next page
+is asked for when the cursor reaches the last task on screen, once. Nothing is asked for while a
+request is out, and nothing is asked for once the walk has read as deep as it goes.
+
+Depth is twelve windows of ninety days, about three years. At the bottom the list names the day it
+read back to and says that is as far as the API goes, so an empty end reads as the end of the history
+rather than as a list that stopped working.
+
+An account whose recent months hold nothing costs several requests before the first task appears:
+each window has to be asked for to find out it is empty. The list says `Reading completed tasks...`
+the whole time and draws whatever it has, so those requests read as work rather than as a hang.
 
 ## The sidebar
 

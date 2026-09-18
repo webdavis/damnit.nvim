@@ -292,6 +292,10 @@ function M.ping(callback)
   M.request({ method = "GET", path = "/projects", query = { limit = 1 }, quiet = true }, callback)
 end
 
+--- How many completed tasks one page holds. The endpoint's own default, named
+--- here so the request says what it expects rather than relying on it.
+local COMPLETED_PAGE_LIMIT = 50
+
 --- Every page of a list endpoint, gathered into one array.
 ---
 --- The v1 API answers a list with `{ results, next_cursor }` and hands back a
@@ -386,6 +390,36 @@ end
 ---@param callback fun(task: table?, err: todoist.Error?)
 function M.update_task(id, fields, callback)
   M.request({ method = "POST", path = "/tasks/" .. id, body = fields }, callback)
+end
+
+--- One page of the tasks completed in `[since, until)`, both ISO 8601
+--- timestamps, `since` inclusive and `until` exclusive. The API caps that
+--- window at three months, so reading further back means asking again for an
+--- earlier window.
+---
+--- Exactly one request, and the page's own `next_cursor` comes back with it.
+--- `collect` cannot serve this: it walks every page before answering, which is
+--- a history with no end, and it reads a page under `results` where this
+--- endpoint answers under `items`.
+---@param since string
+---@param until_ string
+---@param cursor string? the previous page's `next_cursor`
+---@param callback fun(page: table?, err: todoist.Error?)
+function M.completed_page(since, until_, cursor, callback)
+  local query = { since = since, ["until"] = until_, limit = COMPLETED_PAGE_LIMIT }
+  if cursor then
+    query.cursor = cursor
+  end
+
+  M.request({ method = "GET", path = "/tasks/completed/by_completion_date", query = query }, callback)
+end
+
+--- Reopen a completed task. It takes no body, and its answer carries nothing
+--- worth reading, so only a refusal matters and that arrives as an error.
+---@param id string
+---@param callback fun(data: any?, err: todoist.Error?)
+function M.reopen_task(id, callback)
+  M.request({ method = "POST", path = "/tasks/" .. id .. "/reopen" }, callback)
 end
 
 return M

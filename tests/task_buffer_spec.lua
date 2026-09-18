@@ -306,7 +306,8 @@ return {
     for _, message in ipairs(said) do
       assert(
         message:find(
-          "usage is :Todoist, :Todoist <view>, :Todoist toggle, :Todoist capture or :Todoist task <id>",
+          "usage is :Todoist, :Todoist <view>, :Todoist completed, :Todoist toggle,"
+            .. " :Todoist capture or :Todoist task <id>",
           1,
           true
         ),
