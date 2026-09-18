@@ -408,9 +408,10 @@ function M.delete_task(id, callback)
   M.request({ method = "DELETE", path = "/tasks/" .. id }, callback)
 end
 
---- Move the task to a project or a section. The body names exactly one of
---- `project_id` and `section_id`, and a task moved into a section follows that
---- section into its project.
+--- Move the task to a project, a section, or under another task as its
+--- subtask. The body names exactly one of `project_id`, `section_id` and
+--- `parent_id`, and a task moved into a section follows that section into its
+--- project.
 ---@param id string
 ---@param destination table
 ---@param callback fun(data: any?, err: todoist.Error?)
