@@ -120,10 +120,12 @@ function M.current_spec()
   return nil
 end
 
---- Ask the API again for the view the buffer is holding.
+--- Ask the API again for the view the buffer is holding, in place: this never
+--- touches the current window, so a quick edit made from the picker while
+--- another buffer sits in it does not steal that window.
 function M.refresh()
   if shown then
-    M.open(shown)
+    M.load(shown)
   end
 end
 
@@ -211,17 +213,16 @@ function M.fetch(filter, callback)
   client.get_sections(part("sections"))
 end
 
---- Put one view in the current window.
+--- Load one view into the buffer, wherever it already is.
 ---
 --- Returns while the requests are still out: the buffer appears at once saying
 --- it is loading, and is redrawn when the API answers. A refused filter is drawn
 --- in the API's own wording, so it cannot be mistaken for a filter that matched
---- nothing.
+--- nothing. This never touches a window; `open` is what puts the buffer in one.
 ---@param spec todoist.ListSpec
 ---@return integer buf
-function M.open(spec)
+function M.load(spec)
   local buf = ensure_buffer()
-  vim.api.nvim_win_set_buf(0, buf)
 
   shown = spec
   draw(buf, { format.title(spec), "", "Loading..." })
@@ -242,6 +243,16 @@ function M.open(spec)
   end)
 
   return buf
+end
+
+--- Put one view in the current window.
+---@param spec todoist.ListSpec
+---@return integer buf
+function M.open(spec)
+  local buf = ensure_buffer()
+  vim.api.nvim_win_set_buf(0, buf)
+
+  return M.load(spec)
 end
 
 return M
