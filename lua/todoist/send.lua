@@ -249,12 +249,20 @@ function M.host()
       end
 
       local command = vim.list_extend({ binary }, args)
-      vim.system(command, { text = true }, function(result)
+      local ok, err = pcall(vim.system, command, { text = true }, function(result)
         local failure = result.code ~= 0 and vim.trim(("%s: %s"):format(binary, result.stderr or "")) or nil
         vim.schedule(function()
           done(result.stdout or "", failure)
         end)
       end)
+
+      -- `vim.system` throws rather than calling back when the binary does not
+      -- exist, so a stale `HERDR_BIN_PATH` would otherwise lose the brief.
+      if not ok then
+        vim.schedule(function()
+          done("", vim.trim(("%s: %s"):format(binary, tostring(err))))
+        end)
+      end
     end,
     copy = function(brief)
       vim.fn.setreg('"', brief)

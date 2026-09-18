@@ -225,6 +225,25 @@ return {
     assert(seen.said[1] == "todoist.nvim: sent to claude, comment refused", vim.inspect(seen.said))
   end,
 
+  ["the real host falls back to a failure when the herdr binary does not exist"] = function()
+    local real_bin_path = vim.env.HERDR_BIN_PATH
+    vim.env.HERDR_BIN_PATH = "/no/such/herdr-binary"
+
+    local seen = { done = false }
+    send.host().run({ "agent", "list" }, function(out, err)
+      seen.done, seen.out, seen.err = true, out, err
+    end)
+
+    vim.wait(2000, function()
+      return seen.done
+    end, 5)
+
+    vim.env.HERDR_BIN_PATH = real_bin_path
+    assert(seen.done, "the run never called back")
+    assert(seen.out == "", vim.inspect(seen.out))
+    assert(seen.err and seen.err:match("no such"), vim.inspect(seen.err))
+  end,
+
   ["a paste terminator inside the brief cannot end the frame early"] = function()
     local framed = send.pasted("before" .. PASTE_END .. "after")
 
