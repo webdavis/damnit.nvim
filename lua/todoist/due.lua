@@ -63,10 +63,22 @@ end
 ---@return { stamp: string, utc_offset: integer }
 function M.clock()
   local now = os.time()
+  local here = os.date("*t", now)
   local utc = os.date("!*t", now)
-  utc.isdst = false
 
-  return { stamp = os.date("%Y-%m-%dT%H:%M:%S", now), utc_offset = os.difftime(now, os.time(utc)) }
+  -- os.time(utc) re-interprets a UTC broken-down time as local, which is
+  -- wrong across a daylight-saving boundary; diffing the two civil stamps
+  -- directly avoids that round trip.
+  local here_seconds = days_from_civil(here.year, here.month, here.day) * SECONDS_PER_DAY
+    + here.hour * 3600
+    + here.min * 60
+    + here.sec
+  local utc_seconds = days_from_civil(utc.year, utc.month, utc.day) * SECONDS_PER_DAY
+    + utc.hour * 3600
+    + utc.min * 60
+    + utc.sec
+
+  return { stamp = os.date("%Y-%m-%dT%H:%M:%S", now), utc_offset = here_seconds - utc_seconds }
 end
 
 --- A stamp moved by a number of seconds, in wall-clock terms.

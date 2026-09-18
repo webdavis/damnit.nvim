@@ -102,4 +102,11 @@ return {
     assert(now.stamp:match("^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d$"), now.stamp)
     assert(type(now.utc_offset) == "number")
   end,
+
+  ["the clock's offset matches the machine's own %z, not the daylight-saving-blind version"] = function()
+    local sign, hours, minutes = os.date("%z"):match("^([+-])(%d%d)(%d%d)$")
+    local expected = (tonumber(sign .. hours) * 3600) + (tonumber(sign .. minutes) * 60)
+    local now = due.clock()
+    assert(now.utc_offset == expected, ("got %d, wanted %d"):format(now.utc_offset, expected))
+  end,
 }
