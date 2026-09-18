@@ -202,6 +202,64 @@ return {
     end)
   end,
 
+  ["opening a task from the sidebar lands beside it, not inside it"] = function()
+    in_tab({}, function()
+      client.get_tasks_matching = function(_, callback)
+        callback({ { id = "T1", content = "Buy oat milk" } })
+      end
+
+      local real_get_task = client.get_task
+      client.get_task = function(id, callback)
+        callback({ id = id, content = "Buy oat milk" })
+      end
+
+      local sidebar_win = sidebar.toggle()
+      local sidebar_buf = vim.api.nvim_win_get_buf(sidebar_win)
+
+      local lines = vim.api.nvim_buf_get_lines(sidebar_buf, 0, -1, false)
+      local task_line
+      for i, line in ipairs(lines) do
+        if line:find("Buy oat milk", 1, true) then
+          task_line = i
+        end
+      end
+      assert(task_line, vim.inspect(lines))
+      vim.api.nvim_win_set_cursor(sidebar_win, { task_line, 0 })
+
+      require("todoist.list").open_task_under_cursor()
+      client.get_task = real_get_task
+
+      assert(vim.api.nvim_get_current_win() ~= sidebar_win, "the task opened into the sidebar")
+      assert(sidebar.window() == sidebar_win, "the sidebar window is gone")
+      assert(vim.api.nvim_win_get_buf(sidebar_win) == sidebar_buf, "the sidebar lost its list")
+    end)
+  end,
+
+  ["opening a task with the sidebar alone in the tabpage splits rather than erroring"] = function()
+    in_tab({}, function()
+      client.get_tasks_matching = function(_, callback)
+        callback({ { id = "T1", content = "Buy oat milk" } })
+      end
+
+      local real_get_task = client.get_task
+      client.get_task = function(id, callback)
+        callback({ id = id, content = "Buy oat milk" })
+      end
+
+      local sidebar_win = sidebar.toggle()
+      vim.api.nvim_set_current_win(sidebar_win)
+      vim.cmd("only")
+
+      local before = windows()
+      local ok = pcall(require("todoist.task_buffer").open, "T1")
+      client.get_task = real_get_task
+
+      assert(ok, "opening a task with the sidebar alone raised an error")
+      assert(windows() == before + 1, "no split was made for the task: " .. windows())
+      assert(sidebar.window() == sidebar_win, "the sidebar window is gone")
+    end)
+  end,
+
   ["toggle in another tabpage opens one there rather than closing the first"] = function()
     in_tab({}, function()
       local first = sidebar.toggle()
