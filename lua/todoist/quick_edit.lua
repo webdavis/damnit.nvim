@@ -71,7 +71,9 @@ local function wrote(done, remember)
       return
     end
 
-    undoable = remember
+    if remember then
+      undoable = remember
+    end
     reread()
     say(done)
   end

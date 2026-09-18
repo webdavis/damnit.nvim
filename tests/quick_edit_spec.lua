@@ -273,6 +273,17 @@ return {
     called(seen, { "reopen", "close" })
   end,
 
+  ["a write that is not x or X leaves the remembered undo alone"] = function()
+    local seen = drive({}, function()
+      quick_edit.complete()
+      quick_edit.cycle_priority()
+      quick_edit.undo()
+    end)
+
+    called(seen, { "close", "update", "reopen" })
+    assert(seen.calls[3].argument == "6XGg", vim.inspect(seen.calls))
+  end,
+
   ["u is one level deep, so a second one has nothing left to reverse"] = function()
     local seen = drive({}, function()
       quick_edit.complete()
