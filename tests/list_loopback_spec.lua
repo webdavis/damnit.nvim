@@ -255,4 +255,39 @@ return {
     assert(has_line_with(lines, "Fresh task"), vim.inspect(lines))
     assert(not has_line_with(lines, "Stale task"), vim.inspect(lines))
   end,
+
+  ["a quick edit made from the picker refreshes the list buffer without touching the current window"] = function()
+    local double = serve({
+      ["/api/v1/tasks/filter"] = {
+        status = 200,
+        body = '{"results":[{"id":"6XGg","content":"Buy milk","project_id":"1"}],"next_cursor":null}',
+      },
+      ["/api/v1/projects"] = { status = 200, body = '{"results":[{"id":"1","name":"Errands"}],"next_cursor":null}' },
+      ["/api/v1/sections"] = { status = 200, body = EMPTY_PAGE },
+      ["/api/v1/tasks/6XGg/close"] = { status = 200, body = "{}" },
+    })
+    point_at(double)
+
+    -- Open the list once, as an earlier action in the session would, then move
+    -- the window on to something else entirely: this is the no-list-in-tabpage
+    -- case the picker documents as supported.
+    local list_buf = todoist.open("today")
+    vim.wait(2000, function()
+      return vim.api.nvim_buf_get_lines(list_buf, 0, -1, false)[3] ~= "Loading..."
+    end, 5)
+
+    local scratch = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_win_set_buf(0, scratch)
+
+    require("todoist.picker").complete_entry({ task = { id = "6XGg", content = "Buy milk" } })
+
+    -- The initial open's three requests, then the close, then the reread's
+    -- own three requests.
+    assert(vim.wait(2000, function()
+      return double.answered >= 7
+    end, 5))
+    double.close()
+
+    assert(vim.api.nvim_get_current_buf() == scratch, "the picker's complete stole the current window")
+  end,
 }

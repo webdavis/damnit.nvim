@@ -33,6 +33,15 @@ local function text(value)
   return tostring(value)
 end
 
+--- The labels a task carries. A JSON null decodes to `vim.NIL`, which is
+--- truthy, so an absent list has to be recognised by its type rather than by
+--- falling back with `or`.
+---@param task table
+---@return string[]
+function M.labels_of(task)
+  return type(task.labels) == "table" and task.labels or {}
+end
+
 --- The name to head a group with, falling back to the id when the API listed a
 --- task under something it did not list itself: an id says less than a name but
 --- more than dropping the task.
@@ -55,7 +64,7 @@ end
 ---@param items table[]?
 ---@return table<string, string> name keyed by id
 ---@return string[] ids in the order the API gave them
-local function names_by_id(items)
+function M.names_by_id(items)
   local names, order = {}, {}
 
   for _, item in ipairs(items or {}) do
@@ -73,7 +82,7 @@ end
 --- over the string it was typed as: a list is read for when things are due.
 ---@param task table
 ---@return string
-local function due_of(task)
+function M.due_of(task)
   local due = task.due
   if type(due) ~= "table" then
     return ""
@@ -87,11 +96,34 @@ local function due_of(task)
   return value
 end
 
+--- The badges every task line carries after its content: when it is due, how
+--- urgent it is and what it is labelled, in that order. `p4` is the API's own
+--- priority scale, the same one the task buffer shows, where 4 is the most
+--- urgent; priority 1 is no priority and is left off rather than written out.
+---
+--- Shared by the list's own line and the picker's, so a null field or a badge's
+--- wording is fixed once rather than in each rendering.
+---@param parts string[] appended to in place
+---@param task table
+function M.append_badges(parts, task)
+  local due = M.due_of(task)
+  if due ~= "" then
+    parts[#parts + 1] = "(" .. due .. ")"
+  end
+
+  local priority = tonumber(task.priority) or 1
+  if priority > 1 then
+    parts[#parts + 1] = "p" .. priority
+  end
+
+  for _, label in ipairs(M.labels_of(task)) do
+    parts[#parts + 1] = "@" .. text(label)
+  end
+end
+
 --- One task as one line: what it is, when it is due, how urgent it is and what
 --- it is labelled. A task carries a bullet and a heading does not, which is
---- what separates a section's name from a task sitting at the same indent. `p4` is the API's own priority scale, the same one the task
---- buffer shows, where 4 is the most urgent. Priority 1 is no priority and is
---- left off rather than written out.
+--- what separates a section's name from a task sitting at the same indent.
 ---
 --- A task captured from code ends with the location icon. It goes last, beside
 --- the other badges, so a narrow sidebar truncates the icon rather than the
@@ -102,20 +134,7 @@ end
 ---@return string
 function M.task_line(task, indent, where)
   local parts = { indent .. "  - " .. text(task.content) }
-
-  local due = due_of(task)
-  if due ~= "" then
-    parts[#parts + 1] = "(" .. due .. ")"
-  end
-
-  local priority = tonumber(task.priority) or 1
-  if priority > 1 then
-    parts[#parts + 1] = "p" .. priority
-  end
-
-  for _, label in ipairs(task.labels or {}) do
-    parts[#parts + 1] = "@" .. text(label)
-  end
+  M.append_badges(parts, task)
 
   if where then
     parts[#parts + 1] = location.ICON
@@ -234,8 +253,8 @@ end
 ---@return table<integer, string> task id by line number
 ---@return table<integer, todoist.Location> location by line number, where one was captured
 function M.render(spec, tasks, projects, sections)
-  local project_names, project_order = names_by_id(projects)
-  local section_names = names_by_id(sections)
+  local project_names, project_order = M.names_by_id(projects)
+  local section_names = M.names_by_id(sections)
   local section_order = sections_by_project(sections)
 
   local buckets, project_ids = bucket(tasks or {}, project_order)

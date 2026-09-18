@@ -307,7 +307,7 @@ return {
       assert(
         message:find(
           "usage is :Todoist, :Todoist <view>, :Todoist completed, :Todoist toggle,"
-            .. " :Todoist capture or :Todoist task <id>",
+            .. " :Todoist capture, :Todoist pick [<view>] or :Todoist task <id>",
           1,
           true
         ),
