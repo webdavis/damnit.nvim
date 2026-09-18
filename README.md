@@ -244,7 +244,7 @@ A name the plugin was never given is refused before any request, and the refusal
 are declared. `:Todoist` completes them, alongside `capture`, `task` and `toggle`.
 
 The list is a plain unlisted buffer in the current window, so every window command, search and motion
-works on it. Two keys are bound in it:
+works on it. Three keys are bound in it:
 
 | Key    | What it does                                        |
 | ------ | --------------------------------------------------- |
