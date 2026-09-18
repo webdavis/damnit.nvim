@@ -98,9 +98,14 @@ function M.parse(description)
 end
 
 ---@param message string
+local function warn(message)
+  vim.notify("todoist.nvim: " .. message, vim.log.levels.WARN)
+end
+
+---@param message string
 ---@return false
 local function refuse(message)
-  vim.notify("todoist.nvim: " .. message, vim.log.levels.WARN)
+  warn(message)
 
   return false
 end
@@ -141,7 +146,7 @@ function M.jump(location)
   if line ~= location.line then
     -- The file is open where it can be read; the line moved out from under the
     -- task, which is worth saying rather than landing silently.
-    refuse(("%s has %d lines, so this is the last one"):format(location.path, last))
+    warn(("%s has %d lines, so this is the last one"):format(location.path, last))
   end
 
   return true
