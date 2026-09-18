@@ -1,6 +1,10 @@
 -- The rendering of a list, as pure functions over tables.
 
 local format = require("todoist.list_format")
+local location = require("todoist.location")
+
+--- The sidebar's default width, which is the narrowest a list is drawn at.
+local SIDEBAR_WIDTH = 40
 
 local PROJECTS = {
   { id = "1", name = "Errands" },
@@ -130,6 +134,39 @@ return {
 
     assert(lines[#lines] == "No tasks.", joined(lines))
     assert(next(ids) == nil, vim.inspect(ids))
+  end,
+
+  ["a task captured from code carries the location icon, and one without carries none"] = function()
+    local captured = { id = "a", content = "Hold the width", description = "todoist.nvim lua/todoist/list.lua:42" }
+    local plain = { id = "b", content = "Buy milk", description = "at the shop on the corner" }
+
+    assert(vim.endswith(format.task_line(captured, "", location.parse(captured.description)), location.ICON))
+    assert(not format.task_line(plain, "", location.parse(plain.description)):find(location.ICON, 1, true))
+  end,
+
+  ["render hands back the location each line holds, for the jump that follows"] = function()
+    local captured = { id = "a", content = "Hold the width", project_id = "1", description = "repo lua/list.lua:42" }
+    local plain = { id = "b", content = "Buy milk", project_id = "1" }
+
+    local lines, _, locations = format.render({ title = "t" }, { captured, plain }, PROJECTS, SECTIONS)
+
+    local where = locations[line_of(lines, "Hold the width")]
+    assert(where and where.path == "lua/list.lua" and where.line == 42, vim.inspect(locations))
+    assert(locations[line_of(lines, "Buy milk")] == nil, vim.inspect(locations))
+  end,
+
+  ["the icon goes last, so it cannot push content out of a 40-column sidebar"] = function()
+    local task = {
+      id = "a",
+      content = "Hold the sidebar at the width it was configured with",
+      description = "todoist.nvim lua/todoist/sidebar.lua:42",
+    }
+
+    local with_icon = format.task_line(task, "", location.parse(task.description))
+    local without = format.task_line(task, "", nil)
+
+    assert(with_icon:sub(1, SIDEBAR_WIDTH) == without:sub(1, SIDEBAR_WIDTH), with_icon)
+    assert(#without > SIDEBAR_WIDTH, "the case needs a line longer than the sidebar to prove anything")
   end,
 
   ["reports a refusal in the API's own wording"] = function()

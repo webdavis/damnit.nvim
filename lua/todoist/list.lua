@@ -25,6 +25,12 @@ local NAME = "todoist://list"
 ---@type table<integer, string>
 local ids = {}
 
+--- The location each line's task was captured from, for the buffer as it
+--- stands. Same idea as `ids`: parsed once at render and looked up by line,
+--- never read back out of the text on screen.
+---@type table<integer, todoist.Location>
+local locations = {}
+
 --- What the buffer was last opened with, which is what a refresh repeats.
 ---@type todoist.ListSpec?
 local shown = nil
@@ -53,6 +59,21 @@ function M.open_task_under_cursor()
   require("todoist.task_buffer").open(id)
 end
 
+--- Jump to the code the task on the cursor's line was captured from.
+---
+--- The description is text a person can edit on their phone, so a line whose
+--- task carries no location says so, and so does one whose file or line has
+--- since moved.
+function M.jump_to_location_under_cursor()
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+
+  if not ids[line] then
+    return vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+  end
+
+  require("todoist.location").jump(locations[line])
+end
+
 --- Ask the API again for the view the buffer is holding.
 function M.refresh()
   if shown then
@@ -76,6 +97,10 @@ local function ensure_buffer()
 
   vim.keymap.set("n", "<CR>", M.open_task_under_cursor, { buffer = buf, desc = "Todoist: open this task" })
   vim.keymap.set("n", "R", M.refresh, { buffer = buf, desc = "Todoist: refresh this view" })
+  vim.keymap.set("n", "gd", M.jump_to_location_under_cursor, {
+    buffer = buf,
+    desc = "Todoist: jump to the code this task was captured from",
+  })
 
   return buf
 end
@@ -83,12 +108,14 @@ end
 ---@param buf integer
 ---@param lines string[]
 ---@param line_ids table<integer, string>?
-local function draw(buf, lines, line_ids)
+---@param line_locations table<integer, todoist.Location>?
+local function draw(buf, lines, line_ids, line_locations)
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
 
   ids = line_ids or {}
+  locations = line_locations or {}
 end
 
 --- Ask for the tasks and the two things that name their groups at once.
@@ -157,8 +184,8 @@ function M.open(spec)
       return draw(buf, format.refusal(spec, err))
     end
 
-    local lines, line_ids = format.render(spec, data.tasks, data.projects, data.sections)
-    draw(buf, lines, line_ids)
+    local lines, line_ids, line_locations = format.render(spec, data.tasks, data.projects, data.sections)
+    draw(buf, lines, line_ids, line_locations)
   end)
 
   return buf
