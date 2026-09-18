@@ -341,12 +341,12 @@ such a task opens the file and puts the cursor on the line.
 A description is text you can edit on your phone, so `gd` treats it as text somebody may well have
 broken, and every case it cannot follow is a message rather than an error:
 
-| What it finds                                     | What it says                                     |
-| ------------------------------------------------- | ------------------------------------------------- |
-| No `path:line` anywhere in the description        | The task has no location.                         |
-| A repository that is not the one you have open    | Names the one it wants and the one you are in.    |
-| A file that has since moved or gone               | There is no file at that path.                    |
-| A line past the end of the file                   | Opens it on the last line and says how long it is. |
+| What it finds                                  | What it says                                       |
+| ---------------------------------------------- | -------------------------------------------------- |
+| No `path:line` anywhere in the description     | The task has no location.                          |
+| A repository that is not the one you have open | Names the one it wants and the one you are in.     |
+| A file that has since moved or gone            | There is no file at that path.                     |
+| A line past the end of the file                | Opens it on the last line and says how long it is. |
 
 The path is resolved against the repository the editor is in, which is the only base there is: the
 description carries no absolute path, on purpose.
