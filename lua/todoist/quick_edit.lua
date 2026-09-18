@@ -233,7 +233,7 @@ function M.labels()
       return
     end
 
-    local on = task.labels or {}
+    local on = type(task.labels) == "table" and task.labels or {}
     local choices = M.label_choices(on, known)
     if #choices == 0 then
       return say("no labels")
