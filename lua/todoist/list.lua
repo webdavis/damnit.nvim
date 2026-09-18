@@ -16,6 +16,7 @@ local M = {}
 
 local client = require("todoist.client")
 local format = require("todoist.list_format")
+local tree = require("todoist.tree")
 
 local NAME = "todoist://list"
 
@@ -41,6 +42,20 @@ local tasks = {}
 --- What the buffer was last opened with, which is what a refresh repeats.
 ---@type todoist.ListSpec?
 local shown = nil
+
+--- The tasks, projects and sections the lines on screen were drawn from, so a
+--- fold can redraw them without asking the API again.
+---@type { tasks: table[], projects: table[], sections: table[] }?
+local drawn_from = nil
+
+--- The tasks whose subtasks are folded away, by task id.
+---
+--- The session's, not the buffer's: every write here re-reads the view, so a
+--- set tied to the lines on screen would unfold the whole tree on every
+--- keypress. Keyed by id, so a task stays folded across a refresh and across a
+--- change of view.
+---@type table<string, boolean>
+local collapsed = {}
 
 ---@return integer buf or -1
 local function find_buffer()
@@ -149,6 +164,9 @@ local function ensure_buffer()
     buffer = buf,
     desc = "Todoist: jump to the code this task was captured from",
   })
+  vim.keymap.set("n", "za", M.toggle_fold, { buffer = buf, desc = "Todoist: fold or unfold this task's subtasks" })
+  vim.keymap.set("n", ">", M.indent, { buffer = buf, desc = "Todoist: make this task a subtask of the one above" })
+  vim.keymap.set("n", "<", M.promote, { buffer = buf, desc = "Todoist: move this task out from under its parent" })
   require("todoist.quick_edit").attach(buf)
 
   return buf
@@ -171,6 +189,138 @@ local function draw(buf, lines, line_ids, line_locations, shown_tasks)
   for _, task in ipairs(shown_tasks or {}) do
     tasks[tostring(task.id)] = task
   end
+
+  -- A loading or refused view was drawn from no answer, so a fold has nothing
+  -- to redraw and says there is no task on the line.
+  if not shown_tasks then
+    drawn_from = nil
+  end
+end
+
+--- Draw one answer from the API, folds and all.
+---@param buf integer
+---@param spec todoist.ListSpec
+---@param data { tasks: table[], projects: table[], sections: table[] }
+local function render_into(buf, spec, data)
+  local lines, line_ids, line_locations = format.render(spec, data.tasks, data.projects, data.sections, collapsed)
+  draw(buf, lines, line_ids, line_locations, data.tasks)
+end
+
+--- Draw the answer already in hand again, which is what a fold needs: folding
+--- changes which lines are written, not what the server holds.
+local function redraw()
+  local buf = find_buffer()
+  if buf ~= -1 and shown and drawn_from then
+    render_into(buf, shown, drawn_from)
+  end
+end
+
+--- The tree the lines on screen were drawn from.
+---@return todoist.Tree
+local function forest()
+  return tree.index(drawn_from and drawn_from.tasks or {})
+end
+
+--- The tasks under a task in the view on screen.
+---
+--- What the view holds, which is not always every subtask a task has: a
+--- filtered view can match a parent and none of its children.
+---@param id string
+---@return table[]
+function M.children_of(id)
+  return forest().children[tostring(id)] or {}
+end
+
+--- Fold or unfold the subtasks of the task on the cursor.
+---
+--- The whole subtree goes, not one level of it, and the line the cursor is on
+--- says how many tasks went with it.
+function M.toggle_fold()
+  local task = M.task_under_cursor()
+  if not task then
+    return
+  end
+
+  local id = tostring(task.id)
+  if #M.children_of(id) == 0 then
+    return vim.notify("todoist.nvim: no subtasks here", vim.log.levels.INFO)
+  end
+
+  if collapsed[id] then
+    collapsed[id] = nil
+  else
+    collapsed[id] = true
+  end
+
+  redraw()
+end
+
+--- Unfold everything. The folds are the session's, so nothing here calls this:
+--- a spec does, to start from a tree with none.
+function M.forget_folds()
+  collapsed = {}
+end
+
+--- The task on the nearest line above the cursor holding one.
+---@return table?
+function M.task_above_cursor()
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+
+  for above = line - 1, 1, -1 do
+    local task = tasks[ids[above] or ""]
+    if task then
+      return task
+    end
+  end
+
+  return nil
+end
+
+--- What a reparent does with its answer: a refusal is the client's to report
+--- and changes nothing on screen, and a success re-reads the view.
+---@param done string
+---@return fun(data: any?, err: todoist.Error?)
+local function moved(done)
+  return function(_, err)
+    if err then
+      return
+    end
+
+    M.refresh()
+    vim.notify("todoist.nvim: " .. done, vim.log.levels.INFO)
+  end
+end
+
+--- Move the task on the cursor, or say why it is staying where it is.
+---@param task table
+---@param destination table?
+---@param refusal string?
+local function reparent(task, destination, refusal)
+  if not destination then
+    return vim.notify("todoist.nvim: " .. refusal, vim.log.levels.WARN)
+  end
+
+  client.move_task(task.id, destination, moved(("moved %s"):format(tostring(task.content))))
+end
+
+--- `>`: make the task on the cursor a subtask of the task on the row above it.
+function M.indent()
+  local task = M.task_under_cursor()
+  if not task then
+    return
+  end
+
+  reparent(task, tree.indent_to(task, M.task_above_cursor()))
+end
+
+--- `<`: move the task on the cursor out from under its parent.
+function M.promote()
+  local task = M.task_under_cursor()
+  if not task then
+    return
+  end
+
+  reparent(task, tree.promote_to(task, forest()))
 end
 
 --- Ask for the tasks and the two things that name their groups at once.
@@ -238,8 +388,8 @@ function M.load(spec)
       return draw(buf, format.refusal(spec, err))
     end
 
-    local lines, line_ids, line_locations = format.render(spec, data.tasks, data.projects, data.sections)
-    draw(buf, lines, line_ids, line_locations, data.tasks)
+    drawn_from = data
+    render_into(buf, spec, data)
   end)
 
   return buf

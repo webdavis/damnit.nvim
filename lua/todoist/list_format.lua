@@ -13,6 +13,7 @@
 local M = {}
 
 local location = require("todoist.location")
+local tree = require("todoist.tree")
 
 --- The indent each kind of line carries. Two spaces per level, so a task under
 --- a section is four in and a task directly under a project is two.
@@ -128,16 +129,24 @@ end
 --- A task captured from code ends with the location icon. It goes last, beside
 --- the other badges, so a narrow sidebar truncates the icon rather than the
 --- content: the columns the content starts at do not move.
+---
+--- A folded task ends with how many children are folded away under it, so a
+--- tree that lost a level says where the level went.
 ---@param task table
 ---@param indent string
 ---@param where todoist.Location? the location its description holds
+---@param folded integer? children hidden under this line, when it is folded
 ---@return string
-function M.task_line(task, indent, where)
+function M.task_line(task, indent, where, folded)
   local parts = { indent .. "  - " .. text(task.content) }
   M.append_badges(parts, task)
 
   if where then
     parts[#parts + 1] = location.ICON
+  end
+
+  if folded and folded > 0 then
+    parts[#parts + 1] = ("(+%d)"):format(folded)
   end
 
   return table.concat(parts, "  ")
@@ -245,19 +254,36 @@ end
 ---@field filter string? a Todoist filter query, or nil for every open task
 
 --- A whole list as lines, plus the task each line holds.
+---
+--- A task with children is drawn as the head of a tree: its subtasks follow it,
+--- two spaces further in per level, wherever their own project and section
+--- would have put them. Only the head of a tree is grouped, so a subtask never
+--- appears twice, and a task whose parent this view does not hold heads a tree
+--- of its own rather than disappearing.
 ---@param spec todoist.ListSpec
 ---@param tasks table[] as the API returned them
 ---@param projects table[] every project, for the headings
 ---@param sections table[] every section, for the headings
+---@param collapsed table<string, boolean>? task ids whose subtasks are folded away
 ---@return string[] lines
 ---@return table<integer, string> task id by line number
 ---@return table<integer, todoist.Location> location by line number, where one was captured
-function M.render(spec, tasks, projects, sections)
+function M.render(spec, tasks, projects, sections, collapsed)
   local project_names, project_order = M.names_by_id(projects)
   local section_names = M.names_by_id(sections)
   local section_order = sections_by_project(sections)
 
-  local buckets, project_ids = bucket(tasks or {}, project_order)
+  local folds = collapsed or {}
+  local forest = tree.index(tasks or {})
+
+  local roots = {}
+  for _, task in ipairs(tasks or {}) do
+    if tree.is_root(forest, task) then
+      roots[#roots + 1] = task
+    end
+  end
+
+  local buckets, project_ids = bucket(roots, project_order)
 
   local lines = { M.title(spec), "" }
   local ids, locations = {}, {}
@@ -270,16 +296,29 @@ function M.render(spec, tasks, projects, sections)
     end
   end
 
+  local rendered = 0
+
   --- A task's own line and the location it holds, parsed once for both the icon
   --- and the jump.
   ---@param task table
   ---@param indent string
   local function write_task(task, indent)
     local where = location.parse(task.description)
-    write(M.task_line(task, indent, where), task, where)
+    local id = text(task.id)
+    local hidden = folds[id] and tree.descendant_count(forest, id) or 0
+
+    write(M.task_line(task, indent, where, hidden), task, where)
+    rendered = rendered + 1
   end
 
-  local rendered = 0
+  --- A task and everything under it, one level of indent per level of the tree.
+  ---@param task table
+  ---@param indent string
+  local function write_subtree(task, indent)
+    tree.descend(forest, task, folds, function(node, depth)
+      write_task(node, indent .. SECTION_INDENT:rep(depth))
+    end)
+  end
 
   for _, project_id in ipairs(project_ids) do
     local present = buckets[project_id]
@@ -290,15 +329,13 @@ function M.render(spec, tasks, projects, sections)
       write(PROJECT_INDENT .. heading(project_names, project_id))
 
       for _, task in ipairs(project_tasks) do
-        write_task(task, PROJECT_INDENT)
-        rendered = rendered + 1
+        write_subtree(task, PROJECT_INDENT)
       end
 
       for _, section_id in ipairs(order) do
         write(SECTION_INDENT .. heading(section_names, section_id))
         for _, task in ipairs(present[section_id]) do
-          write_task(task, SECTION_INDENT)
-          rendered = rendered + 1
+          write_subtree(task, SECTION_INDENT)
         end
       end
 

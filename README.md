@@ -261,6 +261,9 @@ works on it. These keys are bound in it:
 | `m`    | Moves the task to a project or section.             |
 | `a`    | Adds a task from a line of Quick Add syntax.        |
 | `u`    | Undoes the last complete or reopen.                 |
+| `za`   | Folds or unfolds the subtasks of this task.         |
+| `>`    | Makes this task a subtask of the task above it.     |
+| `<`    | Moves this task out from under its parent.          |
 
 In the sidebar `<CR>` opens the task in the window beside it, so the list stays where it is.
 
@@ -278,6 +281,8 @@ Errands
 
 Work
   - Review the branch  (2026-09-18)  p4
+    - Read the diff
+    - Leave the comments
 ```
 
 A task carries a bullet and a heading does not. `p3` is the API's own priority scale, the same one the
@@ -293,6 +298,53 @@ The API refused this view:
 
   Invalid query
 ```
+
+### Subtasks
+
+A task with subtasks heads a tree, and each level is two spaces further in. A subtask is drawn under
+its parent wherever the parent sits, so it appears once and never twice.
+
+A view can match a subtask without matching its parent, which any filter narrower than the whole
+account will do. Such a task heads a tree of its own at the top level rather than disappearing.
+
+`za` folds a task's subtasks away and a second `za` brings them back. The whole subtree goes, not one
+level of it, and the line says how many tasks went with it:
+
+```text
+Work
+  - Review the branch  (2026-09-18)  p4  (+2)
+```
+
+Folding is this plugin's own, not Neovim's fold machinery, so `zR`, `zM` and the rest of the fold
+family do not act on it. What that buys is the one thing that matters here: a fold is remembered by
+task id for the session, and every write in this plugin re-reads the view, so a tree folded once
+stays folded through a refresh, through a quick edit and through a change of view. Nothing is written
+to disk, so a restart starts with everything unfolded.
+
+`>` and `<` are writes, not a change of what is drawn. `>` makes the task a subtask of the task on
+the row above it, whatever level that row is at, and `<` moves it out from under its parent: beside
+the parent it just left when the view holds a grandparent, and to the top level of its section or
+project when it does not. Todoist moves a task's own subtasks with it, so a branch keeps its shape.
+
+Neither is undoable. `u` reverses a complete or a reopen and nothing else, so a `>` pressed by
+mistake is put back with `<`, and a `<` with `>` on the row above where the task was.
+
+Four cases send nothing and say why: `>` on the first task in the view, which has no row above it,
+`>` on a task already under the task above it, `>` on the first task of a project or section other
+than the one above it, and `<` on a task that is already at the top level.
+
+### Completing a parent
+
+`x` on a task with open subtasks in this view asks first, naming how many:
+
+```text
+Complete "Review the branch" and its 2 open subtasks? (Y)es, [N]o:
+```
+
+Yes or no, because Todoist closes a task's subtasks with it, server side, and offers no way to close
+a parent and leave its subtasks open. Answering no sends nothing at all. A task with no open subtasks
+in the view is completed with no question, which includes a parent whose children the current filter
+did not match: the count is the view's own, and the server still closes them.
 
 ### Quick edits
 

@@ -90,10 +90,32 @@ function M.complete_task(task)
 end
 
 --- Complete the task under the cursor. `u` puts it back.
+---
+--- Todoist closes a task's subtasks with it, server side, so completing a
+--- parent is one call and the question is whether the operator meant to take
+--- the children too. It is asked only when this view holds open children, and
+--- the answers are yes or no: the API offers no way to close a parent and leave
+--- its subtasks open.
+---
+--- The count is the view's own: a filtered view that matched a parent and none
+--- of its children asks nothing, and the server still closes them.
 function M.complete()
   local task = under_cursor()
   if not task then
     return
+  end
+
+  local children = require("todoist.list").children_of(task.id)
+  if #children > 0 then
+    local question = ("Complete %q and its %d open subtask%s?"):format(
+      text(task.content),
+      #children,
+      #children == 1 and "" or "s"
+    )
+
+    if vim.fn.confirm(question, "&Yes\n&No", 2) ~= 1 then
+      return say("left that task alone")
+    end
   end
 
   M.complete_task(task)
