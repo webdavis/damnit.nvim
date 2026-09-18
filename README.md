@@ -337,7 +337,7 @@ than the one above it, and `<` on a task that is already at the top level.
 `x` on a task with open subtasks in this view asks first, naming how many:
 
 ```text
-Complete "Review the branch" and its 2 open subtasks? [Y]es, (N)o:
+Complete "Review the branch" and its 2 open subtasks? (Y)es, [N]o:
 ```
 
 Yes or no, because Todoist closes a task's subtasks with it, server side, and offers no way to close
