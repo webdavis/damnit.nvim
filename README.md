@@ -76,16 +76,18 @@ quoted, in case a program printed the secret on the stream the error was read fr
 
 ## Options
 
-| Option          | Default                          | What it does                                  |
-| --------------- | -------------------------------- | --------------------------------------------- |
-| `token_command` | unset                            | A command whose standard output is the token. |
-| `token_env`     | unset                            | The name of an environment variable with it.  |
-| `base_url`      | `https://api.todoist.com/api/v1` | The API root requests are built against.      |
-| `curl`          | `"curl"`                         | The curl to run, found on `PATH` if bare.     |
-| `timeout`       | `15`                             | Seconds a request may take before curl stops. |
-| `views`         | `{}`                             | Named Todoist filter queries. See below.      |
-| `picker`        | `"auto"`                         | `auto`, `fzf-lua` or `select`. See below.     |
-| `sidebar`       | see below                        | The side, width and view of the sidebar.      |
+| Option             | Default                          | What it does                                   |
+| ------------------ | -------------------------------- | ---------------------------------------------- |
+| `token_command`    | unset                            | A command whose standard output is the token.  |
+| `token_env`        | unset                            | The name of an environment variable with it.   |
+| `base_url`         | `https://api.todoist.com/api/v1` | The API root requests are built against.       |
+| `curl`             | `"curl"`                         | The curl to run, found on `PATH` if bare.      |
+| `timeout`          | `15`                             | Seconds a request may take before curl stops.  |
+| `views`            | `{}`                             | Named Todoist filter queries. See below.       |
+| `picker`           | `"auto"`                         | `auto`, `fzf-lua` or `select`. See below.      |
+| `sidebar`          | see below                        | The side, width and view of the sidebar.       |
+| `refresh_interval` | `60`                             | Seconds between the fetches behind `status()`. |
+| `reminders`        | `false`                          | Announce a task with a time when it comes due. |
 
 Options are read when a request is made, so a later `setup` call changes the next request.
 
@@ -649,6 +651,57 @@ While the first fetch is out the sidebar says which view it is holding and `Load
 the same as any list, so a slow network reads as a slow network rather than an empty window. Lines
 are not wrapped, because a task belongs on one line even when the line is longer than the sidebar is
 wide.
+
+## The statusline
+
+```lua
+require("lualine").setup({
+  sections = { lualine_x = { require("todoist").status } },
+})
+```
+
+`status()` returns `3 due, 1 overdue`, or one half of that when only one half applies, or an empty
+string when nothing is due. A component that returns an empty string draws nothing, which is the
+right answer for "no news".
+
+It is called on every redraw, so it does no work at all: it hands back a string that was built the
+last time an answer arrived. One timer does the fetching, every `refresh_interval` seconds, and the
+first call to `status()` is what starts it. A plugin nobody asks about polls nothing.
+
+That makes the count up to `refresh_interval` seconds old, which is the trade for a component that
+cannot stutter. Three readings are not counts:
+
+| What you see | What it means                                          |
+| ------------ | ------------------------------------------------------ |
+| empty        | No fetch has finished yet, or nothing is due.          |
+| `todoist !`  | The last fetch failed, or the token would not resolve. |
+| a count      | What Todoist said at the last fetch.                   |
+
+A count left standing after the network died is worse than no count, so a failure replaces the
+number rather than keeping it.
+
+A task due today at 09:00 is overdue from 09:00 on. A task due today with no time is due for the
+whole of its day and overdue only once the day is over, because a full-day task names no moment to
+be late by. Tasks due later than today are counted as neither.
+
+## Due reminders
+
+```lua
+opts = { reminders = true }
+```
+
+Off unless you turn it on. With it on, a task that carries a time raises one `vim.notify` when its
+time has come, once per task per due instant, and the next iteration of a recurring task counts as a
+new instant. A full-day task never raises one, having no moment to announce.
+
+It rides on the same fetch as the statusline, so there is one poller in this plugin, and turning
+reminders on is what starts it when nothing has called `status()`. The lateness of an announcement
+is therefore `refresh_interval` at worst.
+
+A task completed before its time arrives is gone from the next fetch and is never announced. A task
+whose time passed while Neovim was closed is not announced either: the first fetch after the timer
+starts records what is already overdue and says nothing, so opening the editor in the evening does
+not replay the morning. The timer stops on `VimLeavePre`, so nothing outlives the editor.
 
 ## Health
 
