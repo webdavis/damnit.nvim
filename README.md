@@ -244,13 +244,22 @@ A name the plugin was never given is refused before any request, and the refusal
 are declared. `:Todoist` completes them, alongside `capture`, `completed`, `task` and `toggle`.
 
 The list is a plain unlisted buffer in the current window, so every window command, search and motion
-works on it. Three keys are bound in it:
+works on it. These keys are bound in it:
 
 | Key    | What it does                                        |
 | ------ | --------------------------------------------------- |
 | `<CR>` | Opens the task on this line as a task buffer.       |
 | `R`    | Asks the API again for the view being shown.        |
 | `gd`   | Jumps to the code the task was captured from.       |
+| `x`    | Completes the task on this line.                    |
+| `X`    | Reopens the task on this line.                      |
+| `dd`   | Deletes the task on this line, after a confirm.     |
+| `p`    | Cycles the priority one step up in urgency.         |
+| `s`    | Sets the due date from a line you type.             |
+| `l`    | Toggles a label from a picker.                      |
+| `m`    | Moves the task to a project or section.             |
+| `a`    | Adds a task from a line of Quick Add syntax.        |
+| `u`    | Undoes the last complete or reopen.                 |
 
 In the sidebar `<CR>` opens the task in the window beside it, so the list stays where it is.
 
@@ -283,6 +292,39 @@ The API refused this view:
 
   Invalid query
 ```
+
+### Quick edits
+
+The eight edit keys are [herdr-todoist](https://github.com/webdavis/herdr-todoist)'s eight, so a hand
+that learned the pane knows the list. `x`, `X` and `p` act at once. `dd` asks yes or no first,
+because Todoist keeps no undo for a delete. `s` and `a` ask for a line through `vim.ui.input`, and
+`l` and `m` offer a picker through `vim.ui.select`, so whatever you have those configured to be is
+what you get.
+
+`s` and `a` are Todoist's own syntax, sent unparsed: `s` takes a due string (`tomorrow`, `next mon`,
+`every 2 weeks`) and `a` takes a whole Quick Add line
+(`Pay rent tomorrow 9am p1 #Finances @home`). The API reads them, so a line it cannot read comes
+back in its own wording.
+
+Every write is followed by a read of the view on screen, so what you are looking at came from the
+server rather than from a guess at what the write did. A refused write leaves the lines where they
+are and says what the API said.
+
+### The undo
+
+`u` reverses the last complete or reopen, and that is the whole of it:
+
+- One level and no stack. A second complete replaces the first as the one `u` will reverse.
+- Within the session only. Nothing is written to disk, so a restart starts with nothing to undo.
+- Only a complete and a reopen. They are the pair with an exact opposite: a delete is gone, and a
+  moved or relabelled task keeps no remembered previous state. After any other key, `u` says there
+  is nothing to undo and sends nothing.
+- A reversal the API refuses keeps the write remembered, so `u` can be pressed again, and re-reads
+  the view so the buffer holds what the server holds rather than what the undo meant to do.
+
+`u` in the completed history reopens the task on the line, which is the same word for the same act
+from the other side: there, every line is already completed, so reopening one is what undoing means.
+They are two buffers with their own keys, so neither shadows the other.
 
 ### The same names in the herdr pane
 
