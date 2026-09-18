@@ -84,6 +84,7 @@ quoted, in case a program printed the secret on the stream the error was read fr
 | `curl`          | `"curl"`                         | The curl to run, found on `PATH` if bare.     |
 | `timeout`       | `15`                             | Seconds a request may take before curl stops. |
 | `views`         | `{}`                             | Named Todoist filter queries. See below.      |
+| `picker`        | `"auto"`                         | `auto`, `fzf-lua` or `select`. See below.     |
 | `sidebar`       | see below                        | The side, width and view of the sidebar.      |
 
 Options are read when a request is made, so a later `setup` call changes the next request.
@@ -335,6 +336,55 @@ be read side by side: every `name` there is a key here, and the `filter` beside 
 value, character for character. Keeping them equal is a convention rather than a mechanism, because
 neither plugin reads the other's configuration, and the point of it is that one word opens one list
 whichever of the two you are in.
+
+## Searching the tasks
+
+```vim
+:Todoist pick                 " the view on screen, or every open task
+:Todoist pick today           " one named view, whatever is on screen
+```
+
+```lua
+vim.keymap.set("n", "<leader>tf", function() require("todoist").pick() end)
+```
+
+| Key     | What it does                                    |
+| ------- | ----------------------------------------------- |
+| `<CR>`  | Opens the picked task as a task buffer.         |
+| `<C-x>` | Completes the picked task and closes the picker. |
+
+Each line carries the task's content, its due date, its priority, its labels and the project and
+section it lives in, so any of those can be typed at.
+
+### Which tasks it searches
+
+With no argument the search follows the screen. A list buffer showing a filtered view is searched
+inside that filter, the unfiltered list searches every open task, and with no list buffer in the
+tabpage it searches every open task as well. Given a view name it searches that view whatever is on
+screen, which is what a keymap bound to one view wants. The prompt always names the view and its
+filter query, so a search that is holding tasks back says which filter is holding them.
+
+### fzf-lua, or vim.ui.select
+
+[fzf-lua](https://github.com/ibhagwan/fzf-lua) is optional and is never required at load: it is
+looked up when a search is asked for, so installing it later needs no restart and not having it is
+not an error. `picker` decides which front end opens:
+
+| Value      | What it opens                                                                 |
+| ---------- | ----------------------------------------------------------------------------- |
+| `auto`     | fzf-lua when it loads, `vim.ui.select` otherwise. The default.                 |
+| `fzf-lua`  | fzf-lua, or `vim.ui.select` with a notice saying fzf-lua is not installed.     |
+| `select`   | `vim.ui.select`, whether fzf-lua is installed or not.                          |
+
+`<C-x>` is an fzf-lua binding. `vim.ui.select` offers one choice and no second key, so on that path
+selecting a task opens it and completing one is `x` in the list.
+
+### Completing from the picker
+
+`<C-x>` completes the picked task through the same call the list's `x` makes, so `u` in the list
+reverses a complete made in the picker exactly as it reverses one made on a line. The picker closes,
+because fzf-lua's accept keys close it, and the list buffer re-reads the view afterwards, so the task
+is gone from the list a moment later without the list guessing at what the write did.
 
 ## Capture from code
 
