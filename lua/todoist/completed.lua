@@ -92,8 +92,13 @@ local function load(buf)
   local held = walking:len()
   in_flight = true
 
+  -- `history` may have moved on to a newer walk by the time this fires, in
+  -- which case that walk owns `in_flight` now and this stale answer must not
+  -- clear it out from under it.
   local function stop()
-    in_flight = false
+    if history == walking then
+      in_flight = false
+    end
   end
 
   local function step()
