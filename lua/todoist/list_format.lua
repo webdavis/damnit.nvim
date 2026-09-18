@@ -96,22 +96,16 @@ function M.due_of(task)
   return value
 end
 
---- One task as one line: what it is, when it is due, how urgent it is and what
---- it is labelled. A task carries a bullet and a heading does not, which is
---- what separates a section's name from a task sitting at the same indent. `p4` is the API's own priority scale, the same one the task
---- buffer shows, where 4 is the most urgent. Priority 1 is no priority and is
---- left off rather than written out.
+--- The badges every task line carries after its content: when it is due, how
+--- urgent it is and what it is labelled, in that order. `p4` is the API's own
+--- priority scale, the same one the task buffer shows, where 4 is the most
+--- urgent; priority 1 is no priority and is left off rather than written out.
 ---
---- A task captured from code ends with the location icon. It goes last, beside
---- the other badges, so a narrow sidebar truncates the icon rather than the
---- content: the columns the content starts at do not move.
+--- Shared by the list's own line and the picker's, so a null field or a badge's
+--- wording is fixed once rather than in each rendering.
+---@param parts string[] appended to in place
 ---@param task table
----@param indent string
----@param where todoist.Location? the location its description holds
----@return string
-function M.task_line(task, indent, where)
-  local parts = { indent .. "  - " .. text(task.content) }
-
+function M.append_badges(parts, task)
   local due = M.due_of(task)
   if due ~= "" then
     parts[#parts + 1] = "(" .. due .. ")"
@@ -125,6 +119,22 @@ function M.task_line(task, indent, where)
   for _, label in ipairs(M.labels_of(task)) do
     parts[#parts + 1] = "@" .. text(label)
   end
+end
+
+--- One task as one line: what it is, when it is due, how urgent it is and what
+--- it is labelled. A task carries a bullet and a heading does not, which is
+--- what separates a section's name from a task sitting at the same indent.
+---
+--- A task captured from code ends with the location icon. It goes last, beside
+--- the other badges, so a narrow sidebar truncates the icon rather than the
+--- content: the columns the content starts at do not move.
+---@param task table
+---@param indent string
+---@param where todoist.Location? the location its description holds
+---@return string
+function M.task_line(task, indent, where)
+  local parts = { indent .. "  - " .. text(task.content) }
+  M.append_badges(parts, task)
 
   if where then
     parts[#parts + 1] = location.ICON

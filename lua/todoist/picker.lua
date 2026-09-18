@@ -48,20 +48,7 @@ end
 ---@return string
 function M.line(task, projects, sections)
   local parts = { text(task.content) }
-
-  local due = format.due_of(task)
-  if due ~= "" then
-    parts[#parts + 1] = "(" .. due .. ")"
-  end
-
-  local priority = tonumber(task.priority) or 1
-  if priority > 1 then
-    parts[#parts + 1] = "p" .. priority
-  end
-
-  for _, label in ipairs(format.labels_of(task)) do
-    parts[#parts + 1] = "@" .. text(label)
-  end
+  format.append_badges(parts, task)
 
   local place = projects[text(task.project_id)] or ""
   local section = sections[text(task.section_id)] or ""
