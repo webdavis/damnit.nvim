@@ -1,0 +1,54 @@
+name: CI
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Pinned release binary, checksum verified against the value measured at pin time.
+      - name: Install stylua
+        env:
+          STYLUA_VERSION: "2.5.2"
+          STYLUA_SHA256: "bcb0d855e91f102f28a370e850f8566b3b44b79e6274d806ea5246837c0fd5ab"
+        run: |
+          curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/v${STYLUA_VERSION}/stylua-linux-x86_64.zip"
+          printf '%s  stylua.zip\n' "$STYLUA_SHA256" | shasum -a 256 -c -
+          unzip -q stylua.zip
+          chmod 0755 stylua
+          sudo mv stylua /usr/local/bin/stylua
+      - name: Install luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks
+          sudo luarocks install luacheck
+      - name: stylua --check
+        run: stylua --check .
+      - name: luacheck
+        run: luacheck .
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Pinned release tarball, checksum verified against the value measured at pin time.
+      # v0.12.5 matches the version the README says this plugin is developed and tested on.
+      - name: Install Neovim
+        env:
+          NVIM_VERSION: "v0.12.5"
+          NVIM_SHA256: "bce0f56eda1f1b1db6eee8f4133d7a38813ea07933837dd1777411ca384c6875"
+        run: |
+          curl -fsSL -o nvim.tar.gz "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          printf '%s  nvim.tar.gz\n' "$NVIM_SHA256" | shasum -a 256 -c -
+          tar xzf nvim.tar.gz
+          echo "$PWD/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+      - name: Run the test suite
+        run: nvim --headless --clean -l tests/run.lua
