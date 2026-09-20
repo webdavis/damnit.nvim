@@ -30,6 +30,12 @@ local BARE = {
   due = vim.NIL,
 }
 
+--- A parent and its two open subtasks, in one project, as the API answers them:
+--- a top-level task carries `parent_id` as the JSON null.
+local RELEASE = { id = "7Aa", content = "Ship the release", project_id = "220", parent_id = vim.NIL }
+local TAG = { id = "7Bb", content = "Tag it", project_id = "220", parent_id = "7Aa" }
+local NOTES = { id = "7Cc", content = "Write the notes", project_id = "220", parent_id = "7Aa" }
+
 local PROJECTS = { { id = "220", name = "Home" } }
 local SECTIONS = { { id = "7", name = "Groceries", project_id = "220" } }
 
@@ -38,7 +44,8 @@ local SECTIONS = { { id = "7", name = "Groceries", project_id = "220" } }
 ---
 --- `env` sets what the stubs answer: `tasks` is what the API returns, `shown`
 --- is the view the list buffer is on (nil for no list open), `fzf` installs the
---- fake fzf-lua, and `picker_option` is the `picker` setting.
+--- fake fzf-lua, `picker_option` is the `picker` setting, and `confirm` is what
+--- the yes or no question is answered with, 1 being yes.
 ---@param env table
 ---@param steps fun(seen: table)
 ---@return table seen
@@ -47,7 +54,8 @@ local function drive(env, steps)
   local list = require("todoist.list")
   local todoist = require("todoist")
 
-  local seen = { reads = {}, notifications = {}, opened = {}, closed = {}, reopened = {}, select = nil, fzf = nil }
+  local seen =
+    { reads = {}, notifications = {}, opened = {}, closed = {}, reopened = {}, asked = {}, select = nil, fzf = nil }
 
   local stubs = {
     get_tasks = function(callback)
@@ -74,7 +82,7 @@ local function drive(env, steps)
     end,
   }
 
-  local reals = { notify = vim.notify, ui = vim.ui, options = todoist.options }
+  local reals = { notify = vim.notify, ui = vim.ui, options = todoist.options, confirm = vim.fn.confirm }
   for name in pairs(stubs) do
     reals[name] = client[name]
     client[name] = stubs[name]
@@ -100,6 +108,11 @@ local function drive(env, steps)
       seen.select = { items = items, opts = opts }
     end,
   }
+  vim.fn.confirm = function(question)
+    table.insert(seen.asked, question)
+
+    return env.confirm or 1
+  end
 
   local real_fzf = package.loaded["fzf-lua"]
   package.loaded["fzf-lua"] = nil
@@ -122,6 +135,7 @@ local function drive(env, steps)
   list.current_spec, list.refresh = real_current_spec, real_refresh
   task_buffer.open = real_open
   vim.notify, vim.ui, todoist.options = reals.notify, reals.ui, reals.options
+  vim.fn.confirm = reals.confirm
 
   assert(ok, err)
 
@@ -221,6 +235,48 @@ return {
 
     assert(vim.deep_equal(seen.closed, { "6XGg" }), vim.inspect(seen.closed))
     assert(#seen.opened == 0, vim.inspect(seen.opened))
+  end,
+
+  ["an entry carries how many open subtasks it has among the tasks searched"] = function()
+    local entries = picker.entries({ RELEASE, TAG, NOTES, MILK }, PROJECTS, SECTIONS)
+
+    local counts = {}
+    for _, entry in ipairs(entries) do
+      counts[entry.id] = entry.open_subtasks
+    end
+
+    assert(vim.deep_equal(counts, { ["7Aa"] = 2, ["7Bb"] = 0, ["7Cc"] = 0, ["6XGg"] = 0 }), vim.inspect(counts))
+  end,
+
+  ["ctrl-x on a parent asks before completing, and completes once the answer is yes"] = function()
+    local seen = drive({ tasks = { RELEASE, TAG, NOTES }, fzf = true, confirm = 1 }, function(recorded)
+      picker.pick()
+      action(recorded, "ctrl-x")({ "7Aa\tShip the release" })
+    end)
+
+    assert(#seen.asked == 1, vim.inspect(seen.asked))
+    assert(seen.asked[1]:find("its 2 open subtasks", 1, true), seen.asked[1])
+    assert(vim.deep_equal(seen.closed, { "7Aa" }), vim.inspect(seen.closed))
+  end,
+
+  ["ctrl-x on a parent sends nothing when the answer is no"] = function()
+    local seen = drive({ tasks = { RELEASE, TAG, NOTES }, fzf = true, confirm = 2 }, function(recorded)
+      picker.pick()
+      action(recorded, "ctrl-x")({ "7Aa\tShip the release" })
+    end)
+
+    assert(#seen.asked == 1, vim.inspect(seen.asked))
+    assert(#seen.closed == 0, vim.inspect(seen.closed))
+  end,
+
+  ["ctrl-x on a task with no open subtasks asks nothing"] = function()
+    local seen = drive({ tasks = { RELEASE, TAG, NOTES }, fzf = true }, function(recorded)
+      picker.pick()
+      action(recorded, "ctrl-x")({ "7Bb\tTag it" })
+    end)
+
+    assert(#seen.asked == 0, vim.inspect(seen.asked))
+    assert(vim.deep_equal(seen.closed, { "7Bb" }), vim.inspect(seen.closed))
   end,
 
   ["a complete made from the picker is what u reverses"] = function()

@@ -89,28 +89,26 @@ function M.complete_task(task)
   client.close_task(task.id, wrote("completed " .. content, { kind = "complete", id = task.id, content = content }))
 end
 
---- Complete the task under the cursor. `u` puts it back.
+--- Complete one task, asking first when open subtasks go with it. `u` puts it
+--- back.
 ---
 --- Todoist closes a task's subtasks with it, server side, so completing a
 --- parent is one call and the question is whether the operator meant to take
---- the children too. It is asked only when this view holds open children, and
---- the answers are yes or no: the API offers no way to close a parent and leave
---- its subtasks open.
+--- the children too. It is asked only when the caller counted open children,
+--- and the answers are yes or no: the API offers no way to close a parent and
+--- leave its subtasks open.
 ---
---- The count is the view's own: a filtered view that matched a parent and none
---- of its children asks nothing, and the server still closes them.
-function M.complete()
-  local task = under_cursor()
-  if not task then
-    return
-  end
-
-  local children = require("todoist.list").children_of(task.id)
-  if #children > 0 then
+--- The count is the caller's view of the task set it is acting in: a filtered
+--- view that matched a parent and none of its children asks nothing, and the
+--- server still closes them.
+---@param task table
+---@param open_subtasks integer how many open subtasks the caller's view holds
+function M.complete_asking(task, open_subtasks)
+  if open_subtasks > 0 then
     local question = ("Complete %q and its %d open subtask%s?"):format(
       text(task.content),
-      #children,
-      #children == 1 and "" or "s"
+      open_subtasks,
+      open_subtasks == 1 and "" or "s"
     )
 
     if vim.fn.confirm(question, "&Yes\n&No", 2) ~= 1 then
@@ -119,6 +117,17 @@ function M.complete()
   end
 
   M.complete_task(task)
+end
+
+--- Complete the task under the cursor, counting its open subtasks in the view
+--- on screen. `u` puts it back.
+function M.complete()
+  local task = under_cursor()
+  if not task then
+    return
+  end
+
+  M.complete_asking(task, #require("todoist.list").children_of(task.id))
 end
 
 --- Reopen the task under the cursor, for a list whose filter shows completed

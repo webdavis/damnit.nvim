@@ -517,10 +517,22 @@ selecting a task opens it and completing one is `x` in the list.
 
 ### Completing from the picker
 
-`<C-x>` completes the picked task through the same call the list's `x` makes, so `u` in the list
-reverses a complete made in the picker exactly as it reverses one made on a line. The picker closes,
-because fzf-lua's accept keys close it, and the list buffer re-reads the view afterwards, so the task
-is gone from the list a moment later without the list guessing at what the write did.
+`<C-x>` completes the picked task through the same path the list's `x` takes, so `u` in the list
+reverses a complete made in the picker exactly as it reverses one made on a line, and a parent asks
+the same yes or no question first:
+
+```text
+Complete "Ship the release" and its 2 open subtasks? (Y)es, [N]o:
+```
+
+Todoist closes a task's subtasks with it, server side, so the question is whether the subtasks were
+meant to go too, and answering no sends nothing at all. The count is the search's own, over the tasks
+that search covered: a filtered view that matched a parent and none of its children asks nothing, and
+the server still closes them. A task with no open subtasks among them is completed with no question.
+
+The picker closes, because fzf-lua's accept keys close it, and the list buffer re-reads the view
+afterwards, so the task is gone from the list a moment later without the list guessing at what the
+write did.
 
 ## Capture from code
 
