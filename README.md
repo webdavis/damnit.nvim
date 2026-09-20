@@ -517,10 +517,14 @@ selecting a task opens it and completing one is `x` in the list.
 
 ### Completing from the picker
 
-`<C-x>` completes the picked task through the same call the list's `x` makes, so `u` in the list
-reverses a complete made in the picker exactly as it reverses one made on a line. The picker closes,
-because fzf-lua's accept keys close it, and the list buffer re-reads the view afterwards, so the task
-is gone from the list a moment later without the list guessing at what the write did.
+`<C-x>` completes the picked task through the same path the list's `x` takes, asking the same yes or
+no question over the tasks the search covered when the task is a parent with open subtasks in that
+set; see "Completing a parent" above.
+
+The picker closes, because fzf-lua's accept keys close it, and the list buffer re-reads the view
+afterwards, so the task is gone from the list a moment later without the list guessing at what the
+write did, and `u` in the list reverses a complete made here exactly as it reverses one made on a
+line.
 
 ## Capture from code
 

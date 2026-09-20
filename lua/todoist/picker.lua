@@ -17,6 +17,7 @@
 local M = {}
 
 local format = require("todoist.list_format")
+local tree = require("todoist.tree")
 
 --- What separates the task id from the text on an fzf line. fzf is told to
 --- display and match from the second field on, so the id travels with the entry
@@ -65,20 +66,27 @@ end
 
 --- The entries a set of tasks becomes, in the order the API gave them: Todoist
 --- has already ordered them, and fzf ranks by the query anyway.
+---
+--- Each entry carries how many open subtasks it has among these same tasks,
+--- because completing a parent closes them server side and the picker has no
+--- buffer to count a tree in.
 ---@param tasks table[]?
 ---@param projects table[]?
 ---@param sections table[]?
----@return { id: string, text: string, task: table }[]
+---@return { id: string, text: string, task: table, open_subtasks: integer }[]
 function M.entries(tasks, projects, sections)
   local project_names = format.names_by_id(projects)
   local section_names = format.names_by_id(sections)
+  local forest = tree.index(tasks or {})
 
   local entries = {}
   for _, task in ipairs(tasks or {}) do
+    local id = text(task.id)
     entries[#entries + 1] = {
-      id = text(task.id),
+      id = id,
       text = M.line(task, project_names, section_names),
       task = task,
+      open_subtasks = tree.child_count(forest, id),
     }
   end
 
@@ -91,11 +99,12 @@ function M.open_entry(entry)
   require("todoist.task_buffer").open(entry.id)
 end
 
---- Complete the picked task, through the same call the list's `x` makes, so
---- `u` reverses a complete made here as well.
----@param entry { task: table }
+--- Complete the picked task, through the same path the list's `x` takes, so a
+--- parent asks before its subtasks go with it and `u` reverses a complete made
+--- here as well.
+---@param entry { task: table, open_subtasks: integer }
 function M.complete_entry(entry)
-  require("todoist.quick_edit").complete_task(entry.task)
+  require("todoist.quick_edit").complete_asking(entry.task, entry.open_subtasks)
 end
 
 --- The id on an fzf selection, which is everything before the first delimiter.
@@ -137,7 +146,7 @@ function M.fzf_lua()
   return nil
 end
 
----@param entries { id: string, text: string, task: table }[]
+---@param entries { id: string, text: string, task: table, open_subtasks: integer }[]
 ---@param title string
 local function with_fzf_lua(fzf_lua, entries, title)
   local lines, by_id = {}, {}
@@ -163,7 +172,7 @@ local function with_fzf_lua(fzf_lua, entries, title)
   })
 end
 
----@param entries { id: string, text: string, task: table }[]
+---@param entries { id: string, text: string, task: table, open_subtasks: integer }[]
 ---@param title string
 local function with_ui_select(entries, title)
   vim.ui.select(entries, {
@@ -179,7 +188,7 @@ local function with_ui_select(entries, title)
 end
 
 --- Put the entries in front of the operator in whichever front end is available.
----@param entries { id: string, text: string, task: table }[]
+---@param entries { id: string, text: string, task: table, open_subtasks: integer }[]
 ---@param title string what the prompt says the search is inside
 function M.show(entries, title)
   local fzf_lua = M.fzf_lua()
