@@ -230,6 +230,17 @@ return {
     assert(seen.calls[1].name == "close" and seen.calls[1].id == "p", vim.inspect(seen.calls))
   end,
 
+  ["x on a parent with exactly one open subtask asks with the singular"] = function()
+    local seen = with_view({ confirm = 1 }, function(view)
+      cursor_on(view, "Tag it")
+      quick_edit.complete()
+    end)
+
+    assert(#seen.asked == 1, vim.inspect(seen.asked))
+    assert(seen.asked[1]:find("its 1 open subtask?", 1, true), seen.asked[1])
+    assert(seen.calls[1].name == "close" and seen.calls[1].id == "c1", vim.inspect(seen.calls))
+  end,
+
   ["x on a parent sends nothing when the answer is no"] = function()
     local seen = with_view({ confirm = 2 }, function(view)
       cursor_on(view, "Ship the release")
