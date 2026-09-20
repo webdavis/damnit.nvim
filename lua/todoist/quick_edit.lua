@@ -84,7 +84,7 @@ end
 --- The picker completes through here rather than through its own call, so one
 --- complete is one code path and the undo remembers both of them.
 ---@param task table
-function M.complete_task(task)
+local function complete_task(task)
   local content = text(task.content)
   client.close_task(task.id, wrote("completed " .. content, { kind = "complete", id = task.id, content = content }))
 end
@@ -116,7 +116,7 @@ function M.complete_asking(task, open_subtasks)
     end
   end
 
-  M.complete_task(task)
+  complete_task(task)
 end
 
 --- Complete the task under the cursor, counting its open subtasks in the view
