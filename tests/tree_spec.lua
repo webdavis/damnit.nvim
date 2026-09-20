@@ -62,10 +62,13 @@ return {
 
   ["counts the children a task has in this view"] = function()
     local second = { id = "c2", content = "Write the notes", parent_id = "p" }
-    local forest = indexed({ PARENT, CHILD, second })
+    local forest = indexed({ PARENT, CHILD, second, GRANDCHILD })
 
+    -- GRANDCHILD sits under CHILD, so "p" has a grandchild: child_count(p)
+    -- must stay 2, not fall through to a descendant total of 3.
     assert(tree.child_count(forest, "p") == 2, tostring(tree.child_count(forest, "p")))
-    assert(tree.child_count(forest, "c") == 0)
+    assert(tree.child_count(forest, "c") == 1, tostring(tree.child_count(forest, "c")))
+    assert(tree.child_count(forest, "g") == 0)
   end,
 
   ["> puts a task under the one above it, whatever level that one is at"] = function()
