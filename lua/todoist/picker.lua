@@ -102,9 +102,9 @@ end
 --- Complete the picked task, through the same path the list's `x` takes, so a
 --- parent asks before its subtasks go with it and `u` reverses a complete made
 --- here as well.
----@param entry { task: table, open_subtasks: integer? }
+---@param entry { task: table, open_subtasks: integer }
 function M.complete_entry(entry)
-  require("todoist.quick_edit").complete_asking(entry.task, entry.open_subtasks or 0)
+  require("todoist.quick_edit").complete_asking(entry.task, entry.open_subtasks)
 end
 
 --- The id on an fzf selection, which is everything before the first delimiter.

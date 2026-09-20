@@ -284,7 +284,7 @@ return {
 
     local seen = drive({}, function()
       quick_edit.forget()
-      picker.complete_entry({ task = MILK })
+      picker.complete_entry({ task = MILK, open_subtasks = 0 })
       quick_edit.undo()
     end)
 

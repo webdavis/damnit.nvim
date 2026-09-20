@@ -279,7 +279,7 @@ return {
     local scratch = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_win_set_buf(0, scratch)
 
-    require("todoist.picker").complete_entry({ task = { id = "6XGg", content = "Buy milk" } })
+    require("todoist.picker").complete_entry({ task = { id = "6XGg", content = "Buy milk" }, open_subtasks = 0 })
 
     -- The initial open's three requests, then the close, then the reread's
     -- own three requests.
