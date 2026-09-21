@@ -12,8 +12,8 @@
 
 local M = {}
 
-local location = require("todoist.location")
-local tree = require("todoist.tree")
+local location = require("damnit.location")
+local tree = require("damnit.tree")
 
 --- The indent each kind of line carries. Two spaces per level, so a task under
 --- a section is four in and a task directly under a project is two.
@@ -134,7 +134,7 @@ end
 --- tree that lost a level says where the level went.
 ---@param task table
 ---@param indent string
----@param where todoist.Location? the location its description holds
+---@param where damnit.Location? the location its description holds
 ---@param folded integer? children hidden under this line, when it is folded
 ---@return string
 function M.task_line(task, indent, where, folded)
@@ -153,7 +153,7 @@ function M.task_line(task, indent, where, folded)
 end
 
 --- The heading that names the view, so a buffer says which list it is holding.
----@param spec todoist.ListSpec
+---@param spec damnit.ListSpec
 ---@return string
 function M.title(spec)
   if spec.filter then
@@ -167,8 +167,8 @@ end
 ---
 --- The API's own wording is the body of it, which is what keeps a filter it
 --- rejected from reading as a filter that matched nothing.
----@param spec todoist.ListSpec
----@param err todoist.Error
+---@param spec damnit.ListSpec
+---@param err damnit.Error
 ---@return string[]
 function M.refusal(spec, err)
   return { M.title(spec), "", "The API refused this view:", "", "  " .. err.message }
@@ -249,7 +249,7 @@ local function section_render_order(present, ordered)
   return vim.list_extend(render, leftover)
 end
 
----@class todoist.ListSpec
+---@class damnit.ListSpec
 ---@field title string the name the buffer reports, a view's name or a phrase
 ---@field filter string? a Todoist filter query, or nil for every open task
 
@@ -260,14 +260,14 @@ end
 --- would have put them. Only the head of a tree is grouped, so a subtask never
 --- appears twice, and a task whose parent this view does not hold heads a tree
 --- of its own rather than disappearing.
----@param spec todoist.ListSpec
+---@param spec damnit.ListSpec
 ---@param tasks table[] as the API returned them
 ---@param projects table[] every project, for the headings
 ---@param sections table[] every section, for the headings
 ---@param collapsed table<string, boolean>? task ids whose subtasks are folded away
 ---@return string[] lines
 ---@return table<integer, string> task id by line number
----@return table<integer, todoist.Location> location by line number, where one was captured
+---@return table<integer, damnit.Location> location by line number, where one was captured
 function M.render(spec, tasks, projects, sections, collapsed)
   local project_names, project_order = M.names_by_id(projects)
   local section_names = M.names_by_id(sections)

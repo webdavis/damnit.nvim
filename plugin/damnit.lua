@@ -1,22 +1,22 @@
--- `:Todoist`, `:Todoist <view>`, `:Todoist completed`, `:Todoist task <id>` and
--- `:Todoist toggle`
+-- `:Dam`, `:Dam <view>`, `:Dam completed`, `:Dam task <id>` and
+-- `:Dam toggle`
 --
 -- The command lives here rather than behind `setup` so that entering Neovim on
 -- it works, which is how the herdr pane and every list view open a task:
 -- `nvim +"Todoist task <id>"` in an editor holding nothing else.
 
-if vim.g.loaded_todoist then
+if vim.g.loaded_damnit then
   return
 end
-vim.g.loaded_todoist = true
+vim.g.loaded_damnit = true
 
-local USAGE = "usage is :Todoist, :Todoist <view>, :Todoist completed, :Todoist toggle,"
-  .. " :Todoist capture, :Todoist pick [<view>] or :Todoist task <id>"
+local USAGE = "usage is :Dam, :Dam <view>, :Dam completed, :Dam toggle,"
+  .. " :Dam capture, :Dam pick [<view>] or :Dam task <id>"
 
 ---@param lead string what has been typed of the argument being completed
 ---@return string[]
 local function complete(lead)
-  local candidates = vim.tbl_keys(require("todoist").options.views or {})
+  local candidates = vim.tbl_keys(require("damnit").options.views or {})
   table.insert(candidates, "capture")
   table.insert(candidates, "completed")
   table.insert(candidates, "pick")
@@ -29,65 +29,65 @@ local function complete(lead)
   end, candidates)
 end
 
-vim.api.nvim_create_user_command("Todoist", function(cmd)
+vim.api.nvim_create_user_command("Dam", function(cmd)
   local args = cmd.fargs
 
   if #args == 0 then
-    return require("todoist").open()
+    return require("damnit").open()
   end
 
   if args[1] == "toggle" then
     if #args ~= 1 then
-      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+      return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
     end
 
-    return require("todoist.sidebar").toggle()
+    return require("damnit.sidebar").toggle()
   end
 
   if args[1] == "completed" then
     if #args ~= 1 then
-      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+      return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
     end
 
-    return require("todoist.completed").open()
+    return require("damnit.completed").open()
   end
 
   if args[1] == "capture" then
     if #args ~= 1 then
-      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+      return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
     end
 
     -- `range` is 0 unless the command was given one, which is how a capture
     -- from visual mode is told apart from a capture on the cursor's line.
     local selection = cmd.range > 0 and { line1 = cmd.line1, line2 = cmd.line2 } or nil
 
-    return require("todoist.capture").capture(selection)
+    return require("damnit.capture").capture(selection)
   end
 
   if args[1] == "pick" then
     if #args > 2 then
-      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+      return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
     end
 
-    return require("todoist").pick(args[2])
+    return require("damnit").pick(args[2])
   end
 
   if args[1] == "task" then
     if #args ~= 2 then
-      return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+      return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
     end
 
-    return require("todoist.task_buffer").open(args[2])
+    return require("damnit.task_buffer").open(args[2])
   end
 
   if #args ~= 1 then
-    return vim.notify("todoist.nvim: " .. USAGE, vim.log.levels.ERROR)
+    return vim.notify("damnit.nvim: " .. USAGE, vim.log.levels.ERROR)
   end
 
-  require("todoist").open(args[1])
+  require("damnit").open(args[1])
 end, {
   nargs = "*",
   range = true,
   complete = complete,
-  desc = "Todoist: a list of tasks, a named view, the completed history, the sidebar, a capture, a search, or one task",
+  desc = "dam: a list of tasks, a named view, the completed history, the sidebar, a capture, a search, or one task",
 })

@@ -1,8 +1,8 @@
 -- The token boundary: where a token may come from, and what a failure is
 -- allowed to say about it.
 
-local todoist = require("todoist")
-local token = require("todoist.token")
+local todoist = require("damnit")
+local token = require("damnit.token")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 

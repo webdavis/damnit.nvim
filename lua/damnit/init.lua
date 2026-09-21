@@ -1,4 +1,4 @@
--- todoist.nvim: Todoist from inside Neovim.
+-- damnit.nvim: Todoist from inside Neovim.
 --
 -- This module is options and nothing else. The one thing worth knowing about
 -- them is that they are read when a request is made rather than copied into the
@@ -18,7 +18,7 @@ local M = {}
 --- reaches this plugin. There is no default path to read one from. When more
 --- than one is set they are tried in the order `token`, `token_command`,
 --- `token_env`.
----@class todoist.Options
+---@class damnit.Options
 ---@field token string? the token itself, for a machine with no vault or keychain
 ---@field token_command string[]? a command whose standard output is the token
 ---@field token_env string? the name of an environment variable holding the token
@@ -27,7 +27,7 @@ local M = {}
 ---@field timeout integer seconds a request may take before curl gives up
 ---@field views table<string, string> a view name to the Todoist filter it runs
 ---@field picker "auto"|"fzf-lua"|"select" which front end the task search uses
----@field sidebar todoist.SidebarOptions how `toggle` puts a view beside your work
+---@field sidebar damnit.SidebarOptions how `toggle` puts a view beside your work
 ---@field refresh_interval integer seconds between the background fetches behind `status()`
 ---@field reminders boolean whether a task with a time raises a notification when it comes due
 M.options = {
@@ -53,24 +53,24 @@ M.options = {
 --- `view` names a view declared in `views`, which is why `today` is the default
 --- here and not a filter: the word is the one the herdr pane uses for the same
 --- list, and the filter behind it is yours to write.
----@class todoist.SidebarOptions
+---@class damnit.SidebarOptions
 ---@field side "left"|"right" the edge the split sits on
 ---@field width integer columns the split is held at
 ---@field view string the name of the view it opens
 
----@param opts todoist.Options?
+---@param opts damnit.Options?
 function M.setup(opts)
   -- Deep, so naming one sidebar option keeps the defaults of the others.
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 
   -- A token already resolved under the old options is not the one the new
   -- options name.
-  require("todoist.token").forget()
+  require("damnit.token").forget()
 
   -- Reminders are the one option that does something on its own, so turning
   -- them on is what starts the fetching rather than the first statusline draw.
   if M.options.reminders then
-    require("todoist.status").start()
+    require("damnit.status").start()
   end
 end
 
@@ -79,7 +79,7 @@ end
 --- Resolving a name is separate from opening it because the sidebar needs the
 --- answer before it changes the layout.
 ---@param name string? a view declared in `setup`, or nil for every open task
----@return todoist.ListSpec? spec
+---@return damnit.ListSpec? spec
 function M.view(name)
   if name == nil or name == "" then
     return { title = "all open tasks" }
@@ -94,7 +94,7 @@ function M.view(name)
     local known = #declared > 0 and ("declared views are " .. table.concat(declared, ", "))
       or "no views are declared in setup"
 
-    vim.notify(("todoist.nvim: there is no view named %q. %s"):format(name, known), vim.log.levels.ERROR)
+    vim.notify(("damnit.nvim: there is no view named %q. %s"):format(name, known), vim.log.levels.ERROR)
 
     return nil
   end
@@ -106,7 +106,7 @@ end
 --- name.
 ---
 --- This is the function a keymap calls, and it is the one stable way in:
---- `vim.keymap.set("n", "<leader>tt", function() require("todoist").open("today") end)`.
+--- `vim.keymap.set("n", "<leader>tt", function() require("damnit").open("today") end)`.
 ---@param name string? a view declared in `setup`, or nil for every open task
 ---@return integer? buf the buffer the list is in, or nil when there is no such view
 function M.open(name)
@@ -115,7 +115,7 @@ function M.open(name)
     return nil
   end
 
-  return require("todoist.list").open(spec)
+  return require("damnit.list").open(spec)
 end
 
 --- Fuzzy-search the open tasks.
@@ -123,19 +123,19 @@ end
 --- Called with no name it searches the view on screen, so a filtered list stays
 --- filtered; with a name it searches that view. The fifth function a keymap
 --- calls:
---- `vim.keymap.set("n", "<leader>tf", function() require("todoist").pick() end)`.
+--- `vim.keymap.set("n", "<leader>tf", function() require("damnit").pick() end)`.
 ---@param name string? a view declared in `setup`, or nil to follow the screen
 function M.pick(name)
-  return require("todoist.picker").pick(name)
+  return require("damnit.picker").pick(name)
 end
 
 --- Open the completed history, newest first.
 ---
 --- The third function a keymap calls:
---- `vim.keymap.set("n", "<leader>td", require("todoist").completed)`.
+--- `vim.keymap.set("n", "<leader>td", require("damnit").completed)`.
 ---@return integer buf the buffer the history is in
 function M.completed()
-  return require("todoist.completed").open()
+  return require("damnit.completed").open()
 end
 
 --- What is due, in a few words, for a statusline.
@@ -146,18 +146,18 @@ end
 --- last background fetch built, and the first call is what starts those
 --- fetches.
 ---
---- In lualine: `sections = { lualine_x = { require("todoist").status } }`.
+--- In lualine: `sections = { lualine_x = { require("damnit").status } }`.
 ---@return string
 function M.status()
-  return require("todoist.status").status()
+  return require("damnit.status").status()
 end
 
 --- Open the sidebar, or close the one this tabpage already has.
 ---
 --- The other function a keymap calls:
---- `vim.keymap.set("n", "<leader>tb", require("todoist").toggle)`.
+--- `vim.keymap.set("n", "<leader>tb", require("damnit").toggle)`.
 function M.toggle()
-  return require("todoist.sidebar").toggle()
+  return require("damnit.sidebar").toggle()
 end
 
 return M

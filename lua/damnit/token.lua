@@ -82,7 +82,7 @@ end
 --- The command path answers on a later tick and the environment path answers
 --- immediately. Either way no caller of this is allowed to block on it, and the
 --- client treats both the same.
----@param options todoist.Options
+---@param options damnit.Options
 ---@param callback fun(token: string?, err: string?)
 function M.resolve(options, callback)
   if cached then

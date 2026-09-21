@@ -1,6 +1,6 @@
 -- A task made out of the code in front of you.
 --
--- `:Todoist capture` takes the content from a visual selection when there is
+-- `:Dam capture` takes the content from a visual selection when there is
 -- one and asks for it when there is not, and puts the buffer's location in the
 -- task's description. Nothing else is set, so the task lands in Inbox, which is
 -- where a capture belongs until it is triaged.
@@ -10,8 +10,8 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local location = require("todoist.location")
+local client = require("damnit.client")
+local location = require("damnit.location")
 
 --- What a comment starts with in the languages a person writes `TODO` in, and
 --- the tail a block comment ends with. Letters are never in this set: a leader
@@ -79,12 +79,12 @@ end
 ---@param message string
 ---@param level integer?
 local function notify(message, level)
-  vim.notify("todoist.nvim: " .. message, level or vim.log.levels.INFO)
+  vim.notify("damnit.nvim: " .. message, level or vim.log.levels.INFO)
 end
 
 --- Send one task, with its location in the description when there is one.
 ---@param content string
----@param where todoist.Location?
+---@param where damnit.Location?
 function M.create(content, where)
   if content == "" then
     return notify("there is nothing to capture here", vim.log.levels.WARN)

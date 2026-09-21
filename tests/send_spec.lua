@@ -5,7 +5,7 @@
 -- register is written and no live pane is touched. The brief's wording is
 -- asserted against the herdr plugin's own, so the two stay the same text.
 
-local send = require("todoist.send")
+local send = require("damnit.send")
 
 local FULL_TASK = {
   id = "6X",
@@ -66,7 +66,7 @@ end
 ---@param task table?
 ---@return table seen
 local function hand_over(env, task)
-  local client = require("todoist.client")
+  local client = require("damnit.client")
   local host, seen = host_double(env)
   seen.comments = {}
   seen.said = {}
@@ -158,7 +158,7 @@ return {
       seen.comments[1].content == "Handed to the agent claude from the Neovim Todoist list.",
       seen.comments[1].content
     )
-    assert(seen.said[1] == "todoist.nvim: sent to claude", vim.inspect(seen.said))
+    assert(seen.said[1] == "damnit.nvim: sent to claude", vim.inspect(seen.said))
   end,
 
   ["outside herdr the brief goes to the clipboard and no comment is written"] = function()
@@ -168,7 +168,7 @@ return {
     assert(seen.copied == send.brief(FULL_TASK), seen.copied)
     assert(#seen.comments == 0, vim.inspect(seen.comments))
     assert(
-      seen.said[1] == "todoist.nvim: copied the brief to the clipboard, no hand-off comment written",
+      seen.said[1] == "damnit.nvim: copied the brief to the clipboard, no hand-off comment written",
       vim.inspect(seen.said)
     )
   end,
@@ -178,7 +178,7 @@ return {
 
     assert(
       seen.said[1]
-        == "todoist.nvim: no agent pane in this workspace; copied the brief to the unnamed register, "
+        == "damnit.nvim: no agent pane in this workspace; copied the brief to the unnamed register, "
           .. "no clipboard provider, no hand-off comment written",
       vim.inspect(seen.said)
     )
@@ -192,7 +192,7 @@ return {
     assert(#seen.comments == 0, vim.inspect(seen.comments))
     assert(
       seen.said[1]
-        == "todoist.nvim: no agent pane in this workspace; copied the brief to the clipboard, "
+        == "damnit.nvim: no agent pane in this workspace; copied the brief to the clipboard, "
           .. "no hand-off comment written",
       vim.inspect(seen.said)
     )
@@ -205,7 +205,7 @@ return {
     assert(#seen.comments == 0, vim.inspect(seen.comments))
     assert(
       seen.said[1]
-        == "todoist.nvim: herdr refused the send to w1:p2; copied the brief to the clipboard, "
+        == "damnit.nvim: herdr refused the send to w1:p2; copied the brief to the clipboard, "
           .. "no hand-off comment written",
       vim.inspect(seen.said)
     )
@@ -216,13 +216,13 @@ return {
 
     assert(#seen.calls == 1, vim.inspect(seen.calls))
     assert(seen.copied == send.brief(FULL_TASK), tostring(seen.copied))
-    assert(seen.said[1]:match("^todoist.nvim: herdr: no such file or directory; copied"), vim.inspect(seen.said))
+    assert(seen.said[1]:match("^damnit.nvim: herdr: no such file or directory; copied"), vim.inspect(seen.said))
   end,
 
   ["a refused comment says so and does not claim the send failed"] = function()
     local seen = hand_over({ comment_fails = true })
 
-    assert(seen.said[1] == "todoist.nvim: sent to claude, comment refused", vim.inspect(seen.said))
+    assert(seen.said[1] == "damnit.nvim: sent to claude, comment refused", vim.inspect(seen.said))
   end,
 
   ["the real host falls back to a failure when the herdr binary does not exist"] = function()
@@ -251,7 +251,7 @@ return {
   end,
 
   ["the hand-off comment is one POST to the comments endpoint"] = function()
-    local client = require("todoist.client")
+    local client = require("damnit.client")
     local seen
     local real = client.request
     client.request = function(spec)
@@ -266,7 +266,7 @@ return {
   end,
 
   ["S on a line holding no task sends nothing"] = function()
-    local list = require("todoist.list")
+    local list = require("damnit.list")
     local real_under_cursor, real_input = list.task_under_cursor, vim.ui.input
     local asked = false
 

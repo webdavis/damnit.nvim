@@ -2,7 +2,7 @@
 -- write sends. Pure functions over tables and lines, so no buffer and no
 -- request appear here.
 
-local format = require("todoist.task_format")
+local format = require("damnit.task_format")
 
 --- One task as the API describes it.
 ---@param overrides table?

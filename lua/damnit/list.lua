@@ -14,9 +14,9 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local format = require("todoist.list_format")
-local tree = require("todoist.tree")
+local client = require("damnit.client")
+local format = require("damnit.list_format")
+local tree = require("damnit.tree")
 
 local NAME = "todoist://list"
 
@@ -29,7 +29,7 @@ local ids = {}
 --- The location each line's task was captured from, for the buffer as it
 --- stands. Same idea as `ids`: parsed once at render and looked up by line,
 --- never read back out of the text on screen.
----@type table<integer, todoist.Location>
+---@type table<integer, damnit.Location>
 local locations = {}
 
 --- The tasks the API last gave, by id. A quick edit needs more of a task than
@@ -40,7 +40,7 @@ local locations = {}
 local tasks = {}
 
 --- What the buffer was last opened with, which is what a refresh repeats.
----@type todoist.ListSpec?
+---@type damnit.ListSpec?
 local shown = nil
 
 --- The tasks, projects and sections the lines on screen were drawn from, so a
@@ -75,10 +75,10 @@ function M.open_task_under_cursor()
   local id = ids[line]
 
   if not id then
-    return vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+    return vim.notify("damnit.nvim: no task on this line", vim.log.levels.WARN)
   end
 
-  require("todoist.task_buffer").open(id)
+  require("damnit.task_buffer").open(id)
 end
 
 --- The task the cursor is on, or nil after saying there is none.
@@ -91,7 +91,7 @@ function M.task_under_cursor()
   local task = tasks[ids[line] or ""]
 
   if not task then
-    vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+    vim.notify("damnit.nvim: no task on this line", vim.log.levels.WARN)
     return nil
   end
 
@@ -107,10 +107,10 @@ function M.jump_to_location_under_cursor()
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   if not ids[line] then
-    return vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+    return vim.notify("damnit.nvim: no task on this line", vim.log.levels.WARN)
   end
 
-  require("todoist.location").jump(locations[line])
+  require("damnit.location").jump(locations[line])
 end
 
 --- The view the list buffer is showing, when it is on screen in this tabpage.
@@ -119,7 +119,7 @@ end
 --- inside that filter. A buffer that exists but is in no window here is not
 --- what the operator is looking at, so it answers with nothing and the caller
 --- falls back to every open task.
----@return todoist.ListSpec? spec
+---@return damnit.ListSpec? spec
 function M.current_spec()
   local buf = find_buffer()
   if buf == -1 or not shown then
@@ -158,19 +158,19 @@ local function ensure_buffer()
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "todoist-list"
 
-  vim.keymap.set("n", "<CR>", M.open_task_under_cursor, { buffer = buf, desc = "Todoist: open this task" })
-  vim.keymap.set("n", "R", M.refresh, { buffer = buf, desc = "Todoist: refresh this view" })
+  vim.keymap.set("n", "<CR>", M.open_task_under_cursor, { buffer = buf, desc = "dam: open this task" })
+  vim.keymap.set("n", "R", M.refresh, { buffer = buf, desc = "dam: refresh this view" })
   vim.keymap.set("n", "gd", M.jump_to_location_under_cursor, {
     buffer = buf,
-    desc = "Todoist: jump to the code this task was captured from",
+    desc = "dam: jump to the code this task was captured from",
   })
-  vim.keymap.set("n", "za", M.toggle_fold, { buffer = buf, desc = "Todoist: fold or unfold this task's subtasks" })
-  vim.keymap.set("n", ">", M.indent, { buffer = buf, desc = "Todoist: make this task a subtask of the one above" })
-  vim.keymap.set("n", "<", M.promote, { buffer = buf, desc = "Todoist: move this task out from under its parent" })
+  vim.keymap.set("n", "za", M.toggle_fold, { buffer = buf, desc = "dam: fold or unfold this task's subtasks" })
+  vim.keymap.set("n", ">", M.indent, { buffer = buf, desc = "dam: make this task a subtask of the one above" })
+  vim.keymap.set("n", "<", M.promote, { buffer = buf, desc = "dam: move this task out from under its parent" })
   vim.keymap.set("n", "S", function()
-    require("todoist.send").send()
-  end, { buffer = buf, desc = "Todoist: send this task to the agent" })
-  require("todoist.quick_edit").attach(buf)
+    require("damnit.send").send()
+  end, { buffer = buf, desc = "dam: send this task to the agent" })
+  require("damnit.quick_edit").attach(buf)
 
   return buf
 end
@@ -178,7 +178,7 @@ end
 ---@param buf integer
 ---@param lines string[]
 ---@param line_ids table<integer, string>?
----@param line_locations table<integer, todoist.Location>?
+---@param line_locations table<integer, damnit.Location>?
 ---@param shown_tasks table[]? the tasks those lines were drawn from
 local function draw(buf, lines, line_ids, line_locations, shown_tasks)
   vim.bo[buf].modifiable = true
@@ -202,7 +202,7 @@ end
 
 --- Draw one answer from the API, folds and all.
 ---@param buf integer
----@param spec todoist.ListSpec
+---@param spec damnit.ListSpec
 ---@param data { tasks: table[], projects: table[], sections: table[] }
 local function render_into(buf, spec, data)
   local lines, line_ids, line_locations = format.render(spec, data.tasks, data.projects, data.sections, collapsed)
@@ -219,7 +219,7 @@ local function redraw()
 end
 
 --- The tree the lines on screen were drawn from.
----@return todoist.Tree
+---@return damnit.Tree
 local function forest()
   return tree.index(drawn_from and drawn_from.tasks or {})
 end
@@ -246,7 +246,7 @@ function M.toggle_fold()
 
   local id = tostring(task.id)
   if #M.children_of(id) == 0 then
-    return vim.notify("todoist.nvim: no subtasks here", vim.log.levels.INFO)
+    return vim.notify("damnit.nvim: no subtasks here", vim.log.levels.INFO)
   end
 
   if collapsed[id] then
@@ -282,7 +282,7 @@ end
 --- What a reparent does with its answer: a refusal is the client's to report
 --- and changes nothing on screen, and a success re-reads the view.
 ---@param done string
----@return fun(data: any?, err: todoist.Error?)
+---@return fun(data: any?, err: damnit.Error?)
 local function moved(done)
   return function(_, err)
     if err then
@@ -290,7 +290,7 @@ local function moved(done)
     end
 
     M.refresh()
-    vim.notify("todoist.nvim: " .. done, vim.log.levels.INFO)
+    vim.notify("damnit.nvim: " .. done, vim.log.levels.INFO)
   end
 end
 
@@ -300,7 +300,7 @@ end
 ---@param refusal string?
 local function reparent(task, destination, refusal)
   if not destination then
-    return vim.notify("todoist.nvim: " .. refusal, vim.log.levels.WARN)
+    return vim.notify("damnit.nvim: " .. refusal, vim.log.levels.WARN)
   end
 
   client.move_task(task.id, destination, moved(("moved %s"):format(tostring(task.content))))
@@ -333,7 +333,7 @@ end
 --- take three times as long to appear. The first failure is the one reported,
 --- and the answers that arrive after it are dropped.
 ---@param filter string? a Todoist filter query, or nil for every open task
----@param callback fun(data: { tasks: table[], projects: table[], sections: table[] }?, err: todoist.Error?)
+---@param callback fun(data: { tasks: table[], projects: table[], sections: table[] }?, err: damnit.Error?)
 function M.fetch(filter, callback)
   local data, pending, failed = {}, 3, false
 
@@ -372,7 +372,7 @@ end
 --- it is loading, and is redrawn when the API answers. A refused filter is drawn
 --- in the API's own wording, so it cannot be mistaken for a filter that matched
 --- nothing. This never touches a window; `open` is what puts the buffer in one.
----@param spec todoist.ListSpec
+---@param spec damnit.ListSpec
 ---@return integer buf
 function M.load(spec)
   local buf = ensure_buffer()
@@ -399,7 +399,7 @@ function M.load(spec)
 end
 
 --- Put one view in the current window.
----@param spec todoist.ListSpec
+---@param spec damnit.ListSpec
 ---@return integer buf
 function M.open(spec)
   local buf = ensure_buffer()

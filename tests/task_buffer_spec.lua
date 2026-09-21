@@ -1,4 +1,4 @@
--- The task buffer against a loopback double: that `:Todoist task <id>` renders
+-- The task buffer against a loopback double: that `:Dam task <id>` renders
 -- one, that `:w` sends what changed and clears the modified flag, and that a
 -- refused write leaves the buffer modified and reports the API's own message.
 --
@@ -6,12 +6,12 @@
 -- made up here, so the real curl and the real `:write` path run and no network
 -- and no token are involved.
 
-local todoist = require("todoist")
-local task_buffer = require("todoist.task_buffer")
+local todoist = require("damnit")
+local task_buffer = require("damnit.task_buffer")
 
 -- `--clean -l` sources no plugin directory, so the command this spec drives is
 -- loaded the way Neovim would load it, out of the file that declares it.
-dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/todoist.lua"))
+dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"))
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 
@@ -115,7 +115,7 @@ end
 local function opened()
   local before = vim.api.nvim_get_current_buf()
 
-  vim.cmd("Todoist task " .. TASK.id)
+  vim.cmd("Dam task " .. TASK.id)
   until_true(function()
     return vim.api.nvim_get_current_buf() ~= before
   end)
@@ -131,7 +131,7 @@ local function forget(buf)
 end
 
 return {
-  ["opens one task through :Todoist task <id> in a fresh editor"] = function()
+  ["opens one task through :Dam task <id> in a fresh editor"] = function()
     local port, requests = serve({ { status = 200, body = vim.json.encode(TASK) } })
     configure(port)
 
@@ -298,16 +298,16 @@ return {
 
   ["refuses `task` with anything but one id"] = function()
     local said = notifications(function()
-      vim.cmd("Todoist task")
-      vim.cmd("Todoist task 1 2")
+      vim.cmd("Dam task")
+      vim.cmd("Dam task 1 2")
     end)
 
     assert(#said == 2, vim.inspect(said))
     for _, message in ipairs(said) do
       assert(
         message:find(
-          "usage is :Todoist, :Todoist <view>, :Todoist completed, :Todoist toggle,"
-            .. " :Todoist capture, :Todoist pick [<view>] or :Todoist task <id>",
+          "usage is :Dam, :Dam <view>, :Dam completed, :Dam toggle,"
+            .. " :Dam capture, :Dam pick [<view>] or :Dam task <id>",
           1,
           true
         ),

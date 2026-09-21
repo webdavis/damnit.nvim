@@ -1,4 +1,4 @@
--- `:checkhealth todoist`
+-- `:checkhealth damnit`
 --
 -- Three questions, in the order they can fail: is there a curl to run, does the
 -- configured source produce a token, and does the API accept it. The third is
@@ -88,7 +88,7 @@ end
 
 local function check_token(options)
   local finished, token, err = settle(function(done)
-    require("todoist.token").resolve(options, done)
+    require("damnit.token").resolve(options, done)
   end)
 
   if not finished then
@@ -108,7 +108,7 @@ end
 
 local function check_request()
   local finished, _, err = settle(function(done)
-    require("todoist.client").ping(done)
+    require("damnit.client").ping(done)
   end)
 
   if not finished then
@@ -119,7 +119,7 @@ local function check_request()
   if err then
     vim.health.error(("the request failed: %s"):format(err.message), {
       err.kind == "unauthorized" and "The token resolved but the API refused it. It may have been revoked."
-        or "Check the network and try :checkhealth todoist again.",
+        or "Check the network and try :checkhealth damnit again.",
     })
     return
   end
@@ -128,9 +128,9 @@ local function check_request()
 end
 
 function M.check()
-  vim.health.start("todoist.nvim")
+  vim.health.start("damnit.nvim")
 
-  local options = require("todoist").options
+  local options = require("damnit").options
 
   if not check_curl(options) then
     return

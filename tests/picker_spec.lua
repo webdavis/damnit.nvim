@@ -6,7 +6,7 @@
 -- records what it was offered, so a case is about the entries and the actions
 -- rather than about somebody else's UI.
 
-local picker = require("todoist.picker")
+local picker = require("damnit.picker")
 
 local MILK = {
   id = "6XGg",
@@ -50,9 +50,9 @@ local SECTIONS = { { id = "7", name = "Groceries", project_id = "220" } }
 ---@param steps fun(seen: table)
 ---@return table seen
 local function drive(env, steps)
-  local client = require("todoist.client")
-  local list = require("todoist.list")
-  local todoist = require("todoist")
+  local client = require("damnit.client")
+  local list = require("damnit.list")
+  local todoist = require("damnit")
 
   local seen =
     { reads = {}, notifications = {}, opened = {}, closed = {}, reopened = {}, asked = {}, select = nil, fzf = nil }
@@ -94,7 +94,7 @@ local function drive(env, steps)
   end
   list.refresh = function() end
 
-  local task_buffer = require("todoist.task_buffer")
+  local task_buffer = require("damnit.task_buffer")
   local real_open = task_buffer.open
   task_buffer.open = function(id)
     table.insert(seen.opened, id)
@@ -205,7 +205,7 @@ return {
   end,
 
   ["a named view is searched whatever the list buffer is showing"] = function()
-    local todoist = require("todoist")
+    local todoist = require("damnit")
     local views = todoist.options.views
 
     local seen = drive({ shown = { title = "all open tasks" }, fzf = true }, function()
@@ -280,7 +280,7 @@ return {
   end,
 
   ["a complete made from the picker is what u reverses"] = function()
-    local quick_edit = require("todoist.quick_edit")
+    local quick_edit = require("damnit.quick_edit")
 
     local seen = drive({}, function()
       quick_edit.forget()

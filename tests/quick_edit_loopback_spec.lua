@@ -5,8 +5,8 @@
 -- would see. No token and no network: the double answers, and the token is a
 -- string made up here.
 
-local client = require("todoist.client")
-local todoist = require("todoist")
+local client = require("damnit.client")
+local todoist = require("damnit")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 

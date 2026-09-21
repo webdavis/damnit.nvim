@@ -1,8 +1,8 @@
 -- The client: how a raw response becomes a result, what each failure is called,
 -- and that nothing on the path blocks the editor or carries the token.
 
-local client = require("todoist.client")
-local todoist = require("todoist")
+local client = require("damnit.client")
+local todoist = require("damnit")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 

@@ -5,8 +5,8 @@
 -- that records the fields it was handed, so no token is needed and no request
 -- is made.
 
-local capture = require("todoist.capture")
-local client = require("todoist.client")
+local capture = require("damnit.capture")
+local client = require("damnit.client")
 
 --- A directory holding the files named, and a `.git` file when `git` is true,
 --- which is what marks it a repository root.

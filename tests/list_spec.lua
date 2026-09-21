@@ -5,9 +5,9 @@
 
 -- `--clean -l` sources no plugin directory, so the command this spec drives is
 -- loaded by hand. It guards itself, so a second spec doing the same is a no-op.
-dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/todoist.lua"))
+dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"))
 
-local todoist = require("todoist")
+local todoist = require("damnit")
 
 ---@param views table<string, string>
 ---@param run fun()
@@ -47,9 +47,9 @@ return {
     assert(notifications[1]:find("declared views are today, work", 1, true), notifications[1])
   end,
 
-  [":Todoist <name> is the same refusal, so the command and the function agree"] = function()
+  [":Dam <name> is the same refusal, so the command and the function agree"] = function()
     local notifications = with_views({ today = "today | overdue" }, function()
-      vim.cmd("Todoist tomorrow")
+      vim.cmd("Dam tomorrow")
     end)
 
     assert(#notifications == 1, vim.inspect(notifications))

@@ -1,7 +1,7 @@
 -- The completed walk, as pure state over the pages handed to it. No buffer, no
 -- request, no token: every page here is a table this spec wrote.
 
-local history = require("todoist.completed_history")
+local history = require("damnit.completed_history")
 
 --- 2026-09-17T12:00:00Z, so the windows below are the same every run.
 local NOON = 1789646400

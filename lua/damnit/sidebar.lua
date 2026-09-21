@@ -17,9 +17,9 @@ local M = {}
 
 local FLAG = "todoist_sidebar"
 
----@return todoist.SidebarOptions
+---@return damnit.SidebarOptions
 local function options()
-  return require("todoist").options.sidebar
+  return require("damnit").options.sidebar
 end
 
 --- The sidebar window in this tabpage, if there is one. A sidebar in another
@@ -64,19 +64,19 @@ function M.open()
 
   if opts.side ~= "left" and opts.side ~= "right" then
     return vim.notify(
-      ('todoist.nvim: sidebar.side is %q, and it is either "left" or "right"'):format(tostring(opts.side)),
+      ('damnit.nvim: sidebar.side is %q, and it is either "left" or "right"'):format(tostring(opts.side)),
       vim.log.levels.ERROR
     )
   end
 
   if type(opts.width) ~= "number" or opts.width < 1 then
     return vim.notify(
-      ("todoist.nvim: sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)),
+      ("damnit.nvim: sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)),
       vim.log.levels.ERROR
     )
   end
 
-  local spec = require("todoist").view(opts.view)
+  local spec = require("damnit").view(opts.view)
   if not spec then
     return
   end
@@ -88,7 +88,7 @@ function M.open()
   local win = vim.api.nvim_get_current_win()
   vim.w[win][FLAG] = true
 
-  require("todoist.list").open(spec)
+  require("damnit.list").open(spec)
   hold(win, opts.width)
 
   return win
@@ -122,7 +122,7 @@ function M.close()
 
   if #vim.api.nvim_tabpage_list_wins(0) == 1 then
     vim.notify(
-      "todoist.nvim: the sidebar is the only window here, so closing it would leave nothing",
+      "damnit.nvim: the sidebar is the only window here, so closing it would leave nothing",
       vim.log.levels.WARN
     )
     return false
@@ -146,7 +146,7 @@ end
 -- `WinResized` catches a terminal that changed size in the same state.
 vim.api.nvim_create_autocmd({ "WinNew", "WinResized" }, {
   group = vim.api.nvim_create_augroup("todoist-sidebar", { clear = true }),
-  desc = "Todoist: hold the sidebar at its configured width",
+  desc = "dam: hold the sidebar at its configured width",
   callback = function()
     local win = M.window()
     if not win or #vim.api.nvim_tabpage_list_wins(0) == 1 then

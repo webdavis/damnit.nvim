@@ -5,10 +5,10 @@
 -- depends on the hour it runs at. Nothing sleeps either: an answer arrives when
 -- the case says it does.
 
-local client = require("todoist.client")
-local due = require("todoist.due")
-local status = require("todoist.status")
-local todoist = require("todoist")
+local client = require("damnit.client")
+local due = require("damnit.due")
+local status = require("damnit.status")
+local todoist = require("damnit")
 
 local NOON = "2026-09-17T12:00:00"
 
@@ -241,7 +241,7 @@ return {
 
       local count = 0
       for _, autocmd in ipairs(vim.api.nvim_get_autocmds({ event = "VimLeavePre" })) do
-        if autocmd.desc == "Todoist: stop the refresh timer" then
+        if autocmd.desc == "dam: stop the refresh timer" then
           count = count + 1
         end
       end

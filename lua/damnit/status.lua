@@ -13,8 +13,8 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local due = require("todoist.due")
+local client = require("damnit.client")
+local due = require("damnit.due")
 
 --- The Todoist filter the refresh runs. Both features only ever count or
 --- announce something from today or earlier.
@@ -88,7 +88,7 @@ end
 --- Announce every task whose time has come since the last fetch, once each.
 ---@param clock { stamp: string, utc_offset: integer }
 local function announce(clock)
-  if not require("todoist").options.reminders then
+  if not require("damnit").options.reminders then
     return
   end
 
@@ -106,7 +106,7 @@ local function announce(clock)
 
       if not announced[key] then
         if seeded then
-          vim.notify(("todoist.nvim: due now: %s"):format(tostring(task.content)), vim.log.levels.INFO)
+          vim.notify(("damnit.nvim: due now: %s"):format(tostring(task.content)), vim.log.levels.INFO)
         end
       end
     end
@@ -119,7 +119,7 @@ end
 --- Take one fetch's answer: store it, rebuild the string, announce what came
 --- due. The only way tasks enter this module, so a spec drives it directly.
 ---@param fetched table[]?
----@param err todoist.Error?
+---@param err damnit.Error?
 function M.apply(fetched, err)
   if err then
     tasks = {}
@@ -160,14 +160,14 @@ function M.start()
     return
   end
 
-  local interval = math.max(tonumber(require("todoist").options.refresh_interval) or 60, 5) * 1000
+  local interval = math.max(tonumber(require("damnit").options.refresh_interval) or 60, 5) * 1000
 
   timer = vim.uv.new_timer()
   timer:start(0, interval, vim.schedule_wrap(M.refresh))
 
   if not autocmd_registered then
     -- A timer that outlived the editor would keep the loop alive on `:qa`.
-    vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "Todoist: stop the refresh timer" })
+    vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "dam: stop the refresh timer" })
     autocmd_registered = true
   end
 end

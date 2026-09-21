@@ -13,8 +13,8 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local completed_history = require("todoist.completed_history")
+local client = require("damnit.client")
+local completed_history = require("damnit.completed_history")
 
 local NAME = "todoist://completed"
 
@@ -168,7 +168,7 @@ function M.reopen_under_cursor()
   local id = ids[line]
 
   if not id then
-    return vim.notify("todoist.nvim: no task on this line", vim.log.levels.WARN)
+    return vim.notify("damnit.nvim: no task on this line", vim.log.levels.WARN)
   end
 
   local buf = vim.api.nvim_get_current_buf()
@@ -181,7 +181,7 @@ function M.reopen_under_cursor()
 
     walking:forget(id)
     redraw(buf)
-    vim.notify("todoist.nvim: reopened that task", vim.log.levels.INFO)
+    vim.notify("damnit.nvim: reopened that task", vim.log.levels.INFO)
   end)
 end
 
@@ -200,13 +200,13 @@ local function ensure_buffer()
   vim.bo[buf].filetype = "todoist-completed"
 
   -- The buffer is not modifiable, so `u` has no undo to do here.
-  vim.keymap.set("n", "u", M.reopen_under_cursor, { buffer = buf, desc = "Todoist: reopen this task" })
-  vim.keymap.set("n", "R", M.open, { buffer = buf, desc = "Todoist: read the history again from today" })
+  vim.keymap.set("n", "u", M.reopen_under_cursor, { buffer = buf, desc = "dam: reopen this task" })
+  vim.keymap.set("n", "R", M.open, { buffer = buf, desc = "dam: read the history again from today" })
 
   vim.api.nvim_create_autocmd("CursorMoved", {
     buffer = buf,
     group = vim.api.nvim_create_augroup("todoist-completed", { clear = true }),
-    desc = "Todoist: read the next page of completed tasks at the bottom of the list",
+    desc = "dam: read the next page of completed tasks at the bottom of the list",
     callback = M.load_more,
   })
 
@@ -221,7 +221,7 @@ end
 function M.open()
   local buf = ensure_buffer()
 
-  require("todoist.sidebar").leave_fixed_window()
+  require("damnit.sidebar").leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)
 
   history = completed_history.new()

@@ -8,8 +8,8 @@
 -- Each route holds a sequence of answers, the last one repeating, so a case can
 -- say what the second and third reads of the same endpoint bring back.
 
-local completed = require("todoist.completed")
-local todoist = require("todoist")
+local completed = require("damnit.completed")
+local todoist = require("damnit")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 

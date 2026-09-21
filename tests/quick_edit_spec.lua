@@ -5,7 +5,7 @@
 -- are about which call a key makes and with what. The wire itself is pinned in
 -- quick_edit_loopback_spec.
 
-local quick_edit = require("todoist.quick_edit")
+local quick_edit = require("damnit.quick_edit")
 
 local TASK = { id = "6XGg", content = "Buy milk", priority = 2, labels = { "errands" } }
 
@@ -22,8 +22,8 @@ local REFUSAL = { kind = "http", status = 400, message = "the API said no" }
 ---@param steps fun()
 ---@return table seen
 local function drive(env, steps)
-  local client = require("todoist.client")
-  local list = require("todoist.list")
+  local client = require("damnit.client")
+  local list = require("damnit.list")
 
   local seen = { calls = {}, notifications = {}, rereads = 0 }
 
@@ -306,7 +306,7 @@ return {
   end,
 
   ["a refused reversal keeps it to undo and re-reads the view"] = function()
-    local client = require("todoist.client")
+    local client = require("damnit.client")
     local refused = drive({}, function()
       quick_edit.complete()
       -- The complete landed; the reversal is what the API refuses, which is the

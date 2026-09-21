@@ -20,7 +20,7 @@ local M = {}
 --- plain terminal font.
 M.ICON = "⌖"
 
----@class todoist.Location
+---@class damnit.Location
 ---@field repo string? the repository the file was in, when it was in one
 ---@field path string relative to that repository's root, or a bare file name
 ---@field line integer 1 or more
@@ -40,7 +40,7 @@ end
 --- carries no location.
 ---@param buf integer? defaults to the current buffer
 ---@param line integer? defaults to the cursor's line
----@return todoist.Location? location
+---@return damnit.Location? location
 function M.of_buffer(buf, line)
   buf = buf or 0
   line = line or vim.api.nvim_win_get_cursor(0)[1]
@@ -61,7 +61,7 @@ function M.of_buffer(buf, line)
 end
 
 --- The one line a location is written as.
----@param location todoist.Location
+---@param location damnit.Location
 ---@return string
 function M.describe(location)
   local where = ("%s:%d"):format(location.path, location.line)
@@ -78,7 +78,7 @@ end
 --- Every line is tried rather than only the first, because a person who adds a
 --- note to the task on their phone may well add it above the location.
 ---@param description string?
----@return todoist.Location? location
+---@return damnit.Location? location
 function M.parse(description)
   for line in tostring(description or ""):gmatch("[^\r\n]+") do
     local repo, path, number = line:match("^%s*(%S+)%s+(%S+):(%d+)%s*$")
@@ -99,7 +99,7 @@ end
 
 ---@param message string
 local function warn(message)
-  vim.notify("todoist.nvim: " .. message, vim.log.levels.WARN)
+  vim.notify("damnit.nvim: " .. message, vim.log.levels.WARN)
 end
 
 ---@param message string
@@ -116,7 +116,7 @@ end
 --- only base this plugin has: the description carries no absolute path, on
 --- purpose. A location from another repository, a file that has since gone and
 --- a line past the end of the file are each reported and none of them raises.
----@param location todoist.Location?
+---@param location damnit.Location?
 ---@return boolean jumped
 function M.jump(location)
   if not location then
@@ -136,7 +136,7 @@ function M.jump(location)
     return refuse(("there is no file at %s"):format(location.path))
   end
 
-  require("todoist.sidebar").leave_fixed_window()
+  require("damnit.sidebar").leave_fixed_window()
   vim.cmd.edit(vim.fn.fnameescape(path))
 
   local last = vim.api.nvim_buf_line_count(0)

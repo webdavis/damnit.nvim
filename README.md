@@ -1,4 +1,4 @@
-# todoist.nvim
+# damnit.nvim
 
 Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
 your configuration, a health check that proves both without printing the token, one task as an
@@ -20,8 +20,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  "webdavis/todoist.nvim",
-  cmd = "Todoist",
+  "webdavis/damnit.nvim",
+  cmd = "Dam",
   opts = {
     token_command = { "keepassxc-cli", "show", "--attributes", "Password", "<database>", "<entry>" },
     views = {
@@ -30,15 +30,15 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
     },
   },
   keys = {
-    { "<leader>tt", function() require("todoist").open() end, desc = "Todoist: every open task" },
-    { "<leader>td", function() require("todoist").open("today") end, desc = "Todoist: today" },
-    { "<leader>tb", function() require("todoist").toggle() end, desc = "Todoist: toggle the sidebar" },
+    { "<leader>tt", function() require("damnit").open() end, desc = "dam: every open task" },
+    { "<leader>td", function() require("damnit").open("today") end, desc = "dam: today" },
+    { "<leader>tb", function() require("damnit").toggle() end, desc = "dam: toggle the sidebar" },
     {
       "<leader>tc",
-      function() require("todoist.capture").capture() end,
-      desc = "Todoist: capture a task from here",
+      function() require("damnit.capture").capture() end,
+      desc = "dam: capture a task from here",
     },
-    { "<leader>tc", ":Todoist capture<CR>", mode = "x", desc = "Todoist: capture this selection" },
+    { "<leader>tc", ":Dam capture<CR>", mode = "x", desc = "dam: capture this selection" },
   },
 }
 ```
@@ -47,7 +47,7 @@ Or name an environment variable instead:
 
 ```lua
 {
-  "webdavis/todoist.nvim",
+  "webdavis/damnit.nvim",
   opts = { token_env = "TODOIST_API_TOKEN" },
 }
 ```
@@ -56,7 +56,7 @@ Or, on a machine with neither a vault nor a keychain, give it the token:
 
 ```lua
 {
-  "webdavis/todoist.nvim",
+  "webdavis/damnit.nvim",
   opts = { token = "<the token>" },
 }
 ```
@@ -131,9 +131,9 @@ error.
 ## Lua API
 
 ```lua
-require("todoist").setup(opts)
+require("damnit").setup(opts)
 
-local client = require("todoist.client")
+local client = require("damnit.client")
 
 client.get_task("6XGgmFVcrG5RRjVr", function(task, err)
   if err then
@@ -178,7 +178,7 @@ wording:
 ## One task as a buffer
 
 ```vim
-:Todoist task 6XGgmFVcrG5RRjVr
+:Dam task 6XGgmFVcrG5RRjVr
 ```
 
 The task arrives as a buffer: a header of `key: value` lines between two `---` fences, and the
@@ -234,22 +234,22 @@ nvim +"Todoist task 6XGgmFVcrG5RRjVr"
 ## Lists and named views
 
 ```vim
-:Todoist                " every open task, grouped by project and section
-:Todoist today          " one named view
+:Dam                " every open task, grouped by project and section
+:Dam today          " one named view
 ```
 
 ```lua
-require("todoist").open()         -- every open task
-require("todoist").open("today")  -- one named view
+require("damnit").open()         -- every open task
+require("damnit").open("today")  -- one named view
 ```
 
-`require("todoist").open` is the stable way in, so a keymap calls it rather than a command string.
+`require("damnit").open` is the stable way in, so a keymap calls it rather than a command string.
 It returns the buffer the list is in.
 
 A view is a name and a Todoist filter query, declared in `setup`:
 
 ```lua
-require("todoist").setup({
+require("damnit").setup({
   views = {
     today = "today | overdue",
     work = "#Work & !@waiting",
@@ -264,7 +264,7 @@ the query is sent as it is written, which is why a filter the API refuses comes 
 wording.
 
 A name the plugin was never given is refused before any request, and the refusal says which names
-are declared. `:Todoist` completes them, alongside `capture`, `completed`, `task` and `toggle`.
+are declared. `:Dam` completes them, alongside `capture`, `completed`, `task` and `toggle`.
 
 The list is a plain unlisted buffer in the current window, so every window command, search and motion
 works on it. These keys are bound in it:
@@ -476,12 +476,12 @@ whichever of the two you are in.
 ## Searching the tasks
 
 ```vim
-:Todoist pick                 " the view on screen, or every open task
-:Todoist pick today           " one named view, whatever is on screen
+:Dam pick                 " the view on screen, or every open task
+:Dam pick today           " one named view, whatever is on screen
 ```
 
 ```lua
-vim.keymap.set("n", "<leader>tf", function() require("todoist").pick() end)
+vim.keymap.set("n", "<leader>tf", function() require("damnit").pick() end)
 ```
 
 | Key     | What it does                                    |
@@ -529,19 +529,19 @@ line.
 ## Capture from code
 
 ```vim
-:Todoist capture              " on the cursor's line
+:Dam capture              " on the cursor's line
 :'<,'>Todoist capture         " from a visual selection
 ```
 
 ```lua
-require("todoist.capture").capture()
+require("damnit.capture").capture()
 ```
 
 A `TODO` you were never going to get back to becomes a task in your Inbox, and the description says
 where it came from:
 
 ```text
-todoist.nvim lua/todoist/sidebar.lua:112
+damnit.nvim lua/todoist/sidebar.lua:112
 ```
 
 That is the repository name, then the path inside it, then the line. The name is the directory the
@@ -586,11 +586,11 @@ description carries no absolute path, on purpose.
 ## The completed history
 
 ```vim
-:Todoist completed
+:Dam completed
 ```
 
 ```lua
-require("todoist").completed()
+require("damnit").completed()
 ```
 
 Completed tasks, newest first, a page at a time. Each line is the day it was finished and what it
@@ -624,17 +624,17 @@ the whole time and draws whatever it has, so those requests read as work rather 
 ## The sidebar
 
 ```vim
-:Todoist toggle
+:Dam toggle
 ```
 
 ```lua
-require("todoist").toggle()
+require("damnit").toggle()
 ```
 
 A fixed-width vertical split on one edge of the tabpage, holding one view. A second call closes it.
 
 ```lua
-require("todoist").setup({
+require("damnit").setup({
   views = { today = "today | overdue" },
   sidebar = {
     side = "left",   -- or "right"
@@ -645,7 +645,7 @@ require("todoist").setup({
 ```
 
 `view` names a view, not a filter, so the same word opens the same list in the sidebar, in
-`:Todoist today` and in the herdr pane. It has to be declared in `views`: a name this plugin was
+`:Dam today` and in the herdr pane. It has to be declared in `views`: a name this plugin was
 never given is refused before the split is made, so a typo leaves your layout exactly as it was.
 `today` is the default because it is the view worth having open while you work, and the default side
 is the left at 40 columns, which is a file tree's width and reads the same way.
@@ -680,7 +680,7 @@ wide.
 
 ```lua
 require("lualine").setup({
-  sections = { lualine_x = { require("todoist").status } },
+  sections = { lualine_x = { require("damnit").status } },
 })
 ```
 
@@ -730,7 +730,7 @@ not replay the morning. The timer stops on `VimLeavePre`, so nothing outlives th
 ## Health
 
 ```vim
-:checkhealth todoist
+:checkhealth damnit
 ```
 
 It reports whether curl was found, which source the token comes from, that the token resolved, and

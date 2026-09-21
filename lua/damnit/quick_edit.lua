@@ -16,7 +16,7 @@
 
 local M = {}
 
-local client = require("todoist.client")
+local client = require("damnit.client")
 
 --- The API's priority scale, where 4 is the app's p1 and 1 is no priority at
 --- all. The vendor's own update parameter says "1 is highest" while its task
@@ -46,25 +46,25 @@ end
 ---@param message string
 ---@param level integer?
 local function say(message, level)
-  vim.notify("todoist.nvim: " .. message, level or vim.log.levels.INFO)
+  vim.notify("damnit.nvim: " .. message, level or vim.log.levels.INFO)
 end
 
 --- Ask the API again for the view on screen.
 local function reread()
-  require("todoist.list").refresh()
+  require("damnit.list").refresh()
 end
 
 --- The task the cursor is on, or nil after saying there is none.
 ---@return table?
 local function under_cursor()
-  return require("todoist.list").task_under_cursor()
+  return require("damnit.list").task_under_cursor()
 end
 
 --- What every write does with its answer: a refusal is the client's to report
 --- and changes nothing on screen, and a success re-reads the view.
 ---@param done string what to say when the write worked
 ---@param remember { kind: "complete"|"reopen", id: string, content: string }?
----@return fun(data: any?, err: todoist.Error?)
+---@return fun(data: any?, err: damnit.Error?)
 local function wrote(done, remember)
   return function(_, err)
     if err then
@@ -127,7 +127,7 @@ function M.complete()
     return
   end
 
-  M.complete_asking(task, #require("todoist.list").children_of(task.id))
+  M.complete_asking(task, #require("damnit.list").children_of(task.id))
 end
 
 --- Reopen the task under the cursor, for a list whose filter shows completed
@@ -423,7 +423,7 @@ function M.attach(buf)
   }
 
   for key, bound in pairs(keys) do
-    vim.keymap.set("n", key, bound[1], { buffer = buf, desc = "Todoist: " .. bound[2] })
+    vim.keymap.set("n", key, bound[1], { buffer = buf, desc = "dam: " .. bound[2] })
   end
 end
 

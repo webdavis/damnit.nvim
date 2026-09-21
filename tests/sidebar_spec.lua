@@ -7,9 +7,9 @@
 -- Each case runs in a tabpage of its own, so one case's layout is never another
 -- case's starting point.
 
-local todoist = require("todoist")
-local client = require("todoist.client")
-local sidebar = require("todoist.sidebar")
+local todoist = require("damnit")
+local client = require("damnit.client")
+local sidebar = require("damnit.sidebar")
 
 local WIDTH = 34
 
@@ -226,7 +226,7 @@ return {
       assert(task_line, vim.inspect(lines))
       vim.api.nvim_win_set_cursor(sidebar_win, { task_line, 0 })
 
-      require("todoist.list").open_task_under_cursor()
+      require("damnit.list").open_task_under_cursor()
       client.get_task = real_get_task
 
       assert(vim.api.nvim_get_current_win() ~= sidebar_win, "the task opened into the sidebar")
@@ -251,7 +251,7 @@ return {
       vim.cmd("only")
 
       local before = windows()
-      local ok = pcall(require("todoist.task_buffer").open, "T1")
+      local ok = pcall(require("damnit.task_buffer").open, "T1")
       client.get_task = real_get_task
 
       assert(ok, "opening a task with the sidebar alone raised an error")

@@ -8,8 +8,8 @@
 -- The double answers by path, because a list asks for tasks, projects and
 -- sections at once and a case cares which of them was refused.
 
-local list = require("todoist.list")
-local todoist = require("todoist")
+local list = require("damnit.list")
+local todoist = require("damnit")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 
@@ -178,7 +178,7 @@ return {
     assert(task_line, vim.inspect(lines))
 
     local opened = nil
-    local task_buffer = require("todoist.task_buffer")
+    local task_buffer = require("damnit.task_buffer")
     local real_open = task_buffer.open
     task_buffer.open = function(id)
       opened = id
@@ -279,7 +279,7 @@ return {
     local scratch = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_win_set_buf(0, scratch)
 
-    require("todoist.picker").complete_entry({ task = { id = "6XGg", content = "Buy milk" }, open_subtasks = 0 })
+    require("damnit.picker").complete_entry({ task = { id = "6XGg", content = "Buy milk" }, open_subtasks = 0 })
 
     -- The initial open's three requests, then the close, then the reread's
     -- own three requests.

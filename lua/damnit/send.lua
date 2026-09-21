@@ -12,8 +12,8 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local format = require("todoist.list_format")
+local client = require("damnit.client")
+local format = require("damnit.list_format")
 
 --- The frame `herdr pane send-text` writes the brief inside. A paste is
 --- inserted verbatim by any input, where the raw bytes of a multi-line brief
@@ -38,7 +38,7 @@ end
 ---@param message string
 ---@param level integer?
 local function say(message, level)
-  vim.notify("todoist.nvim: " .. message, level or vim.log.levels.INFO)
+  vim.notify("damnit.nvim: " .. message, level or vim.log.levels.INFO)
 end
 
 --- The due date as its first ten characters, which are the date whether the
@@ -279,7 +279,7 @@ end
 --- `S` on the list: the note box, then the hand-off. Nothing here happens on
 --- its own, and an escaped box sends nothing at all.
 function M.send()
-  local task = require("todoist.list").task_under_cursor()
+  local task = require("damnit.list").task_under_cursor()
   if not task then
     return
   end

@@ -81,7 +81,7 @@ local function newest_first(left, right)
   return text(left.id) > text(right.id)
 end
 
----@class todoist.CompletedRequest
+---@class damnit.CompletedRequest
 ---@field since string ISO 8601, inclusive
 ---@field until_ string ISO 8601, exclusive
 ---@field cursor string? the previous page's cursor, within the same window
@@ -112,7 +112,7 @@ end
 
 --- The request that reads the next page, or nil once the walk has read as deep
 --- as it goes.
----@return todoist.CompletedRequest?
+---@return damnit.CompletedRequest?
 function History:request()
   if self.is_spent then
     return nil

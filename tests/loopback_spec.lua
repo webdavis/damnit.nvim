@@ -7,8 +7,8 @@
 -- comes back are all real. No token and no network: the double answers, and the
 -- token is a string made up here.
 
-local client = require("todoist.client")
-local todoist = require("todoist")
+local client = require("damnit.client")
+local todoist = require("damnit")
 
 local SECRET = "0123456789abcdef0123456789abcdef01234567"
 
@@ -61,9 +61,9 @@ end
 
 --- Point the plugin at a loopback base URL and run one request to completion.
 ---@param port integer
----@param run fun(done: fun(data: any?, err: todoist.Error?))
+---@param run fun(done: fun(data: any?, err: damnit.Error?))
 ---@return any? data
----@return todoist.Error? err
+---@return damnit.Error? err
 local function against(port, run)
   vim.env.TODOIST_SPEC_TOKEN = SECRET
   todoist.options = {
@@ -120,13 +120,13 @@ return {
     local port, received = serve(200, '{"id":"6XGg","content":"hold the width"}')
 
     local task, err = against(port, function(done)
-      client.create_task({ content = "hold the width", description = "todoist.nvim lua/list.lua:42" }, done)
+      client.create_task({ content = "hold the width", description = "damnit.nvim lua/list.lua:42" }, done)
     end)
 
     assert(err == nil, vim.inspect(err))
     assert(task.id == "6XGg", vim.inspect(task))
     assert(received.request:find("POST /api/v1/tasks ", 1, true), received.request)
-    assert(received.request:find('"description":"todoist.nvim lua/list.lua:42"', 1, true), received.request)
+    assert(received.request:find('"description":"damnit.nvim lua/list.lua:42"', 1, true), received.request)
   end,
 
   ["reports a refused token as unauthorized and says nothing about it"] = function()

@@ -16,8 +16,8 @@
 
 local M = {}
 
-local format = require("todoist.list_format")
-local tree = require("todoist.tree")
+local format = require("damnit.list_format")
+local tree = require("damnit.tree")
 
 --- What separates the task id from the text on an fzf line. fzf is told to
 --- display and match from the second field on, so the id travels with the entry
@@ -38,7 +38,7 @@ end
 ---@param message string
 ---@param level integer?
 local function say(message, level)
-  vim.notify("todoist.nvim: " .. message, level or vim.log.levels.INFO)
+  vim.notify("damnit.nvim: " .. message, level or vim.log.levels.INFO)
 end
 
 --- One task as one searchable line: what it is, when it is due, how urgent it
@@ -96,7 +96,7 @@ end
 --- Open the picked task in task 115's buffer.
 ---@param entry { id: string }
 function M.open_entry(entry)
-  require("todoist.task_buffer").open(entry.id)
+  require("damnit.task_buffer").open(entry.id)
 end
 
 --- Complete the picked task, through the same path the list's `x` takes, so a
@@ -104,7 +104,7 @@ end
 --- here as well.
 ---@param entry { task: table, open_subtasks: integer }
 function M.complete_entry(entry)
-  require("todoist.quick_edit").complete_asking(entry.task, entry.open_subtasks)
+  require("damnit.quick_edit").complete_asking(entry.task, entry.open_subtasks)
 end
 
 --- The id on an fzf selection, which is everything before the first delimiter.
@@ -123,7 +123,7 @@ end
 --- to open is worse than one that opens in the other front end.
 ---@return table? fzf_lua
 function M.fzf_lua()
-  local wanted = require("todoist").options.picker
+  local wanted = require("damnit").options.picker
 
   if wanted ~= "auto" and wanted ~= "fzf-lua" and wanted ~= "select" then
     say(("picker %q is not auto, fzf-lua or select; using auto"):format(wanted), vim.log.levels.WARN)
@@ -207,13 +207,13 @@ end
 --- whatever is on screen, which is what a keymap bound to one view wants.
 ---@param name string? a view declared in `setup`, or nil to follow the screen
 function M.pick(name)
-  local list = require("todoist.list")
+  local list = require("damnit.list")
   local spec
 
   if name == nil or name == "" then
-    spec = list.current_spec() or require("todoist").view(nil)
+    spec = list.current_spec() or require("damnit").view(nil)
   else
-    spec = require("todoist").view(name)
+    spec = require("damnit").view(name)
   end
 
   if not spec then

@@ -5,20 +5,20 @@
 -- it as `vim.NIL`, which is what `vim.json.decode` makes of a JSON null and is
 -- truthy.
 
-local tree = require("todoist.tree")
+local tree = require("damnit.tree")
 
 local PARENT = { id = "p", content = "Ship the release", project_id = "1", section_id = "9", parent_id = vim.NIL }
 local CHILD = { id = "c", content = "Tag it", project_id = "1", section_id = "9", parent_id = "p" }
 local GRANDCHILD = { id = "g", content = "Sign the tag", project_id = "1", section_id = "9", parent_id = "c" }
 
 ---@param tasks table[]
----@return todoist.Tree
+---@return damnit.Tree
 local function indexed(tasks)
   return tree.index(tasks)
 end
 
 --- Every task a walk visits, as `id@depth`.
----@param forest todoist.Tree
+---@param forest damnit.Tree
 ---@param root table
 ---@param collapsed table<string, boolean>?
 ---@return string

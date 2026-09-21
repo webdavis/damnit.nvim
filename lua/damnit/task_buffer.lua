@@ -15,8 +15,8 @@
 
 local M = {}
 
-local client = require("todoist.client")
-local format = require("todoist.task_format")
+local client = require("damnit.client")
+local format = require("damnit.task_format")
 
 local GROUP = vim.api.nvim_create_augroup("todoist_task_buffer", { clear = true })
 
@@ -49,7 +49,7 @@ end
 ---@param message string
 ---@param level integer?
 local function notify(message, level)
-  vim.notify("todoist.nvim: " .. message, level or vim.log.levels.INFO)
+  vim.notify("damnit.nvim: " .. message, level or vim.log.levels.INFO)
 end
 
 ---@param buf integer
@@ -145,7 +145,7 @@ function M.show(task)
     })
   end
 
-  require("todoist.sidebar").leave_fixed_window()
+  require("damnit.sidebar").leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)
 
   -- A modified buffer holds text the operator has not saved; reopening the

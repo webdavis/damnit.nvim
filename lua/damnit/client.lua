@@ -15,7 +15,7 @@
 
 local M = {}
 
-local token_source = require("todoist.token")
+local token_source = require("damnit.token")
 
 --- How long to wait before the one retry of a transient failure. Todoist sends
 --- `Retry-After` on a rate limit and that value wins; this is the fallback for
@@ -27,7 +27,7 @@ local RETRY_DELAY_MS = 1000
 --- a hang rather than as patience.
 local MAX_RETRY_DELAY_MS = 10000
 
----@class todoist.Error
+---@class damnit.Error
 ---@field kind "network"|"unauthorized"|"forbidden"|"rate_limited"|"not_found"|"http"|"malformed"|"token"
 ---@field message string safe to show a user: never carries the token
 ---@field status integer? the HTTP status, when there was one
@@ -107,7 +107,7 @@ end
 --- Turn one finished curl run into either a decoded body or a typed error.
 ---@param out vim.SystemCompleted
 ---@return any? data
----@return todoist.Error? err
+---@return damnit.Error? err
 function M.interpret(out)
   local status, headers, body = M.parse_response(out.stdout)
 
@@ -150,7 +150,7 @@ end
 --- Whether a failure is worth one more attempt. A refused token is not: the
 --- API's own guidance is that retrying an invalid token only spends the rate
 --- limit, and the answer would not change in a second.
----@param err todoist.Error
+---@param err damnit.Error
 ---@return boolean
 function M.is_transient(err)
   return err.kind == "network" or err.kind == "rate_limited" or (err.kind == "http" and (err.status or 0) >= 500)
@@ -158,7 +158,7 @@ end
 
 --- How long to wait before that attempt. `Retry-After` wins when the API sent
 --- one, bounded at both ends.
----@param err todoist.Error
+---@param err damnit.Error
 ---@return integer milliseconds
 function M.retry_delay(err)
   local advised = (err.retry_after or 0) * 1000
@@ -166,10 +166,10 @@ function M.retry_delay(err)
   return math.min(math.max(advised, RETRY_DELAY_MS), MAX_RETRY_DELAY_MS)
 end
 
----@param err todoist.Error
+---@param err damnit.Error
 ---@param retried boolean? whether a retry was actually spent on this failure
 local function notify(err, retried)
-  local message = "todoist.nvim: " .. err.message
+  local message = "damnit.nvim: " .. err.message
 
   if err.kind == "unauthorized" then
     message = message .. ". Check the token_command or token_env named in setup"
@@ -180,15 +180,15 @@ local function notify(err, retried)
   vim.notify(message, vim.log.levels.WARN)
 end
 
----@class todoist.Request
+---@class damnit.Request
 ---@field method "GET"|"POST"|"DELETE"
 ---@field path string appended to `base_url`, for example "/tasks/6XGg"
 ---@field query table<string, string|number>? URL parameters
 ---@field body table? encoded as the JSON request body
 ---@field quiet boolean? suppress the notification and report the error only
 
----@param options todoist.Options
----@param spec todoist.Request
+---@param options damnit.Options
+---@param spec damnit.Request
 ---@param token string
 ---@param callback fun(out: vim.SystemCompleted)
 ---@return boolean spawned
@@ -229,10 +229,10 @@ end
 --- token only spends the rate limit. Every failure raises one `vim.notify` at
 --- WARN unless the request asked to be quiet, and no message anywhere contains
 --- the token.
----@param spec todoist.Request
----@param callback fun(data: any?, err: todoist.Error?)
+---@param spec damnit.Request
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.request(spec, callback)
-  local options = require("todoist").options
+  local options = require("damnit").options
 
   local function fail(err, retried)
     vim.schedule(function()
@@ -287,7 +287,7 @@ end
 
 --- The one cheap authenticated call, used by the health check to prove that the
 --- token works without asking for anything in particular.
----@param callback fun(data: any?, err: todoist.Error?)
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.ping(callback)
   M.request({ method = "GET", path = "/projects", query = { limit = 1 }, quiet = true }, callback)
 end
@@ -302,8 +302,8 @@ local COMPLETED_PAGE_LIMIT = 50
 --- page at a time, so a list of more tasks than one page holds is several
 --- requests. They run one after another because the cursor for the next page is
 --- in the answer to the last one.
----@param spec todoist.Request
----@param callback fun(items: table[]?, err: todoist.Error?)
+---@param spec damnit.Request
+---@param callback fun(items: table[]?, err: damnit.Error?)
 function M.collect(spec, callback)
   local items = {}
 
@@ -334,7 +334,7 @@ function M.collect(spec, callback)
 end
 
 --- Every open task.
----@param callback fun(tasks: table[]?, err: todoist.Error?)
+---@param callback fun(tasks: table[]?, err: damnit.Error?)
 function M.get_tasks(callback)
   M.collect({ method = "GET", path = "/tasks" }, callback)
 end
@@ -345,19 +345,19 @@ end
 --- whatever the app accepts works here and whatever it refuses comes back as the
 --- API's own message.
 ---@param filter string
----@param callback fun(tasks: table[]?, err: todoist.Error?)
+---@param callback fun(tasks: table[]?, err: damnit.Error?)
 function M.get_tasks_matching(filter, callback)
   M.collect({ method = "GET", path = "/tasks/filter", query = { query = filter } }, callback)
 end
 
 --- Every project, which is what names a group in a list.
----@param callback fun(projects: table[]?, err: todoist.Error?)
+---@param callback fun(projects: table[]?, err: damnit.Error?)
 function M.get_projects(callback)
   M.collect({ method = "GET", path = "/projects" }, callback)
 end
 
 --- Every section, which is what names a group inside a project.
----@param callback fun(sections: table[]?, err: todoist.Error?)
+---@param callback fun(sections: table[]?, err: damnit.Error?)
 function M.get_sections(callback)
   M.collect({ method = "GET", path = "/sections" }, callback)
 end
@@ -368,14 +368,14 @@ end
 --- sends a content and a description and nothing else: the task lands in Inbox,
 --- which is the API's own default for a task with no project.
 ---@param fields table
----@param callback fun(task: table?, err: todoist.Error?)
+---@param callback fun(task: table?, err: damnit.Error?)
 function M.create_task(fields, callback)
   M.request({ method = "POST", path = "/tasks", body = fields }, callback)
 end
 
 --- One task, whole.
 ---@param id string
----@param callback fun(task: table?, err: todoist.Error?)
+---@param callback fun(task: table?, err: damnit.Error?)
 function M.get_task(id, callback)
   M.request({ method = "GET", path = "/tasks/" .. id }, callback)
 end
@@ -387,7 +387,7 @@ end
 --- `labels`.
 ---@param id string
 ---@param fields table
----@param callback fun(task: table?, err: todoist.Error?)
+---@param callback fun(task: table?, err: damnit.Error?)
 function M.update_task(id, fields, callback)
   M.request({ method = "POST", path = "/tasks/" .. id, body = fields }, callback)
 end
@@ -395,7 +395,7 @@ end
 --- Complete the task. Its answer carries nothing worth reading, so only a
 --- refusal matters and that arrives as an error.
 ---@param id string
----@param callback fun(data: any?, err: todoist.Error?)
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.close_task(id, callback)
   M.request({ method = "POST", path = "/tasks/" .. id .. "/close" }, callback)
 end
@@ -403,7 +403,7 @@ end
 --- Delete the task, and every subtask under it. Todoist keeps no undo for this,
 --- which is why the list asks before calling it.
 ---@param id string
----@param callback fun(data: any?, err: todoist.Error?)
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.delete_task(id, callback)
   M.request({ method = "DELETE", path = "/tasks/" .. id }, callback)
 end
@@ -414,7 +414,7 @@ end
 --- project.
 ---@param id string
 ---@param destination table
----@param callback fun(data: any?, err: todoist.Error?)
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.move_task(id, destination, callback)
   M.request({ method = "POST", path = "/tasks/" .. id .. "/move", body = destination }, callback)
 end
@@ -425,7 +425,7 @@ end
 --- priority in it are its reading and not this plugin's, and the task it
 --- answers with is what the list reports.
 ---@param text string
----@param callback fun(task: table?, err: todoist.Error?)
+---@param callback fun(task: table?, err: damnit.Error?)
 function M.quick_add(text, callback)
   M.request({ method = "POST", path = "/tasks/quick", body = { text = text } }, callback)
 end
@@ -434,13 +434,13 @@ end
 --- the WHEN of anything the comment records.
 ---@param id string
 ---@param content string
----@param callback fun(comment: table?, err: todoist.Error?)
+---@param callback fun(comment: table?, err: damnit.Error?)
 function M.add_comment(id, content, callback)
   M.request({ method = "POST", path = "/comments", body = { task_id = id, content = content } }, callback)
 end
 
 --- Every label the account has, which is what the label picker offers.
----@param callback fun(labels: table[]?, err: todoist.Error?)
+---@param callback fun(labels: table[]?, err: damnit.Error?)
 function M.get_labels(callback)
   M.collect({ method = "GET", path = "/labels" }, callback)
 end
@@ -457,7 +457,7 @@ end
 ---@param since string
 ---@param until_ string
 ---@param cursor string? the previous page's `next_cursor`
----@param callback fun(page: table?, err: todoist.Error?)
+---@param callback fun(page: table?, err: damnit.Error?)
 function M.completed_page(since, until_, cursor, callback)
   local query = { since = since, ["until"] = until_, limit = COMPLETED_PAGE_LIMIT }
   if cursor then
@@ -470,7 +470,7 @@ end
 --- Reopen a completed task. It takes no body, and its answer carries nothing
 --- worth reading, so only a refusal matters and that arrives as an error.
 ---@param id string
----@param callback fun(data: any?, err: todoist.Error?)
+---@param callback fun(data: any?, err: damnit.Error?)
 function M.reopen_task(id, callback)
   M.request({ method = "POST", path = "/tasks/" .. id .. "/reopen" }, callback)
 end

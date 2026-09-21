@@ -6,9 +6,9 @@
 -- sent. The rendering itself is pinned in list_format_spec and the wire in the
 -- loopback specs.
 
-local client = require("todoist.client")
-local list = require("todoist.list")
-local quick_edit = require("todoist.quick_edit")
+local client = require("damnit.client")
+local list = require("damnit.list")
+local quick_edit = require("damnit.quick_edit")
 
 local PROJECTS = { { id = "1", name = "Errands" } }
 
@@ -269,7 +269,7 @@ return {
       assert(task and task.id == "g", vim.inspect(task))
 
       local opened = nil
-      local task_buffer = require("todoist.task_buffer")
+      local task_buffer = require("damnit.task_buffer")
       local real_open = task_buffer.open
       task_buffer.open = function(id)
         opened = id
