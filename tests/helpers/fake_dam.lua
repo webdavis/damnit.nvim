@@ -1,8 +1,9 @@
 -- A fake `dam` at the front of PATH.
 --
--- Four environment variables drive every case: which fixture directory to read,
--- how long to sleep, what to write on standard error, and what to exit with.
--- The argv log is what every assertion about "what the plugin sent" reads.
+-- Five environment variables drive every case: which fixture directory to read,
+-- which version to answer the handshake with, how long to sleep, what to write
+-- on standard error, and what to exit with. The argv log is what every
+-- assertion about "what the plugin sent" reads.
 
 local M = {}
 
@@ -35,7 +36,7 @@ done
 
 # The sleep runs in the background and the script waits on it, so the trap runs
 # the moment the signal arrives. It owns neither of this script's pipes, so a
-# caller reading them sees the exit as soon as the trap runs.
+# caller reading them sees the exit as soon as the trap does.
 if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 & sleeper=$!; wait $sleeper; fi
 
 if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi

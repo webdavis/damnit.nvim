@@ -2,9 +2,8 @@
 --
 -- This is what keeps the plugin from being a second writer against its own
 -- SQLite store, and it is what makes a push and a pull impossible to overlap.
--- A read and a write share the lane: `dam status` is under 30 ms, and a fast
--- lane for reads would bring the concurrent-writer problem back the moment a
--- read pulls a stale remote.
+-- A read and a write share the lane, which costs a read the 30 ms a `dam
+-- status` takes.
 
 local M = {}
 

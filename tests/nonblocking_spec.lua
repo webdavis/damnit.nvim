@@ -39,9 +39,7 @@ return {
     queue.reset()
 
     assert(submit_ms < 100, ("submit took %.1fms, so something waited"):format(submit_ms))
-    -- A blocking implementation produces zero ticks. The floor is generous on
-    -- purpose: a ceiling around a real spawn is what reddens a build on a slow
-    -- runner.
+    -- A blocking implementation produces zero ticks.
     assert(ticks >= 5, ("the loop ticked %d times while dam ran"):format(ticks))
     assert(log[#log] == "push --json", vim.inspect(log))
   end,
