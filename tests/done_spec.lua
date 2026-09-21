@@ -76,18 +76,6 @@ return {
     assert(vim.deep_equal(blockers, { "ed990d4", "e0edd1e" }), vim.inspect(blockers))
   end,
 
-  ["recognises the rule for a question no machine format can answer"] = function()
-    local said = done.interactive_refusal({ kind = "refused", rule = "needs_an_answer" }, TAXES.oid)
-
-    assert(
-      said
-        == "dam is configured to ask what happens to the children; "
-          .. "run dam done cfdc36e --force --interactive in a terminal",
-      tostring(said)
-    )
-    assert(done.interactive_refusal({ kind = "refused", rule = "blocked" }, TAXES.oid) == nil)
-  end,
-
   ["offers to complete it anyway, and sends --force when that is chosen"] = function()
     with_dam(function(fake)
       local chosen = nil
@@ -105,7 +93,9 @@ return {
 
       local log = fake_dam.argv_log(fake)
       assert(log[2] == ("done %s --json"):format(TAXES.oid), vim.inspect(log))
-      assert(log[3] == ("done %s --force --json"):format(TAXES.oid), vim.inspect(log))
+      -- `--children keep` states the answer the offer promised, which is also
+      -- what gets the call through where `done.interactive` is set.
+      assert(log[3] == ("done %s --force --children keep --json"):format(TAXES.oid), vim.inspect(log))
       assert(chosen and chosen:find("4aa6797", 1, true), tostring(chosen))
     end, { exit = 4, stderr = BLOCKED })
   end,

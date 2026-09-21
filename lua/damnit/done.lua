@@ -37,21 +37,6 @@ function M.blockers(err)
   return found
 end
 
---- The sentence for dam being configured to ask a question no client can
---- answer, or nil when the refusal is a different one.
----@param err damnit.Error
----@param oid string
----@return string?
-function M.interactive_refusal(err, oid)
-  if err.rule ~= "needs_an_answer" then
-    return nil
-  end
-
-  return ("dam is configured to ask what happens to the children; run dam done %s --force --interactive in a terminal"):format(
-    text(oid):sub(1, SHORT)
-  )
-end
-
 ---@param object table
 ---@param report table? what `dam done` answered
 local function report_completion(object, report)
@@ -69,15 +54,17 @@ end
 --- Complete one object.
 ---
 --- dam refuses while a child or a dependency is open and lists the blockers, so
---- the plugin shows them and offers the one disposition it can reach without a
---- terminal. Task 31 adds the other two once dam takes them as flags.
+--- the plugin shows them and offers the completion that leaves them where they
+--- are. `--children keep` states that answer in the argv, which is what also
+--- gets the call through on a machine where `done.interactive` turns a plain
+--- `--force` into a question dam will not ask under `--json`.
 ---@param object table
 ---@param force boolean
 function M.send(object, force)
   local args = { "done", object.oid }
 
   if force then
-    args[#args + 1] = "--force"
+    vim.list_extend(args, { "--force", "--children", "keep" })
   end
 
   args[#args + 1] = "--json"
@@ -90,11 +77,6 @@ function M.send(object, force)
         report_completion(object, report)
 
         return require("damnit.list").refresh()
-      end
-
-      local interactive = M.interactive_refusal(err, object.oid)
-      if interactive then
-        return message.warn(interactive)
       end
 
       -- Only a blocked completion has a force that helps. dam refuses `done`
