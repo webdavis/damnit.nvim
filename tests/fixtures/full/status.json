@@ -1,0 +1,96 @@
+{
+  "staged": [
+    {
+      "oid": "660a08d0a1f74c9a3c2e5d8b7f1049ab6c3d2e51",
+      "op": "create",
+      "before": null,
+      "after": {
+        "oid": "660a08d0a1f74c9a3c2e5d8b7f1049ab6c3d2e51",
+        "kind": "task",
+        "subject": "write the spec",
+        "body": "",
+        "path": "work/",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 2 }
+      }
+    }
+  ],
+  "unstaged": [
+    {
+      "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
+      "op": "update",
+      "before": {
+        "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
+        "kind": "task",
+        "subject": "oat milk",
+        "body": "",
+        "path": "inbox/",
+        "labels": ["home"],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 1 }
+      },
+      "after": {
+        "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
+        "kind": "task",
+        "subject": "buy oat milk",
+        "body": "",
+        "path": "inbox/",
+        "labels": ["errand", "home"],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 1, "due": "2026-09-25" }
+      }
+    },
+    {
+      "oid": "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77",
+      "op": "delete",
+      "before": {
+        "oid": "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77",
+        "kind": "task",
+        "subject": "child",
+        "body": "",
+        "path": "work/proj/",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 4 }
+      },
+      "after": null
+    }
+  ],
+  "conflicts": [
+    {
+      "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+      "remote": "todoist",
+      "ours": {
+        "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+        "kind": "task",
+        "subject": "file taxes here",
+        "body": "",
+        "path": "home/finances/",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 1 }
+      },
+      "theirs": {
+        "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+        "kind": "task",
+        "subject": "file taxes there",
+        "body": "",
+        "path": "home/finances/",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": { "done": false, "priority": 1 }
+      }
+    }
+  ],
+  "notices": [
+    { "kind": "removed_upstream", "remote": "todoist", "oid": "c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e" }
+  ],
+  "unpushed": [{ "remote": "todoist", "commits": 1 }]
+}
