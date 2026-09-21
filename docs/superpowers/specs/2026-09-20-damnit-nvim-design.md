@@ -1482,7 +1482,8 @@ Three rules, each of which CI can check:
 1. **Only `damnit.dam` calls `vim.system`.** Grep `lua/` for `vim.system` and assert one file.
 1. **The pure modules call no `vim.*` API.** `status_model`, `task_format`, `list_format`, `tree`,
    `location` and `answer` are grepped for `vim.api`, `vim.fn`, `vim.system`, `vim.notify` and
-   `vim.schedule`. They may use `vim.tbl_*`, `vim.json` and `vim.split`, which are data functions.
+   `vim.schedule`. They may use `vim.tbl_*`, `vim.islist`, `vim.json` and `vim.split`, which are data
+   functions.
 1. **`render` does not know `dam` exists.** It takes a model and a buffer.
 
 The pure layer is what makes the window testable without a window: a golden render test builds a

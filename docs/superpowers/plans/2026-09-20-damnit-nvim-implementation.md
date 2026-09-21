@@ -40,7 +40,8 @@ From the spec, and equally binding:
 - `:wait(` appears nowhere outside `lua/damnit/health.lua` and `tests/`. CI greps for it.
 - The pure modules `status_model`, `task_format`, `list_format`, `tree`, `location` and `answer`
   call no `vim.api`, `vim.fn`, `vim.system`, `vim.notify` or `vim.schedule`. They may use `vim.tbl_*`,
-  `vim.deep_equal`, `vim.json`, `vim.trim` and `vim.split`, which are data functions. CI greps for it.
+  `vim.deep_equal`, `vim.islist`, `vim.json`, `vim.trim` and `vim.split`, which are data functions. CI
+  greps for it.
 - Every result is marshalled through `vim.schedule` before it touches a buffer, a window or an option.
 - Every file targets 300 lines and none exceeds 500, comments included.
 - Every highlight group links to a standard group. No colour is written anywhere in the plugin.
@@ -8119,7 +8120,7 @@ After the `luacheck` step in `.github/workflows/ci.yml`:
           pure="lua/damnit/status_model.lua lua/damnit/task_format.lua lua/damnit/list_format.lua"
           pure="$pure lua/damnit/tree.lua lua/damnit/location.lua lua/damnit/answer.lua"
           if grep -nE 'vim\.(api|fn|system|notify|schedule)' $pure; then
-            echo "these six modules are pure: they may use vim.tbl_*, vim.json, vim.split and vim.deep_equal" >&2
+            echo "these six are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
             exit 1
           fi
 ```
