@@ -100,14 +100,9 @@ function M.parse(description)
 end
 
 ---@param text string
-local function warn(text)
-  message.warn(text)
-end
-
----@param text string
 ---@return false
 local function refuse(text)
-  warn(text)
+  message.warn(text)
 
   return false
 end
@@ -147,7 +142,7 @@ function M.jump(location)
   if line ~= location.line then
     -- The file is open where it can be read; the line moved out from under the
     -- task, which is worth saying rather than landing silently.
-    warn(("%s has %d lines, so this is the last one"):format(location.path, last))
+    message.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
   end
 
   return true

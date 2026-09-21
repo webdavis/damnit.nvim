@@ -7283,14 +7283,9 @@ function M.of_buffer(buf, line)
 end
 
 ---@param text string
-local function warn(text)
-  message.warn(text)
-end
-
----@param text string
 ---@return false
 local function refuse(text)
-  warn(text)
+  message.warn(text)
 
   return false
 end
@@ -7330,7 +7325,7 @@ function M.jump(location)
   if line ~= location.line then
     -- The file is open where it can be read; the line moved out from under the
     -- task, which is worth saying rather than landing silently.
-    warn(("%s has %d lines, so this is the last one"):format(location.path, last))
+    message.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
   end
 
   return true
@@ -7339,7 +7334,7 @@ end
 return M
 ```
 
-Delete `repository_root`, `of_buffer`, `warn`, `refuse` and `jump` from `location.lua`, along with
+Delete `repository_root`, `of_buffer`, `refuse` and `jump` from `location.lua`, along with
 the `local message = require("damnit.message")` line at its head, which only those two used. What is
 left is `ICON`, the `damnit.Location` class, `describe` and `parse`, and it calls nothing on `vim`
 at all. Its header changes in the same edit, since it no longer opens anything and the field is now
