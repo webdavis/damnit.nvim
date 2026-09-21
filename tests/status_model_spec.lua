@@ -52,6 +52,18 @@ return {
     assert(vim.deep_equal(kinds, { "conflicts", "working", "staged", "unpushed", "notices" }), vim.inspect(kinds))
   end,
 
+  ["keeps a section whose predecessor in the order is empty"] = function()
+    local status = vim.json.decode('{"staged":[],"unstaged":[],"conflicts":[],"unpushed":[],"notices":[]}')
+    status.notices = { { kind = "push_failed", remote = "todoist" } }
+
+    local model = status_model.build(status, nil)
+    local kinds = vim.tbl_map(function(each)
+      return each.kind
+    end, model.sections)
+
+    assert(vim.deep_equal(kinds, { "notices" }), vim.inspect(kinds))
+  end,
+
   ["names an update's changed fields in dam's own order"] = function()
     local model = status_model.build(fixture("full/status.json"), nil)
     local change = section(model, "working").entries[1]

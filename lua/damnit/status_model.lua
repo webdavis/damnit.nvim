@@ -134,6 +134,18 @@ function M.notice_text(notice)
   return table.concat(parts, " ")
 end
 
+---@param item table
+---@return table entry
+local function remote_entry(item)
+  return { kind = "remote", remote = item.remote, commits = item.commits }
+end
+
+---@param item table
+---@return table entry
+local function notice_entry(item)
+  return { kind = "notice", notice_kind = item.kind, text = M.notice_text(item) }
+end
+
 ---@param name string
 ---@param kind string
 ---@param source table[]?
@@ -148,6 +160,18 @@ local function section(name, kind, source, make)
   return { name = name, kind = kind, entries = vim.tbl_map(make, items) }
 end
 
+--- Every section, in the order it is drawn: the heading, its kind, the status
+--- field it reads and the entry it makes. Conflicts are first because they are
+--- the only section that blocks a pull.
+---@type { [1]: string, [2]: string, [3]: string, [4]: fun(item: table): table }[]
+local SECTIONS = {
+  { "Conflicts", "conflicts", "conflicts", conflict_entry },
+  { "Working", "working", "unstaged", change_entry },
+  { "Staged", "staged", "staged", change_entry },
+  { "Unpushed", "unpushed", "unpushed", remote_entry },
+  { "Notices", "notices", "notices", notice_entry },
+}
+
 ---@class damnit.Section
 ---@field name string the heading as it is drawn
 ---@field kind "conflicts"|"working"|"staged"|"unpushed"|"notices"
@@ -160,9 +184,7 @@ end
 
 --- The window's model for one status document.
 ---
---- Conflicts are drawn first because they are the only section that blocks a
---- pull. An empty section is left out entirely, the way `dam status` leaves it
---- out.
+--- An empty section is left out entirely, the way `dam status` leaves it out.
 ---@param status table the decoded `dam status --json`
 ---@param remotes table? the decoded `dam remote list --json`
 ---@return damnit.Model
@@ -185,19 +207,11 @@ function M.build(status, remotes)
     end
   end
 
+  -- Appended one at a time rather than collected in a table constructor: a
+  -- constructor holding a nil for an empty section is a hole ipairs stops at.
   local sections = {}
-  for _, built in ipairs({
-    section("Conflicts", "conflicts", status.conflicts, conflict_entry),
-    section("Working", "working", status.unstaged, change_entry),
-    section("Staged", "staged", status.staged, change_entry),
-    section("Unpushed", "unpushed", status.unpushed, function(item)
-      return { kind = "remote", remote = item.remote, commits = item.commits }
-    end),
-    section("Notices", "notices", status.notices, function(item)
-      return { kind = "notice", notice_kind = item.kind, text = M.notice_text(item) }
-    end),
-  }) do
-    sections[#sections + 1] = built
+  for _, each in ipairs(SECTIONS) do
+    sections[#sections + 1] = section(each[1], each[2], status[each[3]], each[4])
   end
 
   return { sections = sections, empty = #sections == 0, remotes = listed }
