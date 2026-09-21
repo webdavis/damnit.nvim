@@ -13,6 +13,8 @@
 -- so every answer here is either a location or nil, and `jump` reports what it
 -- could not do rather than raising.
 
+local message = require("damnit.message")
+
 local M = {}
 
 --- The marker a task with a location carries in a list. Narrow enough not to
@@ -97,15 +99,15 @@ function M.parse(description)
   return nil
 end
 
----@param message string
-local function warn(message)
-  vim.notify("damnit.nvim: " .. message, vim.log.levels.WARN)
+---@param text string
+local function warn(text)
+  message.warn(text)
 end
 
----@param message string
+---@param text string
 ---@return false
-local function refuse(message)
-  warn(message)
+local function refuse(text)
+  warn(text)
 
   return false
 end
