@@ -7,6 +7,12 @@
 local M = {}
 
 local SCRIPT = [==[#!/bin/sh
+# dam exits 3 on an interrupt. The traps are installed before the first write,
+# because a caller that waits for that write and then signals can beat a trap
+# installed after it.
+trap 'kill $sleeper 2>/dev/null; exit 3' INT
+trap 'kill $sleeper 2>/dev/null; exit 3' TERM
+
 # Records its argv, then replays the fixture named for its subcommand.
 printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
 
@@ -27,12 +33,9 @@ for arg in "$@"; do
   esac
 done
 
-# dam exits 3 on an interrupt. The sleep runs in the background and the script
-# waits on it, so the trap runs the moment the signal arrives. The sleep owns
-# neither of this script's pipes, so a caller reading them sees the exit as
-# soon as the trap runs even when the signal arrived before $! was assigned.
-trap 'kill $sleeper 2>/dev/null; exit 3' INT
-trap 'kill $sleeper 2>/dev/null; exit 3' TERM
+# The sleep runs in the background and the script waits on it, so the trap runs
+# the moment the signal arrives. It owns neither of this script's pipes, so a
+# caller reading them sees the exit as soon as the trap runs.
 if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 & sleeper=$!; wait $sleeper; fi
 
 if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
