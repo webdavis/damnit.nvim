@@ -331,8 +331,8 @@ end
 function M.refresh(key)
   key = key or queue.key()
 
-  -- Read once per store and cached. A failure leaves the cache empty rather
-  -- than caching the failure, so the next refresh asks again.
+  -- Read once per store and cached. A failure leaves the cache empty, so the
+  -- next refresh asks again.
   if remotes[key] == nil then
     queue.submit({
       args = { "remote", "list", "--json" },

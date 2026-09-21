@@ -127,8 +127,7 @@ local function conflict_entry(conflict)
   }
 end
 
---- One notice as a line, built from the fields it carries rather than from a
---- shape assumed per kind.
+--- One notice as a line, built from the fields it carries.
 ---@param notice table
 ---@return string
 function M.notice_text(notice)
@@ -232,8 +231,7 @@ function M.build(status, remotes)
     end
   end
 
-  -- Appended one at a time rather than collected in a table constructor: a
-  -- constructor holding a nil for an empty section is a hole ipairs stops at.
+  -- An empty section assigns nil, which is a no-op on append.
   local sections = {}
   for _, each in ipairs(SECTIONS) do
     sections[#sections + 1] = section(each[1], each[2], status[each[3]], each[4])

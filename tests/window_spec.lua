@@ -91,28 +91,43 @@ return {
     end)
   end,
 
-  ["keeps a section the user folded closed across a re-read"] = function()
+  ["keeps a section the user folded closed when the re-read moves its heading"] = function()
     with_window(function(fake)
       local buf = window.buffer()
-      local heading = nil
-      for index, kind in ipairs(vim.b[buf].damnit_kinds) do
-        if kind == "section" then
-          heading = index
-          break
+
+      ---@param kind string
+      ---@return integer
+      local function heading_of(kind)
+        local sections = vim.b[buf].damnit_sections
+        local kinds = vim.b[buf].damnit_kinds
+
+        for index = 1, #kinds do
+          if kinds[index] == "section" and sections[index] == kind then
+            return index
+          end
         end
+
+        error("no " .. kind .. " heading: " .. vim.inspect(sections))
       end
 
+      local heading = heading_of("staged")
       vim.api.nvim_win_set_cursor(0, { heading, 0 })
       vim.cmd("normal! zc")
       assert(vim.fn.foldclosed(heading) == heading, ("fold at %d: %d"):format(heading, vim.fn.foldclosed(heading)))
 
+      -- One object moves from Working to Staged, which is what `s` does, so
+      -- Staged gains a row and its heading slides up a line.
+      vim.env.DAMNIT_TEST_FIXTURES = TESTS_DIR .. "/fixtures/shifted"
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_dam.settle(function()
         return #fake_dam.argv_log(fake) > before and queue.running() == nil
       end)
 
-      assert(vim.fn.foldclosed(heading) == heading, "the re-read re-opened a section the user closed")
+      local moved = heading_of("staged")
+      assert(moved == heading - 1, ("heading %d did not move: %d"):format(heading, moved))
+      assert(vim.fn.foldclosed(moved) == moved, "the re-read re-opened a section the user closed")
+      assert(vim.fn.foldclosedend(moved) == moved + 2, tostring(vim.fn.foldclosedend(moved)))
     end)
   end,
 
