@@ -60,6 +60,25 @@ function M.open_status()
   return require("damnit.window").open()
 end
 
+--- Open the sidebar view beside your work, or close the one this tabpage has.
+function M.toggle()
+  require("damnit.sidebar").toggle()
+end
+
+--- The completed history, newest first. One local query: dam holds the whole
+--- history and answers it at once, so there is nothing to page.
+---@return integer buf
+function M.completed()
+  return require("damnit.list").open({ title = "completed", query = "done", flat = true })
+end
+
+--- Search one view's objects, in fzf-lua or `vim.ui.select`. No name follows
+--- the screen: the view the list buffer is showing, or every open object.
+---@param name string?
+function M.pick(name)
+  require("damnit.picker").pick(name)
+end
+
 --- Open one view in the current window, by the name `setup` or dam's own config
 --- declares. No name means every open object.
 ---@param name string?

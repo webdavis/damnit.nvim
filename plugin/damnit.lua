@@ -9,6 +9,11 @@ if vim.g.loaded_damnit then
 end
 vim.g.loaded_damnit = true
 
+--- The subcommands whose one argument is a view name, so `:Dam <name> <TAB>`
+--- completes on the views rather than on the subcommands again.
+---@type table<string, boolean>
+local TAKES_A_VIEW = { list = true, pick = true }
+
 --- One entry per subcommand. `""` is `:Dam` with no argument.
 ---@type table<string, fun(args: string[], cmd: table)>
 local SUBCOMMANDS = {
@@ -18,8 +23,22 @@ local SUBCOMMANDS = {
   cancel = function()
     require("damnit.queue").cancel()
   end,
+  capture = function(_, cmd)
+    local selection = cmd.range > 0 and { line1 = cmd.line1, line2 = cmd.line2 } or nil
+
+    require("damnit.capture").capture(selection)
+  end,
+  done = function()
+    require("damnit").completed()
+  end,
   list = function(args)
     require("damnit").open(args[1])
+  end,
+  pick = function(args)
+    require("damnit").pick(args[1])
+  end,
+  toggle = function()
+    require("damnit").toggle()
   end,
   task = function(args)
     if #args ~= 1 then
@@ -49,7 +68,7 @@ end
 local function complete(lead, line)
   local typed = vim.split(vim.trim(line), "%s+")
 
-  if #typed > 1 and typed[2] == "list" then
+  if #typed > 1 and TAKES_A_VIEW[typed[2]] then
     return vim.tbl_filter(function(name)
       return vim.startswith(name, lead)
     end, require("damnit.views").declared())

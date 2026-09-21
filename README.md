@@ -343,18 +343,19 @@ are and says what the API said.
 from the other side: there, every line is already completed, so reopening one is what undoing means.
 They are two buffers with their own keys, so neither shadows the other.
 
-### Sending a task to the agent
+### Sending an object to the agent
 
-`S` hands the task under the cursor to the agent working in this workspace. It asks for an optional
+`S` hands the object under the cursor to the agent working in this workspace. It asks for an optional
 note first, through `vim.ui.input`: `<CR>` sends, `<Esc>` cancels, and an empty line sends the brief
 with no note rather than refusing. Nothing here happens on its own.
 
-The brief is plain text, because an agent pane is a shell rather than a structure. It is the same
-text [herdr-todoist](https://github.com/webdavis/herdr-todoist) sends, character for character:
+The brief is plain text, because an agent pane is a shell rather than a structure:
 
 ```text
-Todoist task: file taxes
-url: https://app.todoist.com/app/task/6cfCrxxxxxxxxxxx
+dam task: file taxes
+oid: 78b8950
+store: ~/.local/share/dam/dam.db
+path: home/finances/
 due: 2026-09-20
 priority: p1
 labels: home, slow
@@ -364,9 +365,10 @@ receipts are in the drawer
 note: start with the receipts
 ```
 
-A field the task has nothing for is left out rather than written empty, so the brief carries no line
-an agent has to discount. The URL is built from the task id: the v1 task object has no `url` field,
-and `https://app.todoist.com/app/task/<id>` is the form the vendor documents in its place.
+A field the object has nothing for is left out rather than written empty, so the brief carries no
+line an agent has to discount. There is no URL, because a dam object is local. The `oid` is its first
+seven characters, which is what an agent would type at `dam show`, and the `store` line is the store
+the staging window's own header names.
 
 Inside herdr (`HERDR_ENV` set) the brief reaches the agent pane through `herdr pane send-text`, which
 writes literal text into a pane's input without a return, so the agent holds the brief until you
@@ -380,10 +382,9 @@ workspace, other than this one. The name it reports is the pane's name, then the
 `display_agent` is the auth profile a pane signed in with, which two panes running different agents
 can share, so it decides nothing.
 
-A comment on the task then records the hand-off (`Handed to the agent <name> from the Neovim Todoist
-list.`). It names the agent rather than its pane, which means nothing a day later, and WHEN is the
-comment's own posted date, which Todoist stamps. A refused comment says `sent to <name>, comment
-refused` rather than pretending the send failed: the agent has the work either way.
+Nothing records the hand-off, because dam has no comments. Every notification ends in `no hand-off
+record written`, on the path that delivered as well as on the ones that fell back, so no line of it
+can be read as a record that exists.
 
 ### When the agent pane cannot take it
 
@@ -398,8 +399,8 @@ anywhere else. Four cases reach it, and each says which in the notification:
 | No agent pane in this workspace           | The same, saying so.                                    |
 | herdr refused the send                    | The same, naming the pane it refused.                   |
 
-The clipboard is a copy rather than a hand-off, so it writes no comment, and every one of those
-notifications ends in `no hand-off comment written` so the two paths can never be confused. A build
+The clipboard is a copy rather than a hand-off, and every one of those notifications ends in
+`no hand-off record written` for the same reason the delivered one does. A build
 with no clipboard provider, which is the normal state of a bare server, has no `+` register to write:
 the brief goes to the unnamed register and the notification says `no clipboard provider` rather than
 reading like a whole copy.
@@ -478,23 +479,23 @@ line.
 require("damnit.capture").capture()
 ```
 
-A `TODO` you were never going to get back to becomes a task in your Inbox, and the description says
+A `TODO` you were never going to get back to becomes a task in `inbox/`, and the body says
 where it came from:
 
 ```text
-damnit.nvim lua/todoist/sidebar.lua:112
+damnit.nvim lua/damnit/sidebar.lua:112
 ```
 
 That is the repository name, then the path inside it, then the line. The name is the directory the
 `.git` lives in, so a linked worktree reports the worktree's own name and `gd` follows it back into
 that worktree. The path is relative to the
-repository root and never absolute: a description syncs to Todoist and onto your phone, so an
+repository root and never absolute: a body syncs to a remote and onto your phone, so an
 absolute path would put the layout of your machine there. A file in no repository goes out as its own
 name and its line, with no repository in front of it, for the same reason. A buffer that is not a
 file at all (a scratch buffer, a directory listing) has nowhere to point, so the task is made with no
-description.
+body.
 
-A visual selection becomes the content, by whole lines: the comment leader goes, a leading `TODO` or
+A visual selection becomes the subject, by whole lines: the comment leader goes, a leading `TODO` or
 `FIXME` goes with the `(author)` and punctuation after it, several lines join into one with their
 space collapsed, and only the first line loses its marker. So this:
 
@@ -511,18 +512,18 @@ Back in a list, a task carrying a location is marked with `⌖` at the end of it
 date, the priority and the labels, so it never pushes the content out of a narrow sidebar. `gd` on
 such a task opens the file and puts the cursor on the line.
 
-A description is text you can edit on your phone, so `gd` treats it as text somebody may well have
+A body is text you can edit on your phone, so `gd` treats it as text somebody may well have
 broken, and every case it cannot follow is a message rather than an error:
 
 | What it finds                                  | What it says                                       |
 | ---------------------------------------------- | -------------------------------------------------- |
-| No `path:line` anywhere in the description     | The task has no location.                          |
+| No `path:line` anywhere in the body            | The task has no location.                          |
 | A repository that is not the one you have open | Names the one it wants and the one you are in.     |
 | A file that has since moved or gone            | There is no file at that path.                     |
 | A line past the end of the file                | Opens it on the last line and says how long it is. |
 
 The path is resolved against the repository the editor is in, which is the only base there is: the
-description carries no absolute path, on purpose.
+body carries no absolute path, on purpose.
 
 ## The completed history
 
@@ -585,9 +586,10 @@ require("damnit").setup({
 })
 ```
 
-`view` names a view, not a filter, so the same word opens the same list in the sidebar, in
-`:Dam today` and in the herdr pane. It has to be declared in `views`: a name this plugin was
-never given is refused before the split is made, so a typo leaves your layout exactly as it was.
+`view` names a view, not a query, so the same word opens the same list in the sidebar, in
+`:Dam list today` and in the herdr pane. It is resolved before the split is made, against `views`
+and then against dam's own saved filters, and a name dam has already refused leaves your layout
+exactly as it was.
 `today` is the default because it is the view worth having open while you work, and the default side
 is the left at 40 columns, which is a file tree's width and reads the same way.
 

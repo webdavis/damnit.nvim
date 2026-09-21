@@ -58,6 +58,22 @@ function M.reopen()
   end
 end
 
+--- `u`: reopen, but only in the completed history, where every row is already
+--- completed and undoing one is reopening it.
+---
+--- A plain `dam ls` holds completed objects too, so `u` pressed by reflex in
+--- any other view would reopen a real one, and `dam edit` has no flag that puts
+--- `completed_at` back. `X` is the word for reopening anywhere else.
+function M.reopen_here()
+  local spec = require("damnit.list").current_spec()
+
+  if not (spec and spec.flat) then
+    return message.warn("u reopens in the completed history; X reopens an object here")
+  end
+
+  M.reopen()
+end
+
 --- Remove the object under the cursor, after a yes or no.
 ---
 --- dam keeps no undo for a removal and neither does this, which is why the

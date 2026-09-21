@@ -126,6 +126,48 @@ function M.refusal(spec, err)
   return { M.title(spec), "", "dam refused this view:", "", "  " .. err.message }
 end
 
+--- When dam recorded this object's completion, or the empty string when it has
+--- none: a pull from a remote carries a done task with no timestamp.
+---@param object table
+---@return string
+local function completed_at_of(object)
+  return text(type(object.task) == "table" and object.task.completed_at or nil)
+end
+
+--- The objects newest completion first, which is the order a history is read in.
+---
+--- `dam ls` orders by path, then due date, then priority, then subject, so the
+--- order it answers in says nothing about when anything was completed.
+---
+--- A timestamp is RFC 3339 in UTC at whatever precision dam wrote, so the text
+--- compares as the instant among timestamps of the same precision, which is
+--- what both reachable paths give: a local completion carries microseconds, and
+--- a remote sends none at all. An object with no timestamp sorts after every one
+--- that has one and keeps dam's order among its own kind.
+---@param objects table[]
+---@return table[]
+function M.by_completion(objects)
+  local seats = {}
+  for index, object in ipairs(objects) do
+    seats[index] = { object = object, at = completed_at_of(object), index = index }
+  end
+
+  table.sort(seats, function(left, right)
+    if left.at ~= right.at then
+      return left.at > right.at
+    end
+
+    return left.index < right.index
+  end)
+
+  local ordered = {}
+  for index, seat in ipairs(seats) do
+    ordered[index] = seat.object
+  end
+
+  return ordered
+end
+
 ---@class damnit.ListEntry
 ---@field object table the object drawn on this line
 ---@field location damnit.Location? the location its body holds
@@ -135,6 +177,9 @@ end
 --- An object with children heads a tree: its children follow it, one indent
 --- further in per level, and an object whose parent this view does not hold
 --- heads a tree of its own rather than disappearing.
+---
+--- A flat spec draws no tree and orders by completion instead, which is what
+--- the completed history is: every line at the left margin, newest first.
 ---@param spec damnit.ListSpec
 ---@param objects table[] as dam returned them
 ---@param collapsed table<string, boolean>? paths whose children are folded away
@@ -159,9 +204,15 @@ function M.render(spec, objects, collapsed)
     drawn = drawn + 1
   end
 
-  for _, object in ipairs(objects or {}) do
-    if tree.is_root(index, object) then
-      tree.descend(index, object, folds, write)
+  if spec.flat then
+    for _, object in ipairs(M.by_completion(objects or {})) do
+      write(object, 0)
+    end
+  else
+    for _, object in ipairs(objects or {}) do
+      if tree.is_root(index, object) then
+        tree.descend(index, object, folds, write)
+      end
     end
   end
 

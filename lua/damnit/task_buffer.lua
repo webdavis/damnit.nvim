@@ -121,6 +121,10 @@ function M.open(oid)
   vim.bo[buf].filetype = "damtask"
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
+
+  -- The sidebar refuses a foreign buffer, so an object opened from it lands in
+  -- the work beside it rather than failing.
+  require("damnit.sidebar").leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)
 
   vim.api.nvim_create_autocmd("BufWriteCmd", {
