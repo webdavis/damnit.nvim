@@ -119,6 +119,16 @@ return {
 
       vim.api.nvim_feedkeys("=", "x", false)
       assert(#virt_lines() == 0, vim.inspect(virt_lines()))
+
+      -- With nothing left to compare, the window goes back to the lean read.
+      local closed = #fake_dam.argv_log(fake)
+      vim.api.nvim_feedkeys("R", "x", false)
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > closed
+      end)
+
+      assert(fake_dam.argv_log(fake)[closed + 1] == "status --json", vim.inspect(fake_dam.argv_log(fake)))
     end)
   end,
 
