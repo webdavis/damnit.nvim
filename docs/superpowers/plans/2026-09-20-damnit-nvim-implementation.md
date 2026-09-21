@@ -7911,6 +7911,37 @@ SKIP_AI_COMMIT=1 git commit -m "feat: keep a dam view beside your work in the si
 
 ### Task 25: The statusline and the due reminders
 
+**Rulings taken while implementing this task.**
+
+Ruling: the fetch is `dam ls "!done & (due:today | overdue)" --no-pull --json`, not
+`dam ls "due:today | overdue"`. / `Term::Due(Today)` matches a completed task as readily as an open
+one (`dam-domain/src/query/term.rs`), measured against a sandboxed 0.2.0 build: completing a task
+due today left it in the answer, and `!done` removed it. `--no-pull` shipped in 0.2.0 and is what
+lets a poll running every minute promise it reaches no remote. / The count keeps every task
+finished today, and a background read can reach the network.
+
+Ruling: dam's `due` is text, so `due.lua` reads a string and its own offset rather than a Todoist
+`due` object. / `When::to_text` writes `YYYY-MM-DD` for a whole day and a zoned stamp otherwise;
+measured, `--due 2026-09-25T09:00` came back as `2026-09-25T09:00:00-05:00[America/Chicago]`. The
+module shifts by `clock.utc_offset` minus the due's own offset, and a due carrying none is already
+local. / Every timed due is misread by the local UTC offset, in both the count and the reminder.
+
+Ruling: the counting case derives today and yesterday from `due.clock()` rather than naming
+2026-09-20 and 2026-09-19. / Those dates were both already in the past when the plan was written,
+so the case asserts "1 due, 1 overdue" against a clock that answers "0 due, 2 overdue". / The case
+reddens on every machine, on every day after 2026-09-20.
+
+Ruling: the running-operation case installs the fake with no sleep. / `queue.submit` assigns
+`lane.running` and `started_at` before it calls `dam.call`, and every answer arrives through
+`vim.schedule`, so `poll.status()` reads the running entry synchronously. / 0.3 s of sleep per run
+buys nothing the assertion needs.
+
+Ruling: `poll.refresh` skips its turn while another call holds the lane. / A poll queued behind a
+push answers about a store that push is still changing and arrives after the count it reports has
+gone stale, and the running operation already owns the statusline slot. / Every minute of a long
+push queues another `ls` behind it.
+
+
 One poller behind both, fed by `dam ls`. Two additions: a running operation takes the statusline slot,
 and `dam !` replaces a stale count on failure.
 
@@ -8048,6 +8079,38 @@ SKIP_AI_COMMIT=1 git commit -m "feat: poll dam for the statusline count and the 
 
 ### Task 26: `:checkhealth damnit`
 
+**Rulings taken while implementing this task.**
+
+Ruling: the credential warning is dropped, and the eight checks become six reports. / `dam remote
+list --json` answers `name`, `helper`, `url`, `path` and `stale_seconds` and nothing else, verified
+against a sandboxed 0.2.0 build and against `remote_json` in `dam-cli/src/commands/remote.rs`. dam
+resolves `<name>_command` credentials from its own config (`toml_config/remote.rs`) and reports
+nothing about them through any `--json` surface, so the check has no data to read and the fixture
+field the plan invents does not exist. / A reader is not warned that a remote's credential needs a
+terminal, which is a thing dam documents from its own side.
+
+Ruling: the `PATH` check is the handshake's own answer, not a second `vim.fn.executable` probe. /
+`dam.spawn` wraps `vim.system` in `pcall`, so a missing binary throws at once and arrives as an
+ordinary answer with `missing` set, carrying `answer.MISSING`, which is the same install line the
+probe would print. Proved by mutation: deleting the probe left all eight cases green. / Nothing,
+the sentence is identical either way.
+
+Ruling: the version assertions read `dam 0.2.0` and `>=0.2.0 <0.3.0`. / The plan's `dam 0.1.0` and
+`>=0.1.0 <0.2.0` contradict the Global Constraint that the supported range is `>=0.2.0 <0.3.0`, and
+`dam.MIN_VERSION` is 0.2.0. / The case pins a range the plugin refuses to speak to.
+
+Ruling: `dam filter list --json` is read and its names reported. / `views.resolve` hands an
+unrecognised name to dam, which resolves its own saved filters, so a report listing only the
+`setup`-declared views is wrong about what `:Dam list` takes. / One extra dam call per checkhealth.
+
+Ruling: the fake dam answers `--version` found anywhere in argv rather than only as `$1`. / Real dam
+answers `dam --store <path> --version` with its banner, and `dam.argv` puts the global flags in
+front of every call, so a spec naming a `store` or a `config` option drove the fake into its
+fixture lookup with no subcommand and the handshake read the resulting failure as a missing dam.
+This is the defect that made the store-and-config case fail. / No spec can set either option, and
+the one that tried reported a dam that was on PATH as absent.
+
+
 Eight checks. It reports nothing about any credential's value, because it never sees one.
 
 **Files:**
@@ -8184,6 +8247,44 @@ SKIP_AI_COMMIT=1 git commit -m "feat: report dam, the store and the remotes in c
 ---
 
 ### Task 27: The three CI greps and the performance spec
+
+**Rulings taken while implementing this task.**
+
+Ruling: five gates go into the lint job, not three: one spawner, no waiting, purity, no em-dash and
+no host data. / The brief names the five that previous lanes ran by hand, and a gate run by hand is
+one a lane can forget. Each was proved against a planted violation and is quiet on a clean tree. /
+Two of the five stay manual and drift back in.
+
+Ruling: the em-dash and host-data gates read the tracked files under `lua tests docs README.md`
+rather than the diff against `main`. / A pull-request checkout at fetch depth one has no `main` to
+diff against, so `git diff main..HEAD` errors rather than checking anything. The path scope is what
+keeps `LICENSE`, whose copyright line is deliberate, out of the host-data pattern. / The two gates
+fail for the wrong reason on every pull request.
+
+Ruling: the commit-message half of the em-dash gate stays a local gate. / The same fetch-depth
+reason: there is no range to read commit messages over. / An em-dash reaches a commit message with
+nothing to catch it.
+
+Ruling: the generated status carries the flat dam 0.2.0 change row with `fields`, not the plan's
+`before` and `after` pair. / That is the shape `dam status --json` writes, measured; `change_entry`
+reads the flat fields first and falls back to the pair, so the plan's shape would have measured the
+fallback. / The measurement covers a path dam no longer writes.
+
+Ruling: 300 objects and budgets of 1, 60, 70 and 0.05 ms, not 2,000 objects and 20, 30, 100 and
+0.05. / Measured on a machine at a load average of 96: modelling 0.054 to 0.072 ms, rendering 27.3
+to 34.7 ms, a re-render 29.6 to 36.3 ms, `status()` 0.001 ms, and ten runs each finishing in 0.64 to
+0.96 s with zero warnings. At 2,000 objects the same case costs 4.3 s, which the Global Constraint
+that every test passes in under a second forbids, and rendering alone measures 197 to 210 ms rather
+than the plan's 30: `render.lines` takes each segment's display width through `vim.fn`, one bridge
+call per segment and about fourteen thousand for a 2,000-object document. At 300 the plan's own 30
+and 100 ms figures are the right scale. / Either a 4.3 s case in a suite held to one second, or
+budgets that warn on every run and train a reader to ignore them.
+
+Ruling: the `settle` doc comment in `health.lua` says "the spawn's own callback" rather than naming
+`vim.system`. / The one-spawner gate is a plain text grep over `lua/`, so a doc comment naming the
+function fires it; the same rewording was made in `sync.lua` in an earlier lane. / The gate is red
+on a comment, which teaches a reader to bypass it.
+
 
 The architecture rules become a gate, and the performance targets become a warning a human reads.
 
@@ -8382,6 +8483,16 @@ before writing code. Version one of the plugin ships without them and says so, w
 28 deliver.
 
 ### Task 29: Reopening a completed task
+
+**Ruling taken while closing this task.**
+
+Ruling: the README half is delivered by Task 28's rewrite, and the two paragraphs this step names
+were never written. / Tasks 19 and 21 shipped `X` and `u` working, so neither wrote a sentence
+saying the key does not work. What the README actually carried was the Todoist-era claim that `u`
+undoes the last complete or reopen, an undo stack this plugin no longer has; the rewrite replaces it
+with what the key does, which is reopen the object under the cursor in the completed history. /
+Nothing: the end state this step asks for is the state the README is in.
+
 
 **Waits on dam PR A: `dam edit <oid> --undone`.** Confirm with `dam edit --help | grep -- --undone`.
 
