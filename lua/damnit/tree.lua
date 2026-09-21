@@ -23,13 +23,13 @@ function M.parent_of(task)
   return tostring(parent)
 end
 
----@class todoist.Tree
+---@class damnit.Tree
 ---@field by_id table<string, table> every task in the view, by id
 ---@field children table<string, table[]> a task's children, in the API's order
 
 --- Index one view's tasks by id and by parent.
 ---@param tasks table[]
----@return todoist.Tree
+---@return damnit.Tree
 function M.index(tasks)
   local tree = { by_id = {}, children = {} }
 
@@ -53,7 +53,7 @@ end
 --- A task whose parent the view does not hold is one too: a filter can match a
 --- subtask without matching its parent, and an orphan drawn at the top level is
 --- better than an orphan dropped.
----@param tree todoist.Tree
+---@param tree damnit.Tree
 ---@param task table
 ---@return boolean
 function M.is_root(tree, task)
@@ -63,7 +63,7 @@ function M.is_root(tree, task)
 end
 
 --- How many children a task has in this view.
----@param tree todoist.Tree
+---@param tree damnit.Tree
 ---@param id string
 ---@return integer
 function M.child_count(tree, id)
@@ -75,7 +75,7 @@ end
 --- What a fold hides: `descend` stops at a collapsed node, so the badge on a
 --- folded line has to count the whole subtree, not the one level of it
 --- `child_count` gives.
----@param tree todoist.Tree
+---@param tree damnit.Tree
 ---@param id string
 ---@return integer
 function M.descendant_count(tree, id)
@@ -105,7 +105,7 @@ end
 ---
 --- A collapsed task is visited itself and its descendants are not, which is
 --- what folding is here: the lines are never drawn rather than hidden.
----@param tree todoist.Tree
+---@param tree damnit.Tree
 ---@param task table
 ---@param collapsed table<string, boolean>
 ---@param visit fun(task: table, depth: integer)
@@ -167,7 +167,7 @@ end
 --- in, which is what makes it top level. A task with no parent has nowhere to
 --- go and says so.
 ---@param task table
----@param tree todoist.Tree
+---@param tree damnit.Tree
 ---@return table? destination a move body, or nil with a reason
 ---@return string? refusal
 function M.promote_to(task, tree)

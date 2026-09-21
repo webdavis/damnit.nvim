@@ -6,9 +6,8 @@
 -- one. A spec file returns a table of `["what it does"] = function() ... end`
 -- cases and asserts with plain `assert`. No plenary, no busted.
 --
--- No spec talks to Todoist. The client is driven either by a fake `vim.system`
--- or by a loopback HTTP server the spec itself runs, so a run needs no token
--- and reaches no network.
+-- No spec reaches the network and no spec runs the real `dam`. Every spec
+-- here is a pure one.
 
 local tests_dir = arg[0]:match("(.*)/") or "."
 local project_root = tests_dir .. "/.."

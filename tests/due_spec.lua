@@ -3,7 +3,7 @@
 -- Every case hands in its own clock, so no answer here depends on the day the
 -- suite runs, the hour it runs at, or the timezone of the machine running it.
 
-local due = require("todoist.due")
+local due = require("damnit.due")
 
 --- A clock five hours behind UTC, at two in the afternoon on a fixed day.
 ---@param stamp string?
