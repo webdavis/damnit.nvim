@@ -6,6 +6,11 @@
 
 local location_edit = require("damnit.location_edit")
 
+-- A jump changes the tabpage's directory, and the runner's `package.path` is
+-- relative to where the run started, so everything a jump reaches is loaded
+-- before any case moves.
+require("damnit.sidebar")
+
 --- A repository holding one file of `lines` lines.
 ---@param lines integer
 ---@return string root

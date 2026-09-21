@@ -586,9 +586,10 @@ require("damnit").setup({
 })
 ```
 
-`view` names a view, not a filter, so the same word opens the same list in the sidebar, in
-`:Dam today` and in the herdr pane. It has to be declared in `views`: a name this plugin was
-never given is refused before the split is made, so a typo leaves your layout exactly as it was.
+`view` names a view, not a query, so the same word opens the same list in the sidebar, in
+`:Dam list today` and in the herdr pane. It is resolved before the split is made, against `views`
+and then against dam's own saved filters, and a name dam has already refused leaves your layout
+exactly as it was.
 `today` is the default because it is the view worth having open while you work, and the default side
 is the left at 40 columns, which is a file tree's width and reads the same way.
 

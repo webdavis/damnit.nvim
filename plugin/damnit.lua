@@ -37,6 +37,9 @@ local SUBCOMMANDS = {
   pick = function(args)
     require("damnit").pick(args[1])
   end,
+  toggle = function()
+    require("damnit").toggle()
+  end,
   task = function(args)
     if #args ~= 1 then
       return require("damnit.message").fail("usage is :Dam task <oid>")

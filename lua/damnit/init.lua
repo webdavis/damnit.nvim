@@ -60,6 +60,11 @@ function M.open_status()
   return require("damnit.window").open()
 end
 
+--- Open the sidebar view beside your work, or close the one this tabpage has.
+function M.toggle()
+  require("damnit.sidebar").toggle()
+end
+
 --- The completed history, newest first. One local query: dam holds the whole
 --- history and answers it at once, so there is nothing to page.
 ---@return integer buf
