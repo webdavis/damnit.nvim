@@ -65,6 +65,7 @@ return {
     assert(lines[1] == "---", lines[1])
     assert(vim.tbl_contains(lines, "subject: buy oat milk"), vim.inspect(lines))
     assert(vim.tbl_contains(lines, "path: inbox/"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "done: false"), vim.inspect(lines))
     assert(vim.tbl_contains(lines, "priority: 1"), vim.inspect(lines))
     assert(vim.tbl_contains(lines, "labels: errand, home"), vim.inspect(lines))
     assert(vim.tbl_contains(lines, "depends:"), "an empty field is `key:` with no trailing space")
@@ -76,6 +77,20 @@ return {
     local changes = after(TASK, { subject = "buy the oat milk" })
 
     assert(vim.deep_equal(changes.edit, { "--subject", "buy the oat milk" }), vim.inspect(changes.edit))
+  end,
+
+  ["clears done with --undone, the one direction dam edit takes"] = function()
+    local finished = vim.tbl_deep_extend("force", TASK, { task = { done = true } })
+    local changes = after(finished, { done = "false" })
+
+    assert(vim.deep_equal(changes.edit, { "--undone" }), vim.inspect(changes.edit))
+  end,
+
+  ["refuses done: true, because completing an object is not an edit to it"] = function()
+    local _, refused = after(TASK, { done = "true" })
+
+    assert(refused.message:find("--undone", 1, true), refused.message)
+    assert(refused.line > 1, tostring(refused.line))
   end,
 
   ["clears a due date with --no-due rather than an empty --due"] = function()

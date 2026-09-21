@@ -12,7 +12,7 @@ local tree = require("damnit.tree")
 
 M.FENCE = "---"
 
-M.TASK_KEYS = { "subject", "path", "priority", "due", "deadline", "labels", "depends", "recurrence" }
+M.TASK_KEYS = { "subject", "path", "done", "priority", "due", "deadline", "labels", "depends", "recurrence" }
 M.EVENT_KEYS = { "subject", "path", "start", "end", "location", "labels", "depends" }
 
 --- The flag that sets a field, and the flag that clears it. `false` means the
@@ -235,6 +235,19 @@ end
 ---@param edit string[] appended to in place
 ---@return { message: string, line: integer }? refusal
 local function append_flags(object, key, entry, edit)
+  -- `done` is the one field with a clearing flag and no setting one: dam has
+  -- `--undone` and nothing for the other direction, because completing rolls a
+  -- recurring object forward instead of setting a flag, which is `dam done`.
+  if key == "done" then
+    if entry.value == "false" then
+      edit[#edit + 1] = "--undone"
+
+      return nil
+    end
+
+    return refuse("`done` only takes false here, which sends --undone; complete an object with x, or dam done", entry)
+  end
+
   if key == "labels" or key == "depends" then
     local added, removed = set_diff(split(entry.value), object[key] or {})
     local set = key == "labels" and "--label" or "--depends"
