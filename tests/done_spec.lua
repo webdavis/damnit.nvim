@@ -5,7 +5,7 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
-local quick_edit = require("damnit.quick_edit")
+local done = require("damnit.done")
 
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }
 
@@ -53,7 +53,7 @@ end
 
 return {
   ["reads the blockers dam named in the refusal's oids"] = function()
-    local blockers = quick_edit.blockers({
+    local blockers = done.blockers({
       kind = "refused",
       rule = "blocked",
       message = "644351d cannot be completed:\n  child ed990d4 is open\n  child e0edd1e is open",
@@ -68,7 +68,7 @@ return {
   end,
 
   ["recognises the rule for a question no machine format can answer"] = function()
-    local said = quick_edit.interactive_refusal({ kind = "refused", rule = "needs_an_answer" }, TAXES.oid)
+    local said = done.interactive_refusal({ kind = "refused", rule = "needs_an_answer" }, TAXES.oid)
 
     assert(
       said
@@ -76,7 +76,7 @@ return {
           .. "run dam done cfdc36e --force --interactive in a terminal",
       tostring(said)
     )
-    assert(quick_edit.interactive_refusal({ kind = "refused", rule = "blocked" }, TAXES.oid) == nil)
+    assert(done.interactive_refusal({ kind = "refused", rule = "blocked" }, TAXES.oid) == nil)
   end,
 
   ["offers to complete it anyway, and sends --force when that is chosen"] = function()
@@ -88,7 +88,7 @@ return {
         on_choice(items[1], 1)
       end
 
-      quick_edit.send_done(TAXES, false)
+      done.send(TAXES, false)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
       end, 2000)
@@ -108,7 +108,7 @@ return {
         on_choice(items[#items], #items)
       end
 
-      quick_edit.send_done(TAXES, false)
+      done.send(TAXES, false)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
       end, 500)
@@ -120,7 +120,7 @@ return {
 
   ["says what it completed"] = function()
     with_dam(function(_, notifications)
-      quick_edit.send_done(TAXES, false)
+      done.send(TAXES, false)
       fake_dam.settle(function()
         return #notifications > 0
       end)
@@ -131,7 +131,7 @@ return {
 
   ["reports a recurring task as rolled forward rather than as done"] = function()
     with_dam(function(_, notifications)
-      quick_edit.send_done({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" }, false)
+      done.send({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" }, false)
       fake_dam.settle(function()
         return #notifications > 0
       end)

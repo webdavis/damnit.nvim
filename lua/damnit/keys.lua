@@ -76,7 +76,7 @@ M.MAPS = {
     { "n", "R", call("damnit.list", "refresh"), "re-read this view" },
     { "n", "za", call("damnit.list", "toggle_fold"), "fold or unfold what is nested here" },
     { "n", "gd", call("damnit.list", "jump_to_location_under_cursor"), "jump to the code this came from" },
-    { "n", "x", edit("complete"), "complete this object" },
+    { "n", "x", call("damnit.done", "complete"), "complete this object" },
     { "n", "X", edit("reopen"), "reopen this object" },
     { "n", "dd", edit("delete"), "remove this object, after the confirm" },
     { "n", "p", edit("cycle_priority"), "cycle this object's priority" },
