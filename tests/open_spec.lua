@@ -50,6 +50,7 @@ return {
   ["opens a remote's unpushed commits, newest first"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gp", "x", false)
+      local status_buf = vim.api.nvim_get_current_buf()
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("\r", "x", false)
 
@@ -79,6 +80,13 @@ return {
       assert(body:find("the newest 1 commit", 1, true), body)
       assert(body:find("1 unpushed", 1, true), body)
       assert(body:find("dam does not name which commits are unpushed", 1, true), body)
+
+      -- The listing splits, the way a conflict does, so the status stays open.
+      local shown = false
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        shown = shown or vim.api.nvim_win_get_buf(win) == status_buf
+      end
+      assert(shown, "the status window survives the listing")
     end)
   end,
 

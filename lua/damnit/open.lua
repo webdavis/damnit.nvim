@@ -112,6 +112,7 @@ function M.unpushed(entry)
         vim.list_extend(lines, commit_lines(commit))
       end
 
+      vim.cmd("split")
       read_only(("damnit://unpushed/%s"):format(entry.remote), lines)
     end,
   })
