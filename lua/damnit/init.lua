@@ -26,8 +26,6 @@ M.options = {
   },
   refresh_interval = 60,
   reminders = false,
-  store = nil,
-  config = nil,
   timeout = 120,
   window = {
     float = false,
