@@ -136,7 +136,6 @@ function M.jump(location)
     return refuse(("there is no file at %s"):format(location.path))
   end
 
-  require("damnit.sidebar").leave_fixed_window()
   vim.cmd.edit(vim.fn.fnameescape(path))
 
   local last = vim.api.nvim_buf_line_count(0)
