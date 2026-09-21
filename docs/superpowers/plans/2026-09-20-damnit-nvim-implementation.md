@@ -6600,18 +6600,34 @@ return {
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,
 
-  ["reports dam's own wording for a query it refuses, and remembers the name"] = function()
+  ["reports dam's own wording for a name it cannot parse, and remembers it"] = function()
     with_list(function(_, fake, notifications)
-      assert(
-        notifications[#notifications] == 'due: cannot read "::"',
-        vim.inspect(notifications)
-      )
+      assert(notifications[#notifications] == "unexpected nonsense in query", vim.inspect(notifications))
 
       local before = #fake_dam.argv_log(fake)
       damnit.open("nonsense")
 
       assert(#fake_dam.argv_log(fake) == before, "the second attempt costs no call")
-    end, { name = "nonsense", exit = 1, stderr = 'dam: due: cannot read "::"' })
+    end, {
+      name = "nonsense",
+      exit = 1,
+      stderr = '{"error": {"kind": "parse", "rule": null, '
+        .. '"message": "unexpected nonsense in query", "oids": []}}',
+    })
+  end,
+
+  ["keeps a probed name when the failure said nothing about it"] = function()
+    with_list(function(_, fake)
+      local before = #fake_dam.argv_log(fake)
+      damnit.open("today")
+
+      assert(#fake_dam.argv_log(fake) > before, "a locked store must not refuse the name for the session")
+    end, {
+      name = "today",
+      exit = 1,
+      stderr = '{"error": {"kind": "store", "rule": null, '
+        .. '"message": "the store is locked", "oids": []}}',
+    })
   end,
 
   ["R re-reads the view, and za folds a subtree away"] = function()
@@ -6654,12 +6670,15 @@ function M.fetch(spec, callback)
     args = require("damnit.views").query_args(spec),
     label = "ls",
     on_done = function(objects, err)
-      -- A bare name that dam refuses is a view in neither source, and the
-      -- next attempt is refused here rather than costing a call. Only a
-      -- refusal says that: a locked store, a timeout or a cancel says nothing
-      -- about the name, and forgetting one has no expiry short of restarting
-      -- Neovim.
-      if err and err.kind == "refused" and spec.probing then
+      -- A bare name that is not a saved filter is parsed as query text, and
+      -- a word with no colon is not a term, so dam answers `parse`. That is
+      -- the one kind that says the name is a view in neither source: a locked
+      -- store, a timeout or a cancel says nothing about it, and forgetting one
+      -- has no expiry short of restarting Neovim. `refused` is left out
+      -- deliberately, because a real saved filter naming a category the config
+      -- has since dropped raises `unknown_category` while probing is still
+      -- true, and forgetting that name would refuse a view that exists.
+      if err and err.kind == "parse" and spec.probing then
         require("damnit.views").forget_filter(spec.title)
       end
 
