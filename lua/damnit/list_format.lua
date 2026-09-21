@@ -137,10 +137,13 @@ end
 --- The objects newest completion first, which is the order a history is read in.
 ---
 --- `dam ls` orders by path, then due date, then priority, then subject, so the
---- order it answers in says nothing about when anything was completed. A
---- timestamp is RFC 3339 in UTC, so comparing the text compares the instant.
---- An object with no timestamp sorts after every one that has one and keeps
---- dam's order among its own kind.
+--- order it answers in says nothing about when anything was completed.
+---
+--- A timestamp is RFC 3339 in UTC at whatever precision dam wrote, so the text
+--- compares as the instant among timestamps of the same precision, which is
+--- what both reachable paths give: a local completion carries microseconds, and
+--- a remote sends none at all. An object with no timestamp sorts after every one
+--- that has one and keeps dam's order among its own kind.
 ---@param objects table[]
 ---@return table[]
 function M.by_completion(objects)
