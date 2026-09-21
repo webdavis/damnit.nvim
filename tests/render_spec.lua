@@ -195,6 +195,14 @@ return {
     assert(line.text:find("%(subject%) inbox/"), line.text)
   end,
 
+  ["says the remote list is unknown when it could not be read, not that there is none"] = function()
+    local unread = status_model.build(fixture("default/status.json"), nil)
+    local none = status_model.build(fixture("default/status.json"), { remotes = {} })
+
+    assert(render.lines(unread, STATE)[2].text == "Remotes: unknown", render.lines(unread, STATE)[2].text)
+    assert(render.lines(none, STATE)[2].text == "Remotes: none configured", render.lines(none, STATE)[2].text)
+  end,
+
   ["links every group to a standard one and writes no colour"] = function()
     for group, target in pairs(render.HIGHLIGHTS) do
       assert(type(target) == "string" and target ~= "", group)

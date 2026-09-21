@@ -203,6 +203,7 @@ local SECTIONS = {
 ---@field sections damnit.Section[] in the order they are drawn
 ---@field empty boolean true when no section has an entry
 ---@field remotes { remote: string, commits: integer }[]
+---@field remotes_known boolean false when the remote list was never read
 
 --- The window's model for one status document.
 ---
@@ -238,7 +239,12 @@ function M.build(status, remotes)
     sections[#sections + 1] = section(each[1], each[2], status[each[3]], each[4])
   end
 
-  return { sections = sections, empty = #sections == 0, remotes = listed }
+  return {
+    sections = sections,
+    empty = #sections == 0,
+    remotes = listed,
+    remotes_known = remotes ~= nil,
+  }
 end
 
 return M

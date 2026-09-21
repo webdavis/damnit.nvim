@@ -132,11 +132,14 @@ local function header_line(label, value, group)
   return built.line("header")
 end
 
+--- Naming none is a claim, so it is made only where the list was read. An
+--- unread list still names whatever the unpushed rows named.
 ---@param remotes { remote: string, commits: integer }[]
+---@param known boolean
 ---@return damnit.Line
-local function remotes_line(remotes)
+local function remotes_line(remotes, known)
   if #remotes == 0 then
-    return header_line("Remotes:", "none configured")
+    return header_line("Remotes:", known and "none configured" or "unknown")
   end
 
   local built = row()
@@ -255,7 +258,7 @@ local ENTRY_LINES = {
 ---@param state { store: string, running: { label: string, elapsed: number, pending: integer }? }
 ---@return damnit.Line[]
 function M.lines(model, state)
-  local lines = { header_line("Store:", state.store), remotes_line(model.remotes) }
+  local lines = { header_line("Store:", state.store), remotes_line(model.remotes, model.remotes_known) }
 
   if state.running then
     lines[#lines + 1] = running_line(state.running)
