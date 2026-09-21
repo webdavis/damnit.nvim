@@ -8387,6 +8387,16 @@ before writing code. Version one of the plugin ships without them and says so, w
 
 Blocks `X` in the list buffer, `u` in the completed history, and editing `done` in the task buffer.
 
+**Only Step 3's README half is left.** Every code step here landed earlier, because `--undone` was
+already in the `dam` on `PATH` when those tasks ran and each would otherwise have shipped a sentence
+saying it was not. Task 19 wrote `quick_edit.reopen` and bound `X`; its fix round put `done` in
+`task_format.M.TASK_KEYS` with the asymmetric flag handling that `dam edit` has only `--undone` and no
+`--done`. Task 21 bound `u`, and the fix round of Tasks 20 to 24 narrowed it to the completed history
+through `quick_edit.reopen_here`, because a plain `dam ls` holds completed objects and reopening one
+clears `completed_at` with no verb that puts it back. So Steps 1 and 2 are done and the cases named
+below exist under their own names. What remains is deleting the two README paragraphs saying these keys
+do not work, at the lines Step 3 names. Close this task on that alone; do not re-do the code.
+
 **Files:** `lua/damnit/quick_edit.lua`, `lua/damnit/task_format.lua`, `tests/quick_edit_spec.lua`,
 `tests/task_format_spec.lua`, `README.md`
 
