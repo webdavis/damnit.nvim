@@ -1,0 +1,7 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: todoist (clean)
+Help:    g?
+
+Conflicts (1)
+! 7257572           file taxes here             todoist
+

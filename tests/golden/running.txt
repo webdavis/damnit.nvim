@@ -1,0 +1,21 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: todoist (1 unpushed)
+Running: push todoist  12.3s  (2 queued)     [C-c to cancel]
+Help:    g?
+
+Conflicts (1)
+! 7257572           file taxes here             todoist
+
+Working (2)
+- changed  78b8950  buy oat milk                (subject, labels, due)  inbox/
+- removed  a9db854  child                                               work/proj/
+
+Staged (1)
+- new      660a08d  write the spec                                      work/
+
+Unpushed (1)
+> todoist           1 unpushed
+
+Notices (1)
+  todoist: c1d2e3f removed upstream
+

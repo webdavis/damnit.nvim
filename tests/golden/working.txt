@@ -1,0 +1,8 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: todoist (clean)
+Help:    g?
+
+Working (2)
+- changed  78b8950  buy oat milk                (subject, labels, due)  inbox/
+- removed  a9db854  child                                               work/proj/
+

@@ -1,0 +1,7 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: todoist (clean)
+Help:    g?
+
+Notices (1)
+  todoist: c1d2e3f removed upstream
+
