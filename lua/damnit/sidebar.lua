@@ -128,9 +128,16 @@ function M.close()
 end
 
 --- Open the sidebar, or close the one this tabpage already has.
+---
+--- Answers with the window either way, so one type covers both: nil once the
+--- sidebar is gone, and the window still there when the close was refused for
+--- being the only one in the tabpage.
+---@return integer? win the sidebar this tabpage has after the call
 function M.toggle()
   if M.window() then
-    return M.close()
+    M.close()
+
+    return M.window()
   end
 
   return M.open()
