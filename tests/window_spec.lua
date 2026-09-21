@@ -129,6 +129,17 @@ return {
     end)
   end,
 
+  [":Dam says its usage, prefixed, for a word it does not know"] = function()
+    with_window(function(_, notifications)
+      vim.cmd("Dam bogus")
+
+      assert(
+        notifications[#notifications] == "damnit.nvim: usage is :Dam, :Dam cancel",
+        tostring(notifications[#notifications])
+      )
+    end)
+  end,
+
   ["says so rather than raising E444 when the window is the only one"] = function()
     with_window(function(_, notifications)
       vim.cmd("only")

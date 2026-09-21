@@ -52,7 +52,7 @@ vim.api.nvim_create_user_command("Dam", function(cmd)
   local run = SUBCOMMANDS[args[1] or ""]
 
   if not run then
-    return vim.notify("damnit.nvim: " .. usage(), vim.log.levels.ERROR)
+    return require("damnit.message").fail(usage())
   end
 
   run(vim.list_slice(args, 2), cmd)
