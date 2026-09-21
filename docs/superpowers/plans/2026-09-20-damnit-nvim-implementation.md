@@ -5295,11 +5295,14 @@ function M.sync(verb, remote)
 
         -- A credential command cannot prompt from here: vim.system closes
         -- standard input, so an interactive vault CLI never sees a terminal.
-        if not err.plugin and err.message:find("credential", 1, true) then
+        -- dam names all three credential failures with the one kind, and the
+        -- rule is null for each, so the advice covers the command and the
+        -- source together.
+        if err.kind == "credential" then
           message.warn(
-            "the remote's credential command needs a terminal; run dam "
+            "dam could not resolve this remote's credential; if its source is a command that prompts, run dam "
               .. verb
-              .. " in one, or point the credential at a non-interactive source"
+              .. " in a terminal, and otherwise fix the source in dam's config"
           )
         end
       else
