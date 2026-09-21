@@ -108,7 +108,7 @@ function M.jump_to_location_under_cursor()
     return message.warn("no object on this line")
   end
 
-  require("damnit.location").jump(entry.location)
+  require("damnit.location_edit").jump(entry.location)
 end
 
 --- The view the list buffer is showing, when it is on screen in this tabpage.

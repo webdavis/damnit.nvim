@@ -140,6 +140,18 @@ return {
     end)
   end,
 
+  ["gd on an object with no location in its body says so"] = function()
+    list_buffer.with(function(buf, _, notifications)
+      list_buffer.cursor_to(buf, "buy oat milk")
+      vim.api.nvim_feedkeys("gd", "x", false)
+
+      assert(
+        notifications[#notifications] == "damnit.nvim: this task has no location in its body",
+        vim.inspect(notifications)
+      )
+    end)
+  end,
+
   ["<CR> on the title says there is no object there and opens nothing"] = function()
     list_buffer.with(function(_, fake, notifications)
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
