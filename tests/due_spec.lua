@@ -13,22 +13,19 @@ local function clock(stamp, utc_offset)
   return { stamp = stamp or "2026-09-17T14:00:00", utc_offset = utc_offset or -5 * 3600 }
 end
 
----@param date any
+--- One object's `task` sub-table, which is where dam puts `due`.
+---@param value any
 ---@return table
-local function task(date)
-  return { id = "1", content = "a task", due = { date = date, string = "today", timezone = vim.NIL } }
+local function task(value)
+  return { done = false, priority = 4, due = value }
 end
 
 return {
-  ["a task with no due object is neither due nor overdue"] = function()
-    assert(due.classify({ id = "1", content = "a task" }, clock()) == "none")
+  ["a task with no due field is neither due nor overdue"] = function()
+    assert(due.classify({ done = false, priority = 4 }, clock()) == "none")
   end,
 
   ["a null due decodes to vim.NIL, which is truthy, and is still not due"] = function()
-    assert(due.classify({ id = "1", content = "a task", due = vim.NIL }, clock()) == "none")
-  end,
-
-  ["a due object whose date is null is not due either"] = function()
     assert(due.classify(task(vim.NIL), clock()) == "none")
   end,
 
@@ -70,6 +67,21 @@ return {
     assert(timed == true)
   end,
 
+  ["a zoned due in the clock's own offset is read as written"] = function()
+    -- The shape dam stores a timed due as: the instant, its offset, its zone.
+    local where, timed, stamp = due.classify(task("2026-09-17T09:00:00-05:00[America/Chicago]"), clock())
+    assert(stamp == "2026-09-17T09:00:00", stamp)
+    assert(where == "overdue", where)
+    assert(timed)
+  end,
+
+  ["a zoned due from another zone is shifted into local time"] = function()
+    -- 18:00 in a zone two hours ahead of UTC is 11:00 five hours behind it.
+    local where, _, stamp = due.classify(task("2026-09-17T18:00:00+02:00[Europe/Berlin]"), clock("2026-09-17T10:00:00"))
+    assert(stamp == "2026-09-17T11:00:00", stamp)
+    assert(where == "due", where)
+  end,
+
   ["a fixed-zone due is stored in UTC and read in local time"] = function()
     -- 18:00 UTC is 13:00 on a clock five hours behind, so it has not come yet.
     local where, _, stamp = due.classify(task("2026-09-17T18:00:00.000000Z"), clock("2026-09-17T12:00:00"))
@@ -88,7 +100,7 @@ return {
     assert(due.classify(task("2026-09-18T02:00:00Z"), clock("2026-09-17T14:00:00")) == "due")
   end,
 
-  ["a floating due is read as written, whatever the offset says"] = function()
+  ["a due carrying no offset at all is read as written"] = function()
     local _, _, stamp = due.classify(task("2026-09-17T09:00:00"), clock("2026-09-17T14:00:00", 9 * 3600))
     assert(stamp == "2026-09-17T09:00:00", stamp)
   end,
