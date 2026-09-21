@@ -6,6 +6,7 @@
 
 local M = {}
 
+local render = require("damnit.render")
 local status_model = require("damnit.status_model")
 
 --- The oids whose diff is open, per store, for the session.
@@ -138,7 +139,7 @@ function M.apply(buf, key, model)
     local entry = oid and wanted[oid] and changes[oid]
 
     if entry then
-      vim.api.nvim_buf_set_extmark(buf, require("damnit.render").NAMESPACE, index - 1, 0, {
+      vim.api.nvim_buf_set_extmark(buf, render.NAMESPACE, index - 1, 0, {
         virt_lines = M.virt_lines(entry),
       })
     end
