@@ -97,7 +97,10 @@ function M.send(object, force)
         return message.warn(interactive)
       end
 
-      if err.kind ~= "refused" or force then
+      -- Only a blocked completion has a force that helps. dam refuses `done`
+      -- by eighteen other rules, several of which name no blocker at all, so
+      -- anything else is reported in dam's own words.
+      if err.rule ~= "blocked" or force then
         return message.report(err)
       end
 
