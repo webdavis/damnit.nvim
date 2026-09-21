@@ -191,6 +191,22 @@ local function forest()
   return tree.index(drawn_from or {})
 end
 
+--- The objects the lines on screen were drawn from, which is what a key that
+--- offers a choice over the whole view reads.
+---@return table[]
+function M.objects_in_view()
+  return drawn_from or {}
+end
+
+--- The path the cursor is in: the path of the object on its line, and the root
+--- when the line holds none.
+---@return string
+function M.path_under_cursor()
+  local entry = entry_under_cursor()
+
+  return entry and tostring(entry.object.path or "") or ""
+end
+
 --- The objects under a path in the view on screen, which is not always every
 --- child: a filtered view can match a parent and none of its children.
 ---@param path string

@@ -1,0 +1,13 @@
+{
+  "categories": [
+    {
+      "name": "context",
+      "values": [
+        "errand",
+        "home",
+        "slow"
+      ],
+      "exclusive": false
+    }
+  ]
+}

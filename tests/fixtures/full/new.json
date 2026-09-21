@@ -1,0 +1,14 @@
+{
+  "oid": "4aa6797253e3610afe61c236650b6ec3f41877ee",
+  "kind": "task",
+  "subject": "buy stamps",
+  "body": "",
+  "path": "inbox/",
+  "labels": [],
+  "depends": [],
+  "reminders": [],
+  "task": {
+    "done": false,
+    "priority": 4
+  }
+}
