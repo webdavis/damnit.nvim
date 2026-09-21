@@ -8,28 +8,22 @@ local M = {}
 
 M.PREFIX = "damnit.nvim: "
 
----@param text string
----@param level integer
-local function notify(text, level)
-  vim.notify(text, level)
-end
-
 --- An outcome the user asked for.
 ---@param text string
 function M.say(text)
-  notify(M.PREFIX .. text, vim.log.levels.INFO)
+  vim.notify(M.PREFIX .. text, vim.log.levels.INFO)
 end
 
 --- A refusal or a failure the user can act on.
 ---@param text string
 function M.warn(text)
-  notify(M.PREFIX .. text, vim.log.levels.WARN)
+  vim.notify(M.PREFIX .. text, vim.log.levels.WARN)
 end
 
 --- A configuration problem that makes the plugin unusable.
 ---@param text string
 function M.fail(text)
-  notify(M.PREFIX .. text, vim.log.levels.ERROR)
+  vim.notify(M.PREFIX .. text, vim.log.levels.ERROR)
 end
 
 --- One error table, at the level its kind deserves.
@@ -41,10 +35,10 @@ function M.report(err)
   local level = err.kind == "missing" and vim.log.levels.ERROR or vim.log.levels.WARN
 
   if err.plugin then
-    return notify(M.PREFIX .. err.message, level)
+    return vim.notify(M.PREFIX .. err.message, level)
   end
 
-  notify(err.message, level)
+  vim.notify(err.message, level)
 end
 
 return M
