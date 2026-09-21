@@ -28,10 +28,12 @@ for arg in "$@"; do
 done
 
 # dam exits 3 on an interrupt. The sleep runs in the background and the script
-# waits on it, so the trap runs the moment the signal arrives.
-trap 'exit 3' INT
-trap 'exit 3' TERM
-if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" & wait $!; fi
+# waits on it, so the trap runs the moment the signal arrives. The sleep owns
+# neither of this script's pipes, so a caller reading them sees the exit as
+# soon as the trap runs even when the signal arrived before $! was assigned.
+trap 'kill $sleeper 2>/dev/null; exit 3' INT
+trap 'kill $sleeper 2>/dev/null; exit 3' TERM
+if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 & sleeper=$!; wait $sleeper; fi
 
 if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
 if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
