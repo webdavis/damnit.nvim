@@ -33,7 +33,7 @@ return {
 
   ["carries dam's own wording unprefixed"] = function()
     local seen = notifications(function()
-      message.report({ kind = "refused", code = 2, message = "78b8950 cannot be completed" })
+      message.report({ kind = "refused", code = 4, message = "78b8950 cannot be completed" })
     end)
 
     assert(seen[1].text == "78b8950 cannot be completed", seen[1].text)

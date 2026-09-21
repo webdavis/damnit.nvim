@@ -46,6 +46,9 @@ M.options = {
 function M.setup(opts)
   -- Deep, so naming one sidebar option keeps the defaults of the others.
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
+
+  -- A handshake made under the old options is not the one the new options name.
+  require("damnit.dam").forget()
 end
 
 return M

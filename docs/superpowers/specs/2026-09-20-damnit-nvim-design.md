@@ -13,7 +13,9 @@ this plugin ever does.
 Every claim below about `dam` cites either the design specification at
 `damnit/docs/superpowers/specs/2026-09-18-damnit-design.md` (written `dam spec` plus a line number)
 or the version-one code as built (written as a path under `crates/`, plus the observed command
-output where the behaviour was measured on 2026-09-20 against `dam 0.1.0`). Every claim about
+output where the behaviour was measured on 2026-09-20 against `dam 0.1.0`). The error document,
+the exit codes and the version range were re-read against `dam 0.2.0` on 2026-09-20, after that
+release changed all three. Every claim about
 fugitive cites `vim-fugitive/doc/fugitive.txt` or `vim-fugitive/autoload/fugitive.vim` by line.
 
 ______________________________________________________________________
@@ -356,13 +358,14 @@ shows (`Oid::short`).
 
 On the first call of a session, before any other, the plugin runs `dam --version` and reads the
 version out of `dam <major>.<minor>.<patch>`. The supported range for version one of the plugin is
-`>= 0.1.0` and `< 0.2.0`.
+`>= 0.2.0` and `< 0.3.0`, because the error document this plugin reads arrived in dam 0.2.0 and a
+0.1.x writes prose instead.
 
-- **Given** `dam --version` prints `dam 0.1.0`, **when** the handshake runs, **then** the version is
+- **Given** `dam --version` prints `dam 0.2.0`, **when** the handshake runs, **then** the version is
   recorded for the session and the pending action proceeds.
 - **Given** `dam --version` prints a version outside the range, **when** the handshake runs, **then**
   every action is refused for the session with
-  `damnit.nvim: dam 0.3.0 is outside the supported range >=0.1.0 <0.2.0; update damnit.nvim` and no
+  `damnit.nvim: dam 0.1.0 is outside the supported range >=0.2.0 <0.3.0; update damnit.nvim` and no
   further `dam` process is spawned until `setup` runs again.
 - **Given** `dam` is not on `PATH`, **when** the handshake runs, **then** the refusal is
   `damnit.nvim: dam was not found on PATH; install it with cargo install damnit` and the window is
@@ -379,35 +382,53 @@ It is not re-run per action.
 
 ### Error mapping
 
-`dam` writes errors as one plain-text line on standard error, prefixed `dam: `, and this is true
-**even under `--json`**: `crates/dam-cli/src/main.rs:54` is an unconditional
-`eprintln!("dam: {e}")`. Standard output is empty in that case. There is no machine-readable error
-document. The exit code is the only structured signal (`crates/dam-cli/src/error.rs:24`):
+Under `--json`, `dam` writes one error document on standard error and nothing else there, and
+standard output stays empty (dam spec 504 to 546). A run that succeeds writes nothing on standard
+error at all.
+
+```json
+{"error": {"kind": "refused", "rule": "blocked",
+ "message": "98d8780 cannot be completed:\n  child a9db854 is open\nuse --force to complete it
+anyway, or --force --interactive to decide what happens to them",
+ "oids": ["98d878013fb0e026d37170e7ceed6707192ae99a",
+          "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}
+```
+
+`kind` is one of `refused`, `store`, `helper`, `credential`, `parse`, `usage` and `cancelled`.
+`rule` names the rule a refusal broke, one stable snake_case word per rule, and is null for every
+other kind. `oids` names the objects the message names, in the order it names them, in full.
+
+`message` is the sentence the human form prints after `dam: `, carried verbatim
+(`crates/dam-cli/src/error.rs:86` sends `self.to_string()`), so it is one line for most failures and
+several for a refusal that lists what stands in the way. A blocked completion is a header line, one
+indented line per blocker, and a closing line of advice aimed at a terminal
+(`crates/dam-application/src/errors.rs:113`). A plugin that shows it shows all of it, which is why
+the blockers are read from `oids` rather than from the sentence.
+
+The exit code says the same thing more coarsely, and the two agree:
 
 | Exit | Meaning | Plugin kind |
 | --- | --- | --- |
 | 0 | Success, JSON on standard output | none |
-| 1 | Anything else: usage, store, helper, credential, editor, parse, ambiguity | `error` |
-| 2 | A rule `dam` enforces refused the action | `refused` |
-| 3 | Cancelled: an interrupt, an end of input at a prompt, or an unanswerable question | `cancelled` |
+| 1 | `dam` failed: store, config, helper, credential, editor, parse or io | `error` |
+| 2 | The command line was wrong, which is clap's own usage text and no document | `error` |
+| 3 | Cancelled: an interrupt, or a prompt that could not be answered | `cancelled` |
+| 4 | A rule `dam` keeps refused the action, and `rule` names it | `refused` |
 | 124 | The plugin's own `vim.system` timeout fired, sending TERM | `timeout` |
 
-The plugin's error table is `{ kind = <above>, code = <exit>, message = <stderr with the leading
-"dam: " stripped, trailing newline removed> }`. `message` is always safe to show: dam's own rule is
-that no error message contains a token (dam spec 396).
+Exit 4 is every rule and nothing else, so the plugin maps the code once rather than per verb, and
+exit 2 is the command line alone.
 
-Because there are no error codes, the plugin classifies only these three substrings, and only to
-choose a better message:
+The plugin's error table is `{ kind, code, rule, oids, message }`: the kind from the table above,
+the exit code, the document's `rule` and `oids` where it carried them, and the document's own
+`message`. `message` is always safe to show: dam's own rule is that no error message contains a
+token (dam spec 396). A signal or a timeout is the plugin's own verdict rather than dam's, so those
+two keep the plugin's kinds and its own sentence.
 
-| Substring in `message` | What the plugin does |
-| --- | --- |
-| `was not found on PATH` | Names the missing helper and says to install it. |
-| `a question needs an answer` | Says the action needs a terminal. See section 6. |
-| `has uncommitted local changes` | Offers to open the window at the named object. |
-
-Everything else is shown verbatim. The plugin does not parse dam's prose for meaning, because dam's
-prose is not a contract, and a message that changes wording must not change what the plugin does.
-See **Needed from dam** for the structured error this section exists to work around.
+The plugin matches no substring of a message. Standard error that is not a document, which is what
+clap prints for an argument `dam` rejects before it runs, is carried verbatim as the message with
+no `rule` and no `oids`. dam's prose is not a contract, and a message that changes wording must not
+change what the plugin does.
 
 ### The three failure modes named in the brief
 
@@ -416,8 +437,8 @@ install line above. `:checkhealth damnit` reports it as an error. No window open
 half-drawn buffer to close.
 
 **The store is locked.** SQLite in WAL mode allows one writer at a time. A second `dam` writing
-concurrently fails with a storage error, which reaches the plugin as exit 1 with a message beginning
-`storage: ` (`crates/dam-application/src/errors.rs`, `UseCaseError::Store`). The per-store queue of
+concurrently fails with a storage error, which reaches the plugin as exit 1 with `kind` `store` in
+the document (`crates/dam-application/src/errors.rs`, `UseCaseError::Store`). The per-store queue of
 section 5 is what prevents the plugin from being that second writer against itself. A lock held by
 something outside Neovim is reported as it arrives, and the window offers `R` to try again. The
 plugin does not retry a storage error on its own: a busy database is a signal, and a silent retry
@@ -425,12 +446,13 @@ loop turns a visible conflict into a hang.
 
 **A remote is unreachable.** `dam push` and `dam pull` reach the remote through a helper process
 (dam spec 258 to 273). A network failure arrives as `the remote refused: <text>` or
-`talking to the helper: <text>`, exit 1, after however long the helper took. A remote's config may
-set a `deadline`, which is how long one helper response may take before the helper is killed
-(`crates/dam-application/src/config.rs`, `RemoteConfig::deadline`). The plugin sets its own
-`vim.system` timeout as well, at `opts.timeout` seconds, default 120, so a helper with no configured
-deadline cannot leave a queue entry running forever. On timeout `vim.system` sends TERM and reports
-code 124, and the plugin reports `damnit.nvim: dam pull took longer than 120s and was stopped`.
+`talking to the helper: <text>`, exit 1 with `kind` `helper`, after however long the helper took. A
+remote's config may set a `deadline`, which is how long one helper response may take before the
+helper is killed (`crates/dam-application/src/config.rs`, `RemoteConfig::deadline`). The plugin sets
+its own `vim.system` timeout as well, at `opts.timeout` seconds, default 120, so a helper with no
+configured deadline cannot leave a queue entry running forever. On timeout `vim.system` sends TERM
+and reports code 124, and the plugin reports
+`damnit.nvim: dam pull took longer than 120s and was stopped`.
 
 A `pull` failure during a stale-read is not an error at all: `dam` records it as a notice and the
 read succeeds (`crates/dam-cli/src/commands/remote.rs`, `maybe_pull_stale`). So the window shows it
@@ -1162,17 +1184,20 @@ Measured against the built binary:
 
 ```
 $ dam done 98d8780 --json
-dam: 98d8780 cannot be completed:
-  child a9db854 is open
-use --force to complete it anyway, or --force --interactive to decide what happens to them
-[exit 2]
+{"error": {"kind": "refused", "rule": "blocked",
+ "message": "98d8780 cannot be completed:\n  child a9db854 is open\nuse --force to complete it
+anyway, or --force --interactive to decide what happens to them",
+ "oids": ["98d878013fb0e026d37170e7ceed6707192ae99a",
+          "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}
+[exit 4]
 ```
 
 So the confirm becomes an explanation plus a choice:
 
 - Given `x` or `<CR>`-then-complete is pressed on a task with no open children or dependencies, when
   the call runs, then `dam done <oid> --json` is sent with no prompt.
-- Given the task has open children or open dependencies, when `dam done` exits 2, then the plugin
+- Given the task has open children or open dependencies, when `dam done` exits 4 with `rule`
+  `blocked`, then the plugin
   reads the blocker lines out of the message, shows them, and offers through `vim.ui.select`:
   `Complete it anyway, keeping the children where they are` and `Cancel`.
 - Given the user chooses the first, when the call runs, then `dam done <oid> --force --json` is sent.
@@ -1455,9 +1480,10 @@ Each has one responsibility and one reason to change.
 Three rules, each of which CI can check:
 
 1. **Only `damnit.dam` calls `vim.system`.** Grep `lua/` for `vim.system` and assert one file.
-1. **The pure modules call no `vim.*` API.** `status_model`, `task_format`, `list_format`, `tree` and
-   `location` are grepped for `vim.api`, `vim.fn`, `vim.system`, `vim.notify` and `vim.schedule`.
-   They may use `vim.tbl_*`, `vim.json` and `vim.split`, which are data functions.
+1. **The pure modules call no `vim.*` API.** `status_model`, `task_format`, `list_format`, `tree`,
+   `location` and `answer` are grepped for `vim.api`, `vim.fn`, `vim.system`, `vim.notify` and
+   `vim.schedule`. They may use `vim.tbl_*`, `vim.islist`, `vim.json` and `vim.split`, which are data
+   functions.
 1. **`render` does not know `dam` exists.** It takes a model and a buffer.
 
 The pure layer is what makes the window testable without a window: a golden render test builds a
@@ -1505,7 +1531,7 @@ it exercises the real spawn, the real argv, the real exit code and the real stde
 # Records its argv, then replays a fixture chosen by the first argument.
 printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
 case "$1" in
-  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.1.0}"; exit 0 ;;
+  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
 esac
 if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP"; fi
 if [ -n "$DAMNIT_TEST_STDERR" ]; then echo "$DAMNIT_TEST_STDERR" >&2; fi
@@ -1527,9 +1553,12 @@ Nothing in the suite reaches the network. Nothing runs the real `dam`. Nothing t
 
 ### The cases
 
-- **`dam_spec`.** argv construction per verb, `--store` passthrough, JSON decoding, the error table
-  for exits 1, 2, 3 and 124, and the `pcall` around a missing binary.
-- **`handshake_spec`.** The supported range accepts 0.1.0 and refuses 0.2.0, an unparseable banner
+- **`dam_spec`.** argv construction per verb, `--store` passthrough, JSON decoding, and the `pcall`
+  around a missing binary.
+- **`answer_spec`.** One finished process read directly: the error table for exits 1, 2, 3, 4 and
+  124, a document whose `rule` or `oids` arrive in a shape dam does not send, a document with no
+  message of its own, and a call a signal killed.
+- **`handshake_spec`.** The supported range accepts 0.2.0 and refuses 0.3.0, an unparseable banner
   warns and proceeds, an absent `dam` refuses.
 - **`status_model_spec`.** One fixture per section, an empty status, a status with every section
   populated, and the field-diff computation against every field `changed_fields` names.
@@ -1545,7 +1574,8 @@ Nothing in the suite reaches the network. Nothing runs the real `dam`. Nothing t
 - **`task_buffer_spec`.** Only changed fields sent, `--no-due` on a cleared due, the label and
   depends set diff, `dam mv` as a second call on a changed path, and diagnostics from both a local
   refusal and a dam refusal.
-- **`done_spec`.** The blocker path: exit 2 shows the blockers, the choice sends `--force`, the
+- **`done_spec`.** The blocker path: exit 4 with `rule` `blocked` shows the blockers dam named in
+  `oids`, the choice sends `--force`, the
   `done.interactive` message is recognised, and a rolled-forward result is reported as rolled
   forward rather than as done.
 - **`views_spec`.** `opts.views` wins over a dam filter, an undeclared name is refused before any
@@ -1571,7 +1601,7 @@ Three greps are added to the lint job, each a one-line `grep` that must find not
 
 1. `vim.system` outside `lua/damnit/dam.lua`.
 1. `:wait(` outside `lua/damnit/health.lua` and `tests/`.
-1. `vim.api`, `vim.fn` or `vim.notify` in the five pure modules.
+1. `vim.api`, `vim.fn` or `vim.notify` in the six pure modules.
 
 ______________________________________________________________________
 
@@ -1670,8 +1700,9 @@ Each decided 2026-09-20 on the recommended option, with what it costs to reverse
    through `dam edit --body`, which works but turns every hand-off into an unstaged working change
    the operator has to stage and commit. Decided 2026-09-20: drop it, the recommended option. Cost to
    reverse: an agent hand-off leaves no trace in the store, only in the notification.
-1. **The supported dam range is `>=0.1.0 <0.2.0`** while dam is pre-1.0, widened by hand on each dam
-   minor whose JSON shapes are unchanged. Decided 2026-09-20: this range, the recommended option.
+1. **The supported dam range is `>=0.2.0 <0.3.0`** while dam is pre-1.0, widened by hand on each dam
+   minor whose JSON shapes are unchanged. Decided 2026-09-20: this range, the recommended option,
+   moved off `>=0.1.0 <0.2.0` the same day when dam 0.2.0 replaced the error prose with a document.
    Cost to reverse: a dam minor release refuses to work with the plugin until one constant moves.
 1. **Health warns on `_command` credentials.** Decided 2026-09-20: warn, the recommended option. Cost
    to reverse: a noisy health report on a machine whose credential command is non-interactive, such
@@ -1747,39 +1778,25 @@ mistake stays completed.
 **Proposed change:** `--done` and `--undone` as a mutually exclusive pair on `dam edit`, which is
 where every other field already lives.
 
-### 4. A machine-readable error
+### 4. A machine-readable error: arrived in dam 0.2.0
 
-**Blocks:** every error path in the plugin acting on anything but an exit code, and the three
-substring matches in section 3 that exist only to work around this.
+**Was blocking:** every error path in the plugin acting on anything but an exit code, and the three
+substring matches section 3 used to carry.
 
-`crates/dam-cli/src/main.rs:54` writes `dam: {e}` to standard error and exits, whatever the format
-flag says. Standard output is empty. The exit code distinguishes only refusal, cancellation and
-everything else.
+**Delivered** by dam 0.2.0 (`webdavis/damnit` PR #4), in a shape of its own rather than the one
+proposed here: the document goes on standard error rather than standard output, its keys are
+`kind`, `rule`, `message` and `oids` rather than `code`, `oid` and `blockers`, and a rule refusal
+exits 4 rather than 2. Section 3 carries the delivered contract, and the substring table is gone.
 
-**Proposed change:** under `--json`, print an error document on standard output and keep the plain
-line on standard error for a human:
+### 5. `fields` in a change document: arrived in dam 0.2.0
 
-```json
-{"error": {"code": "blocked", "message": "98d8780 cannot be completed: child a9db854 is open",
- "oid": "98d878013fb0e026d37170e7ceed6707192ae99a",
- "blockers": [{"kind": "open_child", "oid": "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"}]}}
-```
+**Was blocking:** nothing, but it made the window's field summary a copy of dam's logic rather than
+a read of dam's answer.
 
-`code` is a stable identifier per `Refusal` variant and per `UseCaseError` arm
-(`crates/dam-application/src/errors.rs`), which is a list that already exists and already has one
-name per case. The fields beyond `code` and `message` are per code.
-
-### 5. `fields` in a change document
-
-**Blocks:** nothing, but it makes the window's field summary a copy of dam's logic rather than a read
-of dam's answer.
-
-`changed_fields(before, after)` returns the names that differ, in a fixed order
-(`crates/dam-domain/src/change.rs`), and `change_line` already prints them. `change_json` does not
-include them (`crates/dam-cli/src/commands/status.rs:100`), so every client recomputes them.
-
-**Proposed change:** add `"fields": ["subject", "due", "labels"]` to `change_json`, empty for a
-create or a delete, which is what `changed_fields` already returns for those.
+**Delivered** by dam 0.2.0 (`webdavis/damnit` PR #4): a change document carries
+`"fields": ["subject", "due"]`, an update names what moved, a create names every field the new
+object carries beyond its defaults, and a delete names none. The same release makes `status --json`
+answer rows without their embedded objects unless `--full` is passed.
 
 ### 6. `--no-pull`
 
