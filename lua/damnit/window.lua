@@ -6,6 +6,7 @@
 
 local M = {}
 
+local folds = require("damnit.folds")
 local message = require("damnit.message")
 local queue = require("damnit.queue")
 local render = require("damnit.render")
@@ -20,9 +21,6 @@ local models = {}
 ---@type table<string, table>
 local remotes = {}
 
----@type table<string, table<string, boolean>>
-local folded = {}
-
 ---@type integer?
 local origin = nil
 
@@ -36,23 +34,6 @@ local function store_display(key)
   end
 
   return vim.fn.fnamemodify(key, ":~")
-end
-
---- The fold level of one line, read off the kinds the renderer recorded.
----@param lnum integer
----@return string
-function M.fold_level(lnum)
-  local kind = (vim.b.damnit_kinds or {})[lnum]
-
-  if kind == "section" then
-    return ">1"
-  end
-
-  if kind == "header" or kind == "blank" or kind == "empty" then
-    return "0"
-  end
-
-  return "1"
 end
 
 ---@param buf integer
@@ -95,7 +76,7 @@ end
 ---@param win integer
 local function configure(win)
   vim.wo[win].foldmethod = "expr"
-  vim.wo[win].foldexpr = "v:lua.require'damnit.window'.fold_level(v:lnum)"
+  vim.wo[win].foldexpr = folds.EXPRESSION
   vim.wo[win].foldlevel = 99
   vim.wo[win].number = false
   vim.wo[win].relativenumber = false
@@ -244,41 +225,6 @@ function M.entry_under_cursor()
 end
 
 ---@param key string
----@param win integer
-local function remember_folds(key, win)
-  folded[key] = {}
-
-  local buf = vim.api.nvim_win_get_buf(win)
-  local kinds = vim.b[buf].damnit_kinds or {}
-  local sections = vim.b[buf].damnit_sections or {}
-
-  vim.api.nvim_win_call(win, function()
-    for index, kind in ipairs(kinds) do
-      if kind == "section" then
-        folded[key][sections[index]] = vim.fn.foldclosed(index) ~= -1
-      end
-    end
-  end)
-end
-
----@param key string
----@param win integer
-local function apply_folds(key, win)
-  local closed = folded[key] or {}
-  local buf = vim.api.nvim_win_get_buf(win)
-  local kinds = vim.b[buf].damnit_kinds or {}
-  local sections = vim.b[buf].damnit_sections or {}
-
-  vim.api.nvim_win_call(win, function()
-    for index, kind in ipairs(kinds) do
-      if kind == "section" and closed[sections[index]] then
-        pcall(vim.cmd, index .. "foldclose")
-      end
-    end
-  end)
-end
-
----@param key string
 ---@param lines damnit.Line[]
 local function draw(key, lines)
   local buf = buffers[key]
@@ -289,7 +235,7 @@ local function draw(key, lines)
   if win then
     lnum = vim.api.nvim_win_get_cursor(win)[1]
     oid = (vim.b[buf].damnit_oids or {})[lnum]
-    remember_folds(key, win)
+    folds.remember(key, win)
   end
 
   render.draw(buf, lines)
@@ -311,7 +257,7 @@ local function draw(key, lines)
 
   local count = vim.api.nvim_buf_line_count(buf)
   vim.api.nvim_win_set_cursor(win, { math.min(math.max(target, 1), count), 0 })
-  apply_folds(key, win)
+  folds.apply(key, win)
 end
 
 --- The oids whose inline diff is open, remembered for the session.
