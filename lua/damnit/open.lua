@@ -86,6 +86,10 @@ end
 --- the helper did not answer stays behind. Naming them is a dam change.
 ---@param entry table the Unpushed row under the cursor
 function M.unpushed(entry)
+  if (entry.commits or 0) == 0 then
+    return message.warn("this remote has no commit on this line")
+  end
+
   require("damnit.queue").submit({
     args = { "log", "--json" },
     label = "log",

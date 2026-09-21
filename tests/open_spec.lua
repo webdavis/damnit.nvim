@@ -82,6 +82,20 @@ return {
     end)
   end,
 
+  ["refuses a remote with nothing unpushed rather than reading the log"] = function()
+    status_window.with(function(fake, notifications)
+      local before = #fake_dam.argv_log(fake)
+
+      require("damnit.open").unpushed({ kind = "remote", remote = "flaky", commits = 0 })
+
+      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      assert(
+        notifications[#notifications] == "damnit.nvim: this remote has no commit on this line",
+        notifications[#notifications]
+      )
+    end)
+  end,
+
   ["does nothing on a heading or a notice"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gn", "x", false)
