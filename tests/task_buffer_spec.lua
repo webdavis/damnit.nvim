@@ -72,9 +72,11 @@ local function written(fake)
   local before = #fake_dam.argv_log(fake)
   vim.cmd("write")
 
+  -- A case expecting no call still waits long enough for one to be logged, so
+  -- an accidental call is caught rather than raced past.
   if not pcall(fake_dam.settle, function()
     return #fake_dam.argv_log(fake) > before
-  end, 300) then
+  end, 200) then
     return nil
   end
 

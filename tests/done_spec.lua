@@ -111,7 +111,7 @@ return {
       done.send(TAXES, false)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
-      end, 500)
+      end, 200)
       vim.ui.select = real
 
       assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
