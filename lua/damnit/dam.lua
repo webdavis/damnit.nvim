@@ -255,8 +255,16 @@ function M.forget()
   generation = generation + 1
   state = "unknown"
   refusal = nil
-  waiting = {}
   M.version = nil
+
+  -- A caller waiting on the old handshake is answered rather than dropped: an
+  -- unanswered call leaves its queue lane running for the rest of the session.
+  settle_handshake({
+    kind = "cancelled",
+    code = -1,
+    plugin = true,
+    message = "the dam call was dropped when the options changed",
+  })
 end
 
 --- Make one `dam` call. The one entry point every other module uses.

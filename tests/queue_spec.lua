@@ -89,6 +89,27 @@ return {
     end, { sleep = "0.2" })
   end,
 
+  ["frees the lane when setup runs while a call is in flight"] = function()
+    with_fake(function()
+      local answered, err = false, nil
+      queue.submit(entry({ "status", "--json" }, {
+        on_done = function(_, failure)
+          answered, err = true, failure
+        end,
+      }))
+
+      -- setup forgets the handshake this call is waiting on.
+      damnit.setup({})
+
+      fake_dam.settle(function()
+        return answered
+      end)
+
+      assert(err ~= nil and err.kind == "cancelled", vim.inspect(err))
+      assert(queue.running() == nil, "a lane left running here is one no later call ever gets out of")
+    end, { sleep = "0.2" })
+  end,
+
   ["keeps a second store's lane independent of the first"] = function()
     with_fake(function()
       damnit.options.store = "/store/one.db"
