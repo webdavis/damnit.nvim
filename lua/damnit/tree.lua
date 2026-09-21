@@ -110,7 +110,9 @@ end
 --- Walk an object and its descendants, calling `visit` with each and its depth.
 ---
 --- A collapsed object is visited and its descendants are not, so a fold means
---- lines that were never drawn.
+--- lines that were never drawn. An object that does not hold its path's seat is
+--- visited the same way: the children hang off the path, so walking them from
+--- every object sharing it would draw each of them once per sharer.
 ---@param index damnit.Tree
 ---@param object table
 ---@param collapsed table<string, boolean>
@@ -121,7 +123,7 @@ function M.descend(index, object, collapsed, visit, depth)
   visit(object, level)
 
   local path = text(object.path)
-  if collapsed[path] then
+  if collapsed[path] or index.by_path[path] ~= object then
     return
   end
 

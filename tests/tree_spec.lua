@@ -91,6 +91,20 @@ return {
     )
   end,
 
+  ["walks what is nested under a shared path once, from the object holding the seat"] = function()
+    local alpha = object("alpha", "work/")
+    local beta = object("beta", "work/")
+    local gamma = object("gamma", "work/sub/")
+    local index = tree.index({ alpha, beta, gamma })
+
+    assert(tree.is_root(index, alpha) and tree.is_root(index, beta), "both sit at the top of this view")
+    assert(index.by_path["work/"] == beta, "the last object indexed at a path holds its seat")
+
+    local drawn = walked(index, alpha) .. " " .. walked(index, beta)
+    local seen = select(2, drawn:gsub("gamma@", ""))
+    assert(seen == 1, drawn)
+  end,
+
   ["indents by naming the path dam mv keeps the object's own segment under"] = function()
     local destination, refusal = tree.indent_to(CHILD, OTHER)
 

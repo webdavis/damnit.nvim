@@ -153,6 +153,18 @@ return {
     )
   end,
 
+  ["draws a nested row once when two objects share the path it hangs off"] = function()
+    local alpha = object({ subject = "alpha", path = "work/" })
+    local beta = object({ subject = "beta", path = "work/" })
+    local gamma = object({ subject = "gamma", path = "work/sub/" })
+
+    -- `line_of` refuses a needle on more than one line, which is the whole
+    -- assertion: both sharers head a tree, and only one may walk the children.
+    local lines = format.render({ title = "v" }, { alpha, beta, gamma })
+
+    assert(line_of(lines, "- gamma") > line_of(lines, "- beta"), joined(lines))
+  end,
+
   ["a child whose parent this view does not hold is drawn at the top level"] = function()
     local lines, entries = format.render({ title = "today", query = "due:today" }, { CHILD })
 
