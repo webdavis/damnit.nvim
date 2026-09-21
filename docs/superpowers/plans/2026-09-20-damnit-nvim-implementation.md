@@ -6646,9 +6646,12 @@ function M.fetch(spec, callback)
     args = require("damnit.views").query_args(spec),
     label = "ls",
     on_done = function(objects, err)
-      -- A bare name that dam does not know either is a view in neither source,
-      -- and the next attempt is refused here rather than costing a call.
-      if err and spec.probing then
+      -- A bare name that dam refuses is a view in neither source, and the
+      -- next attempt is refused here rather than costing a call. Only a
+      -- refusal says that: a locked store, a timeout or a cancel says nothing
+      -- about the name, and forgetting one has no expiry short of restarting
+      -- Neovim.
+      if err and err.kind == "refused" and spec.probing then
         require("damnit.views").forget_filter(spec.title)
       end
 
