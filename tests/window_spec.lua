@@ -59,6 +59,30 @@ return {
     end)
   end,
 
+  ["writes the running operation into the header on a tick"] = function()
+    with_window(function(fake)
+      local buf = window.buffer()
+      local before = #fake_dam.argv_log(fake)
+
+      -- Called directly rather than through the queue's listener: window.lua
+      -- registers one at load and queue.reset() drops it before this file runs.
+      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+
+      -- The first tick adds a header line, so it redraws in full. The second
+      -- is the one the timer repeats every 250 ms, on the header alone.
+      window.tick(queue.key())
+      window.tick(queue.key())
+
+      local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
+      assert(header[3]:find("Running: push fake", 1, true), vim.inspect(header))
+      assert(header[3]:find("[C-c to cancel]", 1, true), header[3])
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      end)
+    end)
+  end,
+
   ["keeps a section the user folded closed across a re-read"] = function()
     with_window(function(fake)
       local buf = window.buffer()
