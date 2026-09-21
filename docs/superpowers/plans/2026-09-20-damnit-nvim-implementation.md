@@ -90,7 +90,8 @@ Created under `lua/damnit/`:
 | `sidebar.lua` | The fixed-width split. |
 | `poll.lua` | The statusline string, the reminders, and the one timer behind both. |
 | `capture.lua` | Capture from code, and the location text. |
-| `location.lua` | Parsing a location out of a body and following it. Pure. |
+| `location.lua` | Parsing a location out of a body. Pure. |
+| `location_edit.lua` | Reading a location off the buffer, and opening the file one names. |
 | `send.lua` | The agent brief and its delivery. |
 | `views.lua` | Resolving a view name against `opts.views` and dam's filters. |
 | `health.lua` | `:checkhealth damnit`. |
@@ -7213,18 +7214,228 @@ SKIP_AI_COMMIT=1 git commit -m "feat: read the completed history in one query"
 
 **Files:**
 
-- Create: `lua/damnit/capture.lua`, `tests/capture_spec.lua`
-- Modify: `lua/damnit/location.lua`, `tests/location_spec.lua`, `plugin/damnit.lua`
+- Create: `lua/damnit/capture.lua`, `tests/capture_spec.lua`, `lua/damnit/location_edit.lua`,
+  `tests/location_edit_spec.lua`
+- Modify: `lua/damnit/location.lua`, `tests/location_spec.lua`, `lua/damnit/list.lua`,
+  `plugin/damnit.lua`
 
-Start from the two files as they stand. `location.lua` needs one change: its doc comment says
-"description", and the field is now `body`. Its parsing is text parsing and is unchanged.
+Start from the two files as they stand. `location.lua` needs two changes. Its doc comment says
+"description", and the field is now `body`. And its two editor-side functions, `of_buffer` and
+`jump`, move into `location_edit.lua`, which is what makes the file match the purity constraint the
+Global Constraints and Task 27's grep both hold it to: every `vim.api`, `vim.fn` and `vim.notify`
+call in the file today is inside one of those two. Its parsing is text parsing and is unchanged.
 
 **Interfaces:**
 
 - Produces: `capture.content(lines) -> string`, `capture.create(content, location)`,
-  `capture.capture(range)`, `location.parse(body)`, `location.describe(location)`.
+  `capture.capture(range)`, `location.parse(body)`, `location.describe(location)`,
+  `location_edit.of_buffer(buf, line)`, `location_edit.jump(location)`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Move the editor half of a location into its own module**
+
+Create `lua/damnit/location_edit.lua` with the three functions that reach the editor, lifted from
+`location.lua` unchanged apart from the module header:
+
+```lua
+-- Reading a location off the buffer, and opening the file one names.
+--
+-- `location.lua` is the text half and calls nothing on the editor, which is
+-- what lets it be tested without one. Every window, buffer and file system
+-- call of a location lives here instead.
+
+local message = require("damnit.message")
+
+local M = {}
+
+---@param path string
+---@return string? root normalized, when the path is inside a repository
+local function repository_root(path)
+  local root = vim.fs.root(path, ".git")
+
+  return root and vim.fs.normalize(root) or nil
+end
+
+--- The location a buffer and a line are, or nil when there is nowhere to point.
+---
+--- A buffer with no name, a scratch buffer and a directory listing all answer
+--- nil: none of them is a file with a line in it, and a capture from one simply
+--- carries no location.
+---@param buf integer? defaults to the current buffer
+---@param line integer? defaults to the cursor's line
+---@return damnit.Location? location
+function M.of_buffer(buf, line)
+  buf = buf or 0
+  line = line or vim.api.nvim_win_get_cursor(0)[1]
+
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" or vim.bo[buf].buftype ~= "" or vim.fn.isdirectory(name) == 1 then
+    return nil
+  end
+
+  local path = vim.fs.normalize(name)
+  local root = repository_root(path)
+
+  if root and vim.startswith(path, root .. "/") then
+    return { repo = vim.fs.basename(root), path = path:sub(#root + 2), line = line }
+  end
+
+  return { path = vim.fs.basename(path), line = line }
+end
+
+---@param text string
+local function warn(text)
+  message.warn(text)
+end
+
+---@param text string
+---@return false
+local function refuse(text)
+  warn(text)
+
+  return false
+end
+
+--- Open the file a location names and put the cursor on its line.
+---
+--- The path is resolved against the repository the editor is in, which is the
+--- only base this plugin has: the body carries no absolute path, on purpose. A
+--- location from another repository, a file that has since gone and a line past
+--- the end of the file are each reported and none of them raises.
+---@param location damnit.Location?
+---@return boolean jumped
+function M.jump(location)
+  if not location then
+    return refuse("this task has no location in its body")
+  end
+
+  local cwd = vim.fs.normalize(vim.uv.cwd() or ".")
+  local base = repository_root(cwd) or cwd
+  local here = vim.fs.basename(base)
+
+  if location.repo and location.repo ~= here then
+    return refuse(("this task points into %s, and %s is what is open here"):format(location.repo, here))
+  end
+
+  local path = vim.fs.joinpath(base, location.path)
+  if vim.fn.filereadable(path) == 0 then
+    return refuse(("there is no file at %s"):format(location.path))
+  end
+
+  vim.cmd.edit(vim.fn.fnameescape(path))
+
+  local last = vim.api.nvim_buf_line_count(0)
+  local line = math.min(location.line, last)
+  vim.api.nvim_win_set_cursor(0, { line, 0 })
+
+  if line ~= location.line then
+    -- The file is open where it can be read; the line moved out from under the
+    -- task, which is worth saying rather than landing silently.
+    warn(("%s has %d lines, so this is the last one"):format(location.path, last))
+  end
+
+  return true
+end
+
+return M
+```
+
+Delete `repository_root`, `of_buffer`, `warn`, `refuse` and `jump` from `location.lua`, along with
+the `local message = require("damnit.message")` line at its head, which only those two used. What is
+left is `ICON`, the `damnit.Location` class, `describe` and `parse`, and it calls nothing on `vim`
+at all. Its header changes in the same edit, since it no longer opens anything and the field is now
+`body`:
+
+```lua
+-- Where in the code a task came from, as one line of its body.
+--
+-- The line is `<repository> <path>:<line>`, and `<path>:<line>` alone when the
+-- file is in no repository. It is written to be read by a person on their
+-- phone and parsed back by `gd`, in that order of importance.
+--
+-- THE PATH IS ALWAYS RELATIVE to the repository root, and a file outside a
+-- repository goes out as its own name alone. A body syncs to a remote and to
+-- every device that pulls it, so an absolute path would put the home directory
+-- of the machine that captured it there.
+--
+-- Parsing a body back is parsing text a person can edit on their phone, so
+-- every answer here is either a location or nil. Opening what one names is
+-- `location_edit`, which is where the editor calls live.
+```
+
+`M.parse`'s own `---@param description string?` becomes `---@param body string?` and its summary
+line becomes "The location a body holds, or nil when no line of it is one."
+
+- [ ] **Step 2: Split the spec along the same line**
+
+Move the five jump cases and the two helpers they use into a new `tests/location_edit_spec.lua`,
+which starts:
+
+```lua
+-- Getting back to the code a task came from.
+--
+-- A body is text a person can edit on their phone, so these cases are mostly
+-- about what `jump` does with one it cannot use. Nothing here reaches a task
+-- store: a location is a string, and the files are made by the spec.
+
+local location_edit = require("damnit.location_edit")
+```
+
+The helpers move verbatim. In `jump_from`, `pcall(location.jump, parsed)` becomes
+`pcall(location_edit.jump, parsed)`. The five cases that move are the ones naming `jump`:
+
+```
+jumps to the file and the line
+refuses a task whose description holds no location
+refuses a location whose file is gone
+refuses a location captured in another repository, and names both
+says so when the line is past the end, and lands on the last one
+```
+
+The second of those asserts on the word "description", which is now "body" in both the module and
+the case name:
+
+```lua
+  ["refuses a task whose body holds no location"] = function()
+    local root = repository(3)
+    local jumped, said = jump_from(root, nil)
+
+    assert(jumped == false, "a task with no location was jumped to")
+    assert(#said == 1 and said[1]:find("no location in its body", 1, true), vim.inspect(said))
+  end,
+```
+
+`tests/location_spec.lua` keeps its five parse and describe cases and loses both helpers, which no
+case left in it calls. Its own header loses the sentence about `jump`.
+
+- [ ] **Step 3: Point the list's `gd` at the new module**
+
+`lua/damnit/list.lua` is the only caller of `jump` in the tree. In
+`M.jump_to_location_under_cursor`:
+
+```lua
+  require("damnit.location_edit").jump(locations[line])
+```
+
+- [ ] **Step 4: Run the split, prove the purity, and commit**
+
+Run: `nvim --headless --clean -l tests/run.lua location_spec`
+Expected: the five parse and describe cases pass.
+
+Run: `nvim --headless --clean -l tests/run.lua location_edit_spec`
+Expected: the same five jump cases pass, with the same wording, under the new module name.
+
+Run: `grep -nE 'vim\.(api|fn|system|notify|schedule)' lua/damnit/location.lua`
+Expected: no output, exit 1. This is the gate Task 27 installs, run early against the one file that
+could not pass it before.
+
+```bash
+nvim --headless --clean -l tests/run.lua
+stylua --check . && luacheck .
+git add -A
+SKIP_AI_COMMIT=1 git commit -m "refactor: keep the editor calls of a location out of the pure half"
+```
+
+- [ ] **Step 5: Write the failing test**
 
 Create `tests/capture_spec.lua`:
 
@@ -7264,7 +7475,7 @@ return {
 Add one case to `tests/location_spec.lua` proving `location.parse` reads the same text back out of a
 body holding a note above it.
 
-- [ ] **Step 2: Write `capture.args` and bring the rest across**
+- [ ] **Step 6: Write `capture.args` and bring the rest across**
 
 ```lua
 --- The `dam new` argv one capture becomes.
@@ -7287,7 +7498,7 @@ function M.args(content, location)
 end
 ```
 
-- [ ] **Step 3: Wire the command, run, lint and commit**
+- [ ] **Step 7: Wire the command, run, lint and commit**
 
 ```lua
   capture = function(_, cmd)
@@ -7402,7 +7613,8 @@ Unchanged behaviour on a new source. Restore the file and change the two lines t
 **Files:**
 
 - Create: `lua/damnit/sidebar.lua`, `tests/sidebar_spec.lua`
-- Modify: `plugin/damnit.lua`, `lua/damnit/init.lua`
+- Modify: `plugin/damnit.lua`, `lua/damnit/init.lua`, `lua/damnit/location_edit.lua`,
+  `tests/location_edit_spec.lua`
 
 ```bash
 git show <rename sha>:lua/damnit/sidebar.lua > lua/damnit/sidebar.lua
@@ -7426,7 +7638,41 @@ before the split is made when the name is in neither source. `winfixwidth`, `win
 `winfixbuf`, the `WinNew` and `WinResized` autocommands and the per-tabpage window-local flag are
 untouched.
 
-- [ ] **Step 3: Wire the command, run, lint and commit**
+- [ ] **Step 3: Give the jump its way out of a fixed window again**
+
+`leave_fixed_window` is the sidebar's, but its only caller is not: it sits in
+`location_edit.jump`, which Task 2 stripped of the call when it deleted `sidebar.lua`. The restore
+above cannot bring a caller back into a file the plan kept, so add it by hand, directly above the
+`vim.cmd.edit` line in `lua/damnit/location_edit.lua`:
+
+```lua
+  require("damnit.sidebar").leave_fixed_window()
+  vim.cmd.edit(vim.fn.fnameescape(path))
+```
+
+Without it, `gd` inside the sidebar hits `winfixbuf` and the `:edit` fails instead of opening the
+file in a window that can hold it.
+
+The require stays inside the function. `sidebar.lua` registers its `WinNew` and `WinResized`
+autocommand at file scope, so requiring it at the head of `location_edit.lua` would install the
+sidebar's width machinery in a session that only ever parsed a line of text.
+
+That lazy require is resolved after `jump` has already changed the tabpage's directory, and the
+runner's `package.path` is relative to where the run started, so `tests/location_edit_spec.lua`
+needs the module loaded before any case moves. Add it below the spec's own require:
+
+```lua
+-- A jump changes the tabpage's directory, and the runner's `package.path` is
+-- relative to where the run started, so everything a jump reaches is loaded
+-- before any case moves.
+require("damnit.sidebar")
+```
+
+Run: `nvim --headless --clean -l tests/run.lua location_edit_spec`
+Expected: the five jump cases still pass. Each opens a tabpage with no sidebar in it, so
+`leave_fixed_window` returns at its first line.
+
+- [ ] **Step 4: Wire the command, run, lint and commit**
 
 ```lua
   toggle = function()
