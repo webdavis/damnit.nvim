@@ -17,8 +17,11 @@ trap 'kill $sleeper 2>/dev/null; exit 3' TERM
 # Records its argv, then replays the fixture named for its subcommand.
 printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
 
-case "$1" in
-  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
+# Anywhere in argv, not just first: real dam takes --version after --store and
+# --config, and the handshake is made with whichever global flags the options
+# name in front of it.
+case " $* " in
+  *" --version "*) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
 esac
 
 # The subcommand is the first argument that is not a flag and is not the value
