@@ -500,7 +500,7 @@ A visual selection becomes the subject, by whole lines: the comment leader goes,
 space collapsed, and only the first line loses its marker. So this:
 
 ```lua
--- TODO(stephen): hold the width
+-- TODO(me): hold the width
 --   the way nvim-tree does
 ```
 

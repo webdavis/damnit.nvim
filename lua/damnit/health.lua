@@ -19,7 +19,7 @@ local DEADLINE_MS = 20000
 
 --- Run an async call to completion inside the synchronous health check.
 ---
---- `vim.wait` keeps the event loop turning, which is what lets the `vim.system`
+--- `vim.wait` keeps the event loop turning, which is what lets the spawn's own
 --- callback and the `vim.schedule` behind it run here at all. This is the one
 --- place in the plugin where waiting is correct.
 ---
