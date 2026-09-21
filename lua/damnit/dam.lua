@@ -32,6 +32,9 @@ local refusal = nil
 ---@type fun(err: damnit.Error?)[]
 local waiting = {}
 
+--- Bumped by every `forget`. A handshake answers for the session it began in.
+local generation = 0
+
 ---@class damnit.Error
 ---@field kind "error"|"refused"|"cancelled"|"timeout"|"missing"|"unsupported"|"malformed"
 ---@field code integer the exit code, or -1 when nothing ran
@@ -192,7 +195,15 @@ local function handshake(callback)
     return
   end
 
+  local session = generation
+
   spawn({ "--version" }, function(out)
+    -- A probe begun under the options of an earlier session says nothing about
+    -- the dam the current options name.
+    if session ~= generation then
+      return
+    end
+
     local banner = vim.trim(tostring(out.stdout or ""))
     local version = banner:match("dam%s+(%d+%.%d+%.%d+)")
 
@@ -229,6 +240,7 @@ end
 --- Forget the handshake, so the next call runs it again. `setup` calls this,
 --- because new options may name a different dam.
 function M.forget()
+  generation = generation + 1
   state = "unknown"
   refusal = nil
   waiting = {}
