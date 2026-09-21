@@ -48,7 +48,7 @@ From the spec, and equally binding:
   unprefixed, so the two are never confused.
 - No message contains a credential, a path outside the store's own, or a full forty-character oid.
   Seven characters identify one.
-- The supported dam range is `>=0.1.0 <0.2.0`.
+- The supported dam range is `>=0.2.0 <0.3.0`.
 - Priority 1 is the most urgent, the reverse of Todoist's scale.
 - `stylua --check .` and `luacheck .` pass. Both are what CI runs.
 
@@ -104,17 +104,19 @@ one spec per module as section 9 of the spec names them.
 
 ## Task order and the dam dependency
 
-Tasks 1 to 28 depend on `dam 0.1.0` as built and are ordered first. Tasks 29 to 36 each wait on one
-change being built in `webdavis/damnit` right now, and each names it:
+Tasks 1 to 28 depend on `dam 0.2.0` as built and are ordered first. Tasks 29 to 36 each wait on one
+change in `webdavis/damnit`, and each names it. PR B landed on 2026-09-20 as dam 0.2.0, so the three
+tasks that named it are unblocked and their text carries the delivered shape rather than the
+proposed one:
 
 | Task | Waits on |
 | --- | --- |
 | 29 | dam PR A: `dam edit --undone` |
 | 30 | dam PR A: `dam restore` |
 | 31 | dam PR A: `dam done --children/--depends` |
-| 32 | dam PR B: the JSON error envelope, exit 2 for refusals only |
-| 33 | dam PR B: `fields` in change documents |
-| 34 | dam PR B: `status` without embedded objects |
+| 32 | dam PR B, landed: the error document on standard error, exit 4 for refusals only |
+| 33 | dam PR B, landed: `fields` in change documents |
+| 34 | dam PR B, landed: `status` without embedded objects |
 | 35 | dam PR C: `--no-pull`, and last-pull times in `remote list` |
 | 36 | dam PR D: the saved-filters command and the category catalogue |
 
@@ -387,7 +389,7 @@ return {
 
   ["carries dam's own wording unprefixed"] = function()
     local seen = notifications(function()
-      message.report({ kind = "refused", code = 2, message = "78b8950 cannot be completed" })
+      message.report({ kind = "refused", code = 4, message = "78b8950 cannot be completed" })
     end)
 
     assert(seen[1].text == "78b8950 cannot be completed", seen[1].text)
@@ -538,8 +540,10 @@ spawn, the real argv, the real exit code and the real standard error are all exe
     `callback` is `fun(data: table?, err: damnit.Error?)`. This is the one entry point every caller uses.
   - `dam.interpret(out, label) -> table?, damnit.Error?`, pure over a `vim.SystemCompleted`.
   - `dam.supported(version) -> boolean`, `dam.forget()`, `dam.version` (a string or nil).
-  - `damnit.Error` = `{ kind, code, message, plugin }` with kind one of `error`, `refused`,
-    `cancelled`, `timeout`, `missing`, `unsupported`, `malformed`.
+  - `damnit.Error` = `{ kind, code, message, rule, oids, plugin }`. `kind` is dam's own word where
+    dam wrote a document (`refused`, `store`, `helper`, `credential`, `parse`, `usage`,
+    `cancelled`), and otherwise this plugin's own (`error`, `usage`, `cancelled`, `timeout`,
+    `missing`, `unsupported`, `malformed`). `rule` and `oids` come from the document.
   - The fake: `fake.install(opts) -> handle`, `fake.argv_log(handle) -> string[]`,
     `fake.settle(done, ms)`, `fake.remove(handle)`.
 
@@ -562,7 +566,7 @@ local SCRIPT = [==[#!/bin/sh
 printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
 
 case "$1" in
-  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.1.0}"; exit 0 ;;
+  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
 esac
 
 # The subcommand is the first argument that is not a flag and is not the value
@@ -626,7 +630,7 @@ function M.install(opts)
   vim.env.PATH = dir .. ":" .. vim.env.PATH
   vim.env.DAMNIT_TEST_LOG = fake.log
   vim.env.DAMNIT_TEST_FIXTURES = opts.fixtures or (TESTS_DIR .. "/fixtures/default")
-  vim.env.DAMNIT_TEST_VERSION = opts.version or "0.1.0"
+  vim.env.DAMNIT_TEST_VERSION = opts.version or "0.2.0"
   vim.env.DAMNIT_TEST_SLEEP = opts.sleep or ""
   vim.env.DAMNIT_TEST_STDERR = opts.stderr or ""
   vim.env.DAMNIT_TEST_EXIT = opts.exit and tostring(opts.exit) or ""
@@ -767,12 +771,32 @@ return {
     assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
   end,
 
-  ["calls exit 2 a refusal and keeps every line of a multi-line one"] = function()
-    local stderr = "dam: 98d8780 cannot be completed:\n  child a9db854 is open"
-    local _, err = call({ exit = 2, stderr = stderr }, { "done", "98d8780", "--json" })
+  ["reads a refusal out of dam's error document, rule and oids included"] = function()
+    local document = vim.json.encode({
+      error = {
+        kind = "refused",
+        rule = "blocked",
+        message = "98d8780 cannot be completed: child a9db854 is open",
+        oids = { "98d878013fb0e026d37170e7ceed6707192ae99a", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77" },
+      },
+    })
+    local _, err = call({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
 
     assert(err.kind == "refused", err.kind)
-    assert(err.message == "98d8780 cannot be completed:\n  child a9db854 is open", vim.inspect(err.message))
+    assert(err.code == 4, tostring(err.code))
+    assert(err.rule == "blocked", tostring(err.rule))
+    assert(err.message == "98d8780 cannot be completed: child a9db854 is open", err.message)
+    assert(#err.oids == 2 and err.oids[2]:sub(1, 7) == "a9db854", vim.inspect(err.oids))
+    assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
+  end,
+
+  ["carries standard error that is not a document as the message it is"] = function()
+    local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
+    local _, err = call({ exit = 2, stderr = usage }, { "dpne", "--json" })
+
+    assert(err.kind == "usage", err.kind)
+    assert(err.rule == nil, "clap wrote this, so there is no rule")
+    assert(err.message == usage, vim.inspect(err.message))
   end,
 
   ["calls exit 3 cancelled"] = function()
@@ -867,8 +891,8 @@ local function first_call(version)
 end
 
 return {
-  ["accepts 0.1.0 and goes on to make the call"] = function()
-    local err, _, log = first_call("0.1.0")
+  ["accepts 0.2.0 and goes on to make the call"] = function()
+    local err, _, log = first_call("0.2.0")
 
     assert(err == nil, err and err.message)
     assert(log[1] == "--version", vim.inspect(log))
@@ -876,21 +900,21 @@ return {
   end,
 
   ["refuses a version above the range and never spawns the call"] = function()
-    local err, _, log = first_call("0.3.0")
+    local err, _, log = first_call("0.9.0")
 
     assert(err.kind == "unsupported", vim.inspect(err))
     assert(
-      err.message == "dam 0.3.0 is outside the supported range >=0.1.0 <0.2.0; update damnit.nvim",
+      err.message == "dam 0.9.0 is outside the supported range >=0.2.0 <0.3.0; update damnit.nvim",
       err.message
     )
     assert(#log == 1 and log[1] == "--version", vim.inspect(log))
   end,
 
-  ["refuses 0.2.0, which is the first version outside the range"] = function()
-    assert(dam.supported("0.1.0"))
-    assert(dam.supported("0.1.9"))
-    assert(not dam.supported("0.2.0"))
-    assert(not dam.supported("0.0.9"))
+  ["refuses 0.3.0, which is the first version outside the range"] = function()
+    assert(dam.supported("0.2.0"))
+    assert(dam.supported("0.2.9"))
+    assert(not dam.supported("0.3.0"))
+    assert(not dam.supported("0.1.9"))
   end,
 
   ["warns once about a banner it cannot read, then makes the call anyway"] = function()
@@ -953,13 +977,15 @@ local M = {}
 local message = require("damnit.message")
 
 --- The dam versions this plugin speaks to, low inclusive and high exclusive.
-M.MIN_VERSION = "0.1.0"
-M.MAX_VERSION = "0.2.0"
+M.MIN_VERSION = "0.2.0"
+M.MAX_VERSION = "0.3.0"
 
 M.MISSING = "dam was not found on PATH; install it with cargo install damnit"
 
---- Exit code to error kind. 0 is success and is handled before this table.
-local KINDS = { [1] = "error", [2] = "refused", [3] = "cancelled" }
+--- Exit code to error kind, for a failure that carried no document. 0 is
+--- success and is handled before this table. dam's own kind is used instead
+--- wherever it wrote one.
+local KINDS = { [1] = "error", [2] = "usage", [3] = "cancelled", [4] = "refused" }
 
 --- The version this session read, or nil when the banner was unreadable.
 ---@type string?
@@ -975,9 +1001,11 @@ local refusal = nil
 local waiting = {}
 
 ---@class damnit.Error
----@field kind "error"|"refused"|"cancelled"|"timeout"|"missing"|"unsupported"|"malformed"
+---@field kind string dam's own kind where it wrote one, this plugin's otherwise
 ---@field code integer the exit code, or -1 when nothing ran
----@field message string ready to show: dam's own line, or this plugin's sentence
+---@field message string ready to show: dam's own sentence, or this plugin's
+---@field rule string? the rule a refusal broke, as dam names it
+---@field oids string[]? the objects dam's message names, in the order it names them
 ---@field plugin boolean? true when this plugin composed the message
 
 --- The full argv for a call, `dam` and the global flags included.
@@ -999,14 +1027,32 @@ function M.argv(args)
   return argv
 end
 
---- dam writes its errors as one plain line prefixed `dam: `, even under --json,
---- and a refusal's detail follows on further lines.
+--- Standard error that is not a document: clap's own usage text, or the plain
+--- line a human format writes.
 ---@param stderr string?
 ---@return string
 function M.message_of(stderr)
   local text = vim.trim(tostring(stderr or ""))
 
   return (text:gsub("^dam: ", ""))
+end
+
+--- The error document dam writes on standard error under --json, or nil when
+--- standard error holds something else.
+---@param stderr string?
+---@return table?
+local function document_of(stderr)
+  local text = vim.trim(tostring(stderr or ""))
+  if text == "" then
+    return nil
+  end
+
+  local ok, decoded = pcall(vim.json.decode, text, { luanil = { object = true } })
+  if not ok or type(decoded) ~= "table" or type(decoded.error) ~= "table" then
+    return nil
+  end
+
+  return decoded.error
 end
 
 ---@param text string
@@ -1076,7 +1122,28 @@ function M.interpret(out, label)
     }
   end
 
-  return nil, { kind = KINDS[out.code] or "error", code = out.code, message = M.message_of(out.stderr) }
+  local document = document_of(out.stderr)
+  if document then
+    return nil, {
+      kind = type(document.kind) == "string" and document.kind or (KINDS[out.code] or "error"),
+      code = out.code,
+      rule = document.rule,
+      oids = document.oids,
+      message = tostring(document.message or ""),
+    }
+  end
+
+  local text = M.message_of(out.stderr)
+  if text == "" then
+    return nil, {
+      kind = KINDS[out.code] or "error",
+      code = out.code,
+      plugin = true,
+      message = ("%s failed with exit %d and said nothing"):format(label or "a dam call", out.code),
+    }
+  end
+
+  return nil, { kind = KINDS[out.code] or "error", code = out.code, message = text }
 end
 
 --- Spawn one `dam`, answering on the main loop.
@@ -1223,6 +1290,19 @@ stylua --check . && luacheck .
 git add -A
 SKIP_AI_COMMIT=1 git commit -m "feat: add the dam process boundary and its version handshake"
 ```
+
+**What landed on top of this transcription.** Four behaviours the module above does not have, each
+found by a measurement rather than by reading:
+
+1. A handshake carries the generation `forget` was at, and a probe whose generation has moved on
+   writes nothing, so an answer under the old options cannot decide the new session's state.
+1. `forget` answers every caller waiting on the handshake with a cancellation before clearing the
+   list. Dropping them silently leaves a queue lane running for the rest of the session.
+1. `interpret` checks `out.signal` before `out.code`: Neovim reports code 0 with the signal set for
+   a child a signal killed, so an unguarded code 0 reads every rung of the cancellation ladder as an
+   empty answer.
+1. A failure that wrote nothing at all on standard error gets a sentence naming the call and the
+   exit code, rather than an empty notification.
 
 ---
 
@@ -1807,6 +1887,12 @@ stylua --check . && luacheck .
 git add -A
 SKIP_AI_COMMIT=1 git commit -m "feat: add the per-store operation queue and its cancellation ladder"
 ```
+
+**What landed on top of this transcription.** `on_spawn` sends the interrupt itself when the entry
+was already cancelled, which is what makes `entry.cancelled` load-bearing. A cancel that arrives
+while the version handshake is still running has no process to signal, and without this it dropped
+the pending entries, reported success, and let the call spawn and reach the remote anyway.
+`reset` clears the tick listeners as well as the lanes.
 
 ---
 
@@ -5918,7 +6004,8 @@ return {
 }
 ```
 
-The last case installs the fake with `{ exit = 2, stderr = "dam: 78b8950 depends on a9db854, which would make a cycle" }`.
+The last case installs the fake with `exit = 4` and an error document whose `rule` is `cycle` and
+whose `message` is `78b8950 depends on a9db854, which would make a cycle`.
 
 - [ ] **Step 3: Run it and watch it fail**
 
@@ -6641,7 +6728,7 @@ and delete its `reopen`, `undo` and `forget` functions with their state.
 - Produces: `quick_edit.complete()`, `quick_edit.delete()`, `quick_edit.cycle_priority()`,
   `quick_edit.schedule()`, `quick_edit.labels()`, `quick_edit.move()`, `quick_edit.add()`,
   `quick_edit.indent()`, `quick_edit.promote()`, `quick_edit.reopen()` (the refusal),
-  `quick_edit.blockers(message) -> string[]`, `quick_edit.attach(buf)`.
+  `quick_edit.blockers(err) -> string[]`, `quick_edit.attach(buf)`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -6655,21 +6742,29 @@ local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua
 local quick_edit = require("damnit.quick_edit")
 
 return {
-  ["reads the blocker lines out of dam's refusal"] = function()
-    local blockers = quick_edit.blockers(
-      "98d8780 cannot be completed:\n  child a9db854 is open\n  depends on 660a08d\n"
-        .. "use --force to complete it anyway, or --force --interactive to decide what happens to them"
-    )
+  ["reads the blockers dam named in the refusal's oids"] = function()
+    local blockers = quick_edit.blockers({
+      kind = "refused",
+      rule = "blocked",
+      message = "98d8780 cannot be completed: child a9db854 is open",
+      oids = {
+        "98d878013fb0e026d37170e7ceed6707192ae99a",
+        "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77",
+        "660a08d1c4b9e8f0a2d3c5b7e9f1a3c5d7e9f1b3",
+      },
+    })
 
-    assert(vim.deep_equal(blockers, { "child a9db854 is open", "depends on 660a08d" }), vim.inspect(blockers))
+    assert(vim.deep_equal(blockers, { "a9db854", "660a08d" }), vim.inspect(blockers))
   end,
 
   ["offers to complete it anyway, and sends --force when that is chosen"] = function()
-    -- The fake exits 2 on the first done and 0 on the second, which is what a
+    -- The fake exits 4 on the first done and 0 on the second, which is what a
     -- forced completion does.
     local fake = fake_dam.install({
-      exit = 2,
-      stderr = "dam: 98d8780 cannot be completed:\n  child a9db854 is open",
+      exit = 4,
+      stderr = '{"error": {"kind": "refused", "rule": "blocked", "message": "98d8780 cannot be completed: '
+        .. 'child a9db854 is open", "oids": ["98d878013fb0e026d37170e7ceed6707192ae99a", '
+        .. '"a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}',
     })
 
     local chosen = nil
@@ -6692,11 +6787,11 @@ return {
 
     assert(log[2] == "done 98d8780134fb0e026d37170e7ceed6707192ae99 --json", vim.inspect(log))
     assert(log[3] == "done 98d8780134fb0e026d37170e7ceed6707192ae99 --force --json", vim.inspect(log))
-    assert(chosen:find("child a9db854 is open", 1, true), tostring(chosen))
+    assert(chosen:find("a9db854", 1, true), tostring(chosen))
   end,
 
-  ["recognises the configured-to-ask message and says where to answer it"] = function()
-    local said = quick_edit.interactive_refusal("a question needs an answer; drop --json/--toon to answer interactively", "98d8780")
+  ["recognises the rule for a question no machine format can answer"] = function()
+    local said = quick_edit.interactive_refusal({ kind = "refused", rule = "needs_an_answer" }, "98d8780")
 
     assert(
       said == "dam is configured to ask what happens to the children; run dam done 98d8780 --force --interactive in a terminal",
@@ -6838,18 +6933,16 @@ Expected: four FAILs, `module 'damnit.quick_edit' not found`.
 - [ ] **Step 3: Write the completion path**
 
 ```lua
---- The blocker lines out of dam's refusal. Indented lines between the first
---- line and the `use --force` sentence.
----@param text string
+--- The objects blocking a completion, as dam named them: every oid after the
+--- first, which is the task itself.
+---@param err damnit.Error
 ---@return string[]
-function M.blockers(text)
+function M.blockers(err)
   local found = {}
 
-  for line in tostring(text):gmatch("[^\n]+") do
-    local indented = line:match("^%s+(.-)%s*$")
-
-    if indented and indented ~= "" then
-      found[#found + 1] = indented
+  for index, oid in ipairs(err.oids or {}) do
+    if index > 1 then
+      found[#found + 1] = tostring(oid):sub(1, 7)
     end
   end
 
@@ -6857,11 +6950,11 @@ function M.blockers(text)
 end
 
 --- The sentence for dam being configured to ask a question no client can answer.
----@param text string
+---@param err damnit.Error
 ---@param oid string
 ---@return string?
-function M.interactive_refusal(text, oid)
-  if not text:find("a question needs an answer", 1, true) then
+function M.interactive_refusal(err, oid)
+  if err.rule ~= "needs_an_answer" then
     return nil
   end
 
@@ -6909,7 +7002,7 @@ function M.send_done(object, force)
         return require("damnit.list").refresh()
       end
 
-      local interactive = M.interactive_refusal(err.message, object.oid)
+      local interactive = M.interactive_refusal(err, object.oid)
       if interactive then
         return message.warn(interactive)
       end
@@ -6918,9 +7011,9 @@ function M.send_done(object, force)
         return message.report(err)
       end
 
-      local blockers = M.blockers(err.message)
+      local blockers = M.blockers(err)
       vim.ui.select({ "Complete it anyway, keeping the children where they are", "Cancel" }, {
-        prompt = ("%s is blocked by: %s"):format(object.oid:sub(1, 7), table.concat(blockers, "; ")),
+        prompt = ("%s is blocked by: %s"):format(object.oid:sub(1, 7), table.concat(blockers, ", ")),
       }, function(choice)
         if choice and vim.startswith(choice, "Complete") then
           M.send_done(object, true)
@@ -8308,54 +8401,55 @@ SKIP_AI_COMMIT=1 git commit -m "feat: choose what happens to the children when c
 
 ### Task 32: The machine-readable error
 
-**Waits on dam PR B: an error document on standard output under `--json`, and exit 2 for refusals
-only.** Confirm with `dam done <a blocked oid> --json | jq .error.code`.
+**dam PR B landed as dam 0.2.0 on 2026-09-20.** Confirm with
+`dam done <a blocked oid> --json 2>&1 >/dev/null | jq .error.rule`, which answers `"blocked"`.
 
-This removes the three substring matches that exist only because dam's prose is the only signal, and it
-turns the blocker list into data rather than into parsed text.
+Most of this task arrived with it. Task 4 already reads the document off standard error and puts
+`kind`, `rule`, `oids` and `message` in the error table, Task 19 already reads `rule` and `oids`
+rather than dam's prose, and the supported range already sits at `>=0.2.0 <0.3.0`. What is left is
+the one caller that still keys off a word in a sentence.
 
-**Files:** `lua/damnit/dam.lua`, `lua/damnit/quick_edit.lua`, `lua/damnit/actions.lua`,
-`tests/dam_spec.lua`, `tests/done_spec.lua`
+**Files:** `lua/damnit/actions.lua`, `tests/actions_spec.lua`
 
 - [ ] **Step 1: Write the failing test**
 
 ```lua
-  ["reads dam's error document rather than its prose"] = function()
-    -- The fake writes the envelope on standard output and exits 2. The error
-    -- table carries code = "blocked", the oid, and a blockers list of tables
-    -- rather than of sentences.
+  ["names the remote whose credential is missing, off dam's kind"] = function()
+    -- The fake exits 1 with { "error": { "kind": "credential", "rule": null,
+    -- "message": "no credential for todoist", "oids": [] } }. The plugin's
+    -- sentence is chosen by `err.kind == "credential"` and by nothing in the
+    -- message.
   end,
 ```
 
-- [ ] **Step 2: Read the envelope in `dam.interpret`**
+- [ ] **Step 2: Key the credential sentence off the kind**
 
-On a non-zero exit, decode standard output first. When it holds `{ "error": { ... } }`, the error table
-gains `code_name`, `oid` and whatever per-code fields the document carries, and `message` is the
-document's own `message` rather than the stripped stderr line. When standard output is empty the
-current path is unchanged, which is what keeps the plugin working against a dam that has not been
-updated.
+`actions.sync` tests `err.kind == "credential"` rather than searching the message for the word.
+Every other caller already reads a field.
 
-- [ ] **Step 3: Delete the three substring matches**
+- [ ] **Step 3: Grep for the last of the prose matching**
 
-`quick_edit.blockers` and `quick_edit.interactive_refusal` go, replaced by reads of
-`err.blockers` and `err.code_name`. The credential sentence in `actions.sync` keys off the code rather
-than off the word `credential`. Delete the specs that pinned the parsing, and pin the fields instead.
+```bash
+grep -rn "find(\"" lua --include='*.lua'
+```
+
+Every hit must be a search of something this plugin wrote or of a buffer line, never of an
+`err.message`.
 
 - [ ] **Step 4: Run, lint and commit**
 
 ```bash
-nvim --headless --clean -l tests/run.lua dam_spec
-nvim --headless --clean -l tests/run.lua done_spec
+nvim --headless --clean -l tests/run.lua actions_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: act on dam's error document rather than on its wording"
+SKIP_AI_COMMIT=1 git commit -m "refactor: act on dam's error kind rather than on its wording"
 ```
 
 ---
 
 ### Task 33: The field summary from dam
 
-**Waits on dam PR B: `"fields": [...]` in a change document.** Confirm with
+**dam PR B landed as dam 0.2.0 on 2026-09-20: `"fields": [...]` in a change document.** Confirm with
 `dam status --json | jq '.unstaged[0].fields'`.
 
 The window's field summary is a copy of dam's own logic today. This makes it a read of dam's answer.
@@ -8404,7 +8498,8 @@ SKIP_AI_COMMIT=1 git commit -m "refactor: read a change's field list from dam"
 
 ### Task 34: Conflicts without their embedded objects
 
-**Waits on dam PR B: `dam status --json` no longer carrying the two objects inside each conflict.**
+**dam PR B landed as dam 0.2.0 on 2026-09-20: `dam status --json` no longer carries the two objects
+inside each conflict unless `--full` is passed.**
 Confirm with `dam status --json | jq '.conflicts[0] | keys'`.
 
 This one is a removal rather than an addition, so it breaks `<CR>` on a conflict, which reads
