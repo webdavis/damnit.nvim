@@ -51,4 +51,13 @@ function M.setup(opts)
   require("damnit.dam").forget()
 end
 
+--- Open the staging window, which is this plugin's default surface.
+---
+--- The function a keymap calls:
+--- `vim.keymap.set("n", "<leader>Ts", require("damnit").open_status)`.
+---@return integer buf
+function M.open_status()
+  return require("damnit.window").open()
+end
+
 return M
