@@ -293,6 +293,7 @@ local function draw(key, lines)
   end
 
   render.draw(buf, lines)
+  require("damnit.render.diff").apply(buf, key, models[key])
 
   if not win then
     return
@@ -311,6 +312,26 @@ local function draw(key, lines)
   local count = vim.api.nvim_buf_line_count(buf)
   vim.api.nvim_win_set_cursor(win, { math.min(math.max(target, 1), count), 0 })
   apply_folds(key, win)
+end
+
+--- The oids whose inline diff is open, remembered for the session.
+---@param key string?
+---@return table<string, boolean>
+function M.open_diffs(key)
+  return require("damnit.render.diff").open_set(key or queue.key())
+end
+
+--- Draw again from the model already in hand. No dam call, so a fold or a diff
+--- toggle costs nothing.
+---@param key string?
+function M.redraw_current(key)
+  key = key or queue.key()
+
+  if not models[key] then
+    return
+  end
+
+  draw(key, render.lines(models[key], { store = store_display(key), running = queue.running(key) }))
 end
 
 ---@param key string
@@ -343,8 +364,15 @@ function M.refresh(key)
     })
   end
 
+  -- A lean change row carries no before or after, so an open inline diff is
+  -- what makes the window ask for the whole objects.
+  local args = { "status", "--json" }
+  if next(require("damnit.render.diff").open_set(key)) ~= nil then
+    args = { "status", "--full", "--json" }
+  end
+
   queue.submit({
-    args = { "status", "--json" },
+    args = args,
     label = "status",
     on_done = function(status, err)
       if err then

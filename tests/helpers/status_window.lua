@@ -31,6 +31,12 @@ function M.with(run, fixtures)
   -- on it starts from a store this session has not read yet.
   window.forget_remotes()
 
+  -- Open diffs are remembered for the session too, so a case starts with none.
+  local diffs = window.open_diffs()
+  for oid in pairs(diffs) do
+    diffs[oid] = nil
+  end
+
   local notifications = {}
   local real = vim.notify
   vim.notify = function(text)

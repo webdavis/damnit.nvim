@@ -216,4 +216,55 @@ function M.unstage_all()
   M.write({ "reset", "--json" }, "reset")
 end
 
+--- Throw away one working change.
+---
+--- Only a `create` has an exact inverse in dam: the object was never committed,
+--- so removing it from the working layer leaves nothing behind. There is no
+--- undo for it either, which is why the confirm has no way to be turned off.
+function M.discard()
+  local found = require("damnit.window").entry_under_cursor()
+
+  if not found or found.entry.kind ~= "change" then
+    return message.warn("nothing to discard on this line")
+  end
+
+  local entry = found.entry
+
+  if entry.op ~= "create" then
+    return message.warn("dam has no verb that restores a committed object; commit the change or edit it back")
+  end
+
+  vim.ui.input({
+    prompt = ('Discard "%s"? This removes the object. (y/N) '):format(entry.subject),
+  }, function(answer)
+    if answer ~= "y" and answer ~= "Y" then
+      return
+    end
+
+    M.write({ "rm", entry.oid, "--json" }, "rm")
+  end)
+end
+
+--- Open or close the inline field diff of the change under the cursor.
+function M.toggle_diff()
+  local window = require("damnit.window")
+  local found = window.entry_under_cursor()
+
+  if not found or found.entry.kind ~= "change" then
+    return message.warn("nothing to show on this line")
+  end
+
+  local entry = found.entry
+  local open = window.open_diffs()
+  open[entry.oid] = not open[entry.oid] or nil
+
+  -- The status this window drew carries no objects to compare, so the first
+  -- open re-reads one that does.
+  if open[entry.oid] and not (entry.before or entry.after) then
+    return window.refresh()
+  end
+
+  window.redraw_current()
+end
+
 return M

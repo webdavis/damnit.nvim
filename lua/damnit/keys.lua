@@ -45,6 +45,8 @@ M.MAPS = {
     { { "n", "x" }, "s", act("stage"), "stage this object" },
     { { "n", "x" }, "u", act("unstage"), "unstage this object" },
     { "n", "U", act("unstage_all"), "unstage everything" },
+    { "n", "X", act("discard"), "discard this working change" },
+    { "n", "=", act("toggle_diff"), "show or hide this change's fields" },
     { "n", "<C-c>", act("cancel"), "cancel the running operation" },
     { "n", "q", act("close"), "close the window" },
     { "n", "gq", act("close"), "close the window" },
