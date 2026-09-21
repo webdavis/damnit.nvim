@@ -1480,9 +1480,9 @@ Each has one responsibility and one reason to change.
 Three rules, each of which CI can check:
 
 1. **Only `damnit.dam` calls `vim.system`.** Grep `lua/` for `vim.system` and assert one file.
-1. **The pure modules call no `vim.*` API.** `status_model`, `task_format`, `list_format`, `tree` and
-   `location` are grepped for `vim.api`, `vim.fn`, `vim.system`, `vim.notify` and `vim.schedule`.
-   They may use `vim.tbl_*`, `vim.json` and `vim.split`, which are data functions.
+1. **The pure modules call no `vim.*` API.** `status_model`, `task_format`, `list_format`, `tree`,
+   `location` and `answer` are grepped for `vim.api`, `vim.fn`, `vim.system`, `vim.notify` and
+   `vim.schedule`. They may use `vim.tbl_*`, `vim.json` and `vim.split`, which are data functions.
 1. **`render` does not know `dam` exists.** It takes a model and a buffer.
 
 The pure layer is what makes the window testable without a window: a golden render test builds a
@@ -1552,8 +1552,11 @@ Nothing in the suite reaches the network. Nothing runs the real `dam`. Nothing t
 
 ### The cases
 
-- **`dam_spec`.** argv construction per verb, `--store` passthrough, JSON decoding, the error table
-  for exits 1, 2, 3 and 124, and the `pcall` around a missing binary.
+- **`dam_spec`.** argv construction per verb, `--store` passthrough, JSON decoding, and the `pcall`
+  around a missing binary.
+- **`answer_spec`.** One finished process read directly: the error table for exits 1, 2, 3, 4 and
+  124, a document whose `rule` or `oids` arrive in a shape dam does not send, a document with no
+  message of its own, and a call a signal killed.
 - **`handshake_spec`.** The supported range accepts 0.2.0 and refuses 0.3.0, an unparseable banner
   warns and proceeds, an absent `dam` refuses.
 - **`status_model_spec`.** One fixture per section, an empty status, a status with every section
@@ -1597,7 +1600,7 @@ Three greps are added to the lint job, each a one-line `grep` that must find not
 
 1. `vim.system` outside `lua/damnit/dam.lua`.
 1. `:wait(` outside `lua/damnit/health.lua` and `tests/`.
-1. `vim.api`, `vim.fn` or `vim.notify` in the five pure modules.
+1. `vim.api`, `vim.fn` or `vim.notify` in the six pure modules.
 
 ______________________________________________________________________
 

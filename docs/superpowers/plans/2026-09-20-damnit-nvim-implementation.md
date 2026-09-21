@@ -38,8 +38,8 @@ From the spec, and equally binding:
 - `--json` on every `dam` call, without exception, including the ones whose result is discarded.
 - Only `lua/damnit/dam.lua` calls `vim.system`. CI greps for it.
 - `:wait(` appears nowhere outside `lua/damnit/health.lua` and `tests/`. CI greps for it.
-- The pure modules `status_model`, `task_format`, `list_format`, `tree` and `location` call no
-  `vim.api`, `vim.fn`, `vim.system`, `vim.notify` or `vim.schedule`. They may use `vim.tbl_*`,
+- The pure modules `status_model`, `task_format`, `list_format`, `tree`, `location` and `answer`
+  call no `vim.api`, `vim.fn`, `vim.system`, `vim.notify` or `vim.schedule`. They may use `vim.tbl_*`,
   `vim.deep_equal`, `vim.json`, `vim.trim` and `vim.split`, which are data functions. CI greps for it.
 - Every result is marshalled through `vim.schedule` before it touches a buffer, a window or an option.
 - Every file targets 300 lines and none exceeds 500, comments included.
@@ -71,7 +71,8 @@ Created under `lua/damnit/`:
 | --- | --- |
 | `init.lua` | Options, `setup`, and the functions a keymap calls. Nothing else. |
 | `message.lua` | The `damnit.nvim: ` prefix rule, in one place. |
-| `dam.lua` | The only module that spawns a process: argv, JSON, errors, the handshake. |
+| `dam.lua` | The only module that spawns a process: argv, the handshake, the call. |
+| `answer.lua` | One finished process into a result or an error: exit code, signal, document. Pure. |
 | `queue.lua` | The per-store queue, the elapsed timer, cancellation. |
 | `status_model.lua` | One status document into the window's model. Pure. |
 | `render.lua` | A model into lines and extmark specs. `render.lines` is pure. |
@@ -525,10 +526,10 @@ spawn, the real argv, the real exit code and the real standard error are all exe
 
 **Files:**
 
-- Create: `lua/damnit/dam.lua`
+- Create: `lua/damnit/dam.lua`, `lua/damnit/answer.lua`
 - Create: `tests/helpers/fake_dam.lua`
 - Create: `tests/fixtures/default/status.json`
-- Create: `tests/dam_spec.lua`, `tests/handshake_spec.lua`
+- Create: `tests/dam_spec.lua`, `tests/handshake_spec.lua`, `tests/answer_spec.lua`
 - Modify: `lua/damnit/init.lua` (`setup` forgets the handshake)
 
 **Interfaces:**
@@ -538,7 +539,8 @@ spawn, the real argv, the real exit code and the real standard error are all exe
   - `dam.argv(args) -> string[]`, the full argv including `dam` and any `--store`/`--config`.
   - `dam.call(args, opts, callback)` where `opts` is `{ label: string?, on_spawn: fun(handle) }?` and
     `callback` is `fun(data: table?, err: damnit.Error?)`. This is the one entry point every caller uses.
-  - `dam.interpret(out, label) -> table?, damnit.Error?`, pure over a `vim.SystemCompleted`.
+  - `answer.interpret(out, label) -> table?, damnit.Error?`, pure over a `vim.SystemCompleted`,
+    and `answer.MISSING`, the sentence for a dam that is not on `PATH`.
   - `dam.supported(version) -> boolean`, `dam.forget()`, `dam.version` (a string or nil).
   - `damnit.Error` = `{ kind, code, message, rule, oids, plugin }`. `kind` is dam's own word where
     dam wrote a document (`refused`, `store`, `helper`, `credential`, `parse`, `usage`,
@@ -1305,7 +1307,13 @@ found by a measurement rather than by reading:
    a child a signal killed, so an unguarded code 0 reads every rung of the cancellation ladder as an
    empty answer.
 1. A failure that wrote nothing at all on standard error gets a sentence naming the call and the
-   exit code, rather than an empty notification.
+   exit code, rather than an empty notification. So does a document whose own message is empty,
+   which names dam's rule or its kind instead of the exit code.
+1. A document's `rule` and `oids` are kept only in the shapes dam sends, a string and a list of
+   strings, because the first thing a caller does with `oids` is iterate it.
+1. The module is two: `dam.lua` spawns and shakes hands, `answer.lua` reads one finished process,
+   and `tests/answer_spec.lua` holds the cases that drive `interpret` directly. `answer.lua` is
+   pure in the sense the constraints use, so it belongs in Task 27's list.
 
 ---
 
@@ -8090,9 +8098,9 @@ After the `luacheck` step in `.github/workflows/ci.yml`:
       - name: The pure modules call no Neovim API
         run: |
           pure="lua/damnit/status_model.lua lua/damnit/task_format.lua lua/damnit/list_format.lua"
-          pure="$pure lua/damnit/tree.lua lua/damnit/location.lua"
+          pure="$pure lua/damnit/tree.lua lua/damnit/location.lua lua/damnit/answer.lua"
           if grep -nE 'vim\.(api|fn|system|notify|schedule)' $pure; then
-            echo "these five modules are pure: they may use vim.tbl_*, vim.json, vim.split and vim.deep_equal" >&2
+            echo "these six modules are pure: they may use vim.tbl_*, vim.json, vim.split and vim.deep_equal" >&2
             exit 1
           fi
 ```
