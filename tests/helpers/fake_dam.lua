@@ -42,7 +42,18 @@ if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 
 if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
 if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
 
-cat "$DAMNIT_TEST_FIXTURES/$subcommand.json"
+# `--full` is a second document shape for the same subcommand, so a fixture
+# directory holding one is what answers it.
+fixture="$DAMNIT_TEST_FIXTURES/$subcommand.json"
+case " $* " in
+  *" --full "*)
+    if [ -f "$DAMNIT_TEST_FIXTURES/$subcommand-full.json" ]; then
+      fixture="$DAMNIT_TEST_FIXTURES/$subcommand-full.json"
+    fi
+    ;;
+esac
+
+cat "$fixture"
 ]==]
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."

@@ -231,10 +231,18 @@ function M.build(status, remotes)
     end
   end
 
+  -- dam writes an unpushed row for every configured remote, zero commits
+  -- included, and filters them out of its own human form. The section says what
+  -- is behind; the header says what exists.
+  local behind = vim.tbl_filter(function(entry)
+    return (entry.commits or 0) > 0
+  end, status.unpushed or {})
+
   -- An empty section assigns nil, which is a no-op on append.
   local sections = {}
   for _, each in ipairs(SECTIONS) do
-    sections[#sections + 1] = section(each[1], each[2], status[each[3]], each[4])
+    local source = each[3] == "unpushed" and behind or status[each[3]]
+    sections[#sections + 1] = section(each[1], each[2], source, each[4])
   end
 
   return {

@@ -1,0 +1,23 @@
+{
+  "remotes": [
+    {
+      "remote": "fake",
+      "sent": 3,
+      "succeeded": 3,
+      "skipped": 0,
+      "failed": []
+    },
+    {
+      "remote": "flaky",
+      "sent": 7,
+      "succeeded": 6,
+      "skipped": 0,
+      "failed": [
+        {
+          "oid": "4aa4fabf5454eabdde38388404cc4a1d9f71a05c",
+          "why": "upstream rejected the write: rate limited"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "remotes": [
+    {
+      "remote": "fake",
+      "created": 2,
+      "updated": 1,
+      "unchanged": 4,
+      "conflicts": 0,
+      "removed_upstream": 0
+    }
+  ]
+}

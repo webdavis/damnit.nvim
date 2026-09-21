@@ -36,6 +36,18 @@ return {
     assert(#model.sections == 0, vim.inspect(model.sections))
   end,
 
+  ["leaves a remote with nothing unpushed out of the section"] = function()
+    -- dam writes an unpushed row for every configured remote, zero commits
+    -- included, and filters them out of its own human form.
+    local model = status_model.build(fixture("clean/status.json"), fixture("full/remote.json"))
+
+    assert(section(model, "unpushed") == nil, vim.inspect(model.sections))
+    assert(model.empty == true, vim.inspect(model.sections))
+
+    local want = { { remote = "fake", commits = 0 }, { remote = "flaky", commits = 0 } }
+    assert(vim.deep_equal(model.remotes, want), vim.inspect(model.remotes))
+  end,
+
   ["puts conflicts first, because they are the only section that blocks a pull"] = function()
     local model = status_model.build(fixture("full/status.json"), fixture("full/remote.json"))
 

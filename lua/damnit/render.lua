@@ -335,6 +335,10 @@ function M.draw(buf, lines)
   vim.b[buf].damnit_oids = oids
   vim.b[buf].damnit_sections = sections
 
+  -- Replacing every line carries a virtual-line mark past the last row, where a
+  -- ranged clear no longer reaches it, so the whole namespace goes first.
+  vim.api.nvim_buf_clear_namespace(buf, M.NAMESPACE, 0, -1)
+
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, text)
   vim.bo[buf].modifiable = false

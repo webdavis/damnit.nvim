@@ -1,45 +1,14 @@
 -- The status window: one per store, re-read rather than patched, and the keys
 -- that move around it.
 
-dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"))
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 local queue = require("damnit.queue")
 local render = require("damnit.render")
 local window = require("damnit.window")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
----@param run fun(fake: damnit.FakeDam, notifications: string[])
----@param fixtures string?
-local function with_window(run, fixtures)
-  local fake = fake_dam.install({ fixtures = fixtures or (TESTS_DIR .. "/fixtures/full") })
-  queue.reset()
-
-  -- The remote list is read once per store and cached, so a case that asserts
-  -- on it starts from a store this session has not read yet.
-  window.forget_remotes()
-
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
-
-  local buf = window.open()
-  fake_dam.settle(function()
-    return queue.running() == nil and vim.api.nvim_buf_line_count(buf) > 1
-  end)
-
-  local ok, err = pcall(run, fake, notifications)
-
-  vim.notify = real
-  vim.cmd("silent! %bwipeout!")
-  queue.reset()
-  fake_dam.remove(fake)
-
-  assert(ok, err)
-end
+local with_window = status_window.with
 
 return {
   ["opens one buffer per store and focuses it rather than opening a second"] = function()
