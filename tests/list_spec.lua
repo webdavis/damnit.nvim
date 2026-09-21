@@ -140,6 +140,28 @@ return {
     end)
   end,
 
+  ["u outside the completed history refuses and sends nothing"] = function()
+    list_buffer.with(function(buf, fake, notifications)
+      list_buffer.cursor_to(buf, "buy oat milk")
+      local before = #fake_dam.argv_log(fake)
+
+      vim.api.nvim_feedkeys("u", "x", false)
+      -- Long enough for a call to reach the log, so one that should not have
+      -- been made is caught rather than raced past.
+      vim.wait(200, function()
+        return #fake_dam.argv_log(fake) > before
+      end, 5)
+
+      -- A plain `dam ls` holds completed objects too, and reopening one clears
+      -- `completed_at` with no verb that puts it back.
+      assert(#fake_dam.argv_log(fake) == before, vim.inspect(fake_dam.argv_log(fake)))
+      assert(
+        notifications[#notifications] == "damnit.nvim: u reopens in the completed history; X reopens an object here",
+        vim.inspect(notifications)
+      )
+    end)
+  end,
+
   ["gd on an object with no location in its body says so"] = function()
     list_buffer.with(function(buf, _, notifications)
       list_buffer.cursor_to(buf, "buy oat milk")
