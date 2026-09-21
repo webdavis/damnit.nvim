@@ -47,6 +47,10 @@ cat "$DAMNIT_TEST_FIXTURES/$subcommand.json"
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
+--- The environment a spec borrows for the length of one case, so a call that
+--- escapes the fake reads and writes inside the fake's own directory.
+local SANDBOXED = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME" }
+
 local VARIABLES = {
   "DAMNIT_TEST_LOG",
   "DAMNIT_TEST_FIXTURES",
@@ -60,6 +64,7 @@ local VARIABLES = {
 ---@field dir string the temporary directory the script lives in
 ---@field log string the path the argv log is appended to
 ---@field path string the PATH this fake replaced
+---@field saved table<string, string?> the sandboxed variables as they were
 
 --- Put a fake `dam` at the front of PATH.
 ---@param opts { fixtures: string?, version: string?, sleep: string?, stderr: string?, exit: integer? }?
@@ -76,7 +81,12 @@ function M.install(opts)
   file:close()
   assert(vim.uv.fs_chmod(script, tonumber("755", 8)))
 
-  local fake = { dir = dir, log = dir .. "/argv.log", path = vim.env.PATH }
+  local fake = { dir = dir, log = dir .. "/argv.log", path = vim.env.PATH, saved = {} }
+
+  for _, name in ipairs(SANDBOXED) do
+    fake.saved[name] = vim.env[name]
+    vim.env[name] = dir
+  end
 
   vim.env.PATH = dir .. ":" .. vim.env.PATH
   vim.env.DAMNIT_TEST_LOG = fake.log
@@ -122,6 +132,11 @@ end
 ---@param fake damnit.FakeDam
 function M.remove(fake)
   vim.env.PATH = fake.path
+
+  for _, name in ipairs(SANDBOXED) do
+    vim.env[name] = fake.saved[name]
+  end
+
   vim.fn.delete(fake.dir, "rf")
 
   for _, name in ipairs(VARIABLES) do
