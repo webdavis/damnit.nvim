@@ -110,6 +110,21 @@ local function oids_of(value)
   return value
 end
 
+--- What to say about a failure that carried no sentence of its own.
+---@param label string?
+---@param code integer
+---@param named string? dam's rule, or its kind, where it sent a document
+---@return string
+local function silent_failure(label, code, named)
+  local call = label or "a dam call"
+
+  if named then
+    return ("%s failed with exit %d: dam said %s and nothing more"):format(call, code, named)
+  end
+
+  return ("%s failed with exit %d and said nothing"):format(call, code)
+end
+
 ---@param text string
 ---@return integer[]? parts
 local function parts_of(text)
@@ -191,29 +206,30 @@ function M.interpret(out, label)
   end
 
   local document = document_of(out.stderr)
+  local kind = KINDS[out.code] or "error"
+  local rule, oids, named
+
   if document then
-    return nil,
-      {
-        kind = type(document.kind) == "string" and document.kind or (KINDS[out.code] or "error"),
-        code = out.code,
-        rule = type(document.rule) == "string" and document.rule or nil,
-        oids = oids_of(document.oids),
-        message = tostring(document.message or ""),
-      }
+    kind = type(document.kind) == "string" and document.kind or kind
+    rule = type(document.rule) == "string" and document.rule or nil
+    oids = oids_of(document.oids)
+    named = rule or kind
   end
 
-  local text = M.message_of(out.stderr)
+  local text = document and tostring(document.message or "") or M.message_of(out.stderr)
   if text == "" then
     return nil,
       {
-        kind = KINDS[out.code] or "error",
+        kind = kind,
         code = out.code,
+        rule = rule,
+        oids = oids,
         plugin = true,
-        message = ("%s failed with exit %d and said nothing"):format(label or "a dam call", out.code),
+        message = silent_failure(label, out.code, named),
       }
   end
 
-  return nil, { kind = KINDS[out.code] or "error", code = out.code, message = text }
+  return nil, { kind = kind, code = out.code, rule = rule, oids = oids, message = text }
 end
 
 --- Spawn one `dam`, answering on the main loop.

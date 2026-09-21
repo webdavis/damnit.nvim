@@ -123,6 +123,23 @@ return {
     assert(err.oids == nil, "half an oid list names the wrong blockers")
   end,
 
+  ["says what a document said when it carried no message of its own"] = function()
+    local document = vim.json.encode({ error = { kind = "refused", rule = "blocked", message = "", oids = {} } })
+    local _, err = dam.interpret({ code = 4, stdout = "", stderr = document }, "done 98d8780")
+
+    assert(err.message == "done 98d8780 failed with exit 4: dam said blocked and nothing more", err.message)
+    assert(err.plugin == true, "the plugin wrote this one")
+    assert(err.rule == "blocked", vim.inspect(err.rule))
+  end,
+
+  ["falls back to the kind when a message-less document named no rule"] = function()
+    local document = vim.json.encode({ error = { kind = "store", message = "", oids = {} } })
+    local _, err = dam.interpret({ code = 1, stdout = "", stderr = document }, "status")
+
+    assert(err.kind == "store", err.kind)
+    assert(err.message == "status failed with exit 1: dam said store and nothing more", err.message)
+  end,
+
   ["carries standard error that is not a document as the message it is"] = function()
     local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
     local _, err = call({ exit = 2, stderr = usage }, { "dpne", "--json" })
