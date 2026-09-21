@@ -13,7 +13,13 @@ function M.cancel()
   require("damnit.queue").cancel()
 end
 
+--- Closing the only window of the only tab page is what Vim refuses with E444,
+--- so the refusal is this plugin's own sentence instead.
 function M.close()
+  if #vim.api.nvim_list_tabpages() == 1 and #vim.api.nvim_tabpage_list_wins(0) == 1 then
+    return message.warn("the status window is the only window open")
+  end
+
   vim.api.nvim_win_close(0, false)
 end
 

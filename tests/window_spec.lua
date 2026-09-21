@@ -129,6 +129,20 @@ return {
     end)
   end,
 
+  ["says so rather than raising E444 when the window is the only one"] = function()
+    with_window(function(_, notifications)
+      vim.cmd("only")
+      local buf = window.buffer()
+      vim.api.nvim_feedkeys("q", "x", false)
+
+      assert(vim.api.nvim_win_get_buf(0) == buf, "the status window is still open")
+      assert(
+        notifications[#notifications] == "damnit.nvim: the status window is the only window open",
+        tostring(notifications[#notifications])
+      )
+    end)
+  end,
+
   ["reads the status from dam rather than guessing at it"] = function()
     with_window(function(fake)
       local log = fake_dam.argv_log(fake)
