@@ -298,6 +298,12 @@ function M.draw(buf, lines)
     sections[index] = line.section or false
   end
 
+  -- Recorded before the text: the fold expression reads the kinds, and replacing
+  -- the lines is what makes Neovim recompute the fold levels.
+  vim.b[buf].damnit_kinds = kinds
+  vim.b[buf].damnit_oids = oids
+  vim.b[buf].damnit_sections = sections
+
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, text)
   vim.bo[buf].modifiable = false
@@ -312,10 +318,6 @@ function M.draw(buf, lines)
       })
     end
   end
-
-  vim.b[buf].damnit_kinds = kinds
-  vim.b[buf].damnit_oids = oids
-  vim.b[buf].damnit_sections = sections
 end
 
 return M

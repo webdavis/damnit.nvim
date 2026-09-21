@@ -59,6 +59,31 @@ return {
     end)
   end,
 
+  ["keeps a section the user folded closed across a re-read"] = function()
+    with_window(function(fake)
+      local buf = window.buffer()
+      local heading = nil
+      for index, kind in ipairs(vim.b[buf].damnit_kinds) do
+        if kind == "section" then
+          heading = index
+          break
+        end
+      end
+
+      vim.api.nvim_win_set_cursor(0, { heading, 0 })
+      vim.cmd("normal! zc")
+      assert(vim.fn.foldclosed(heading) == heading, ("fold at %d: %d"):format(heading, vim.fn.foldclosed(heading)))
+
+      local before = #fake_dam.argv_log(fake)
+      vim.api.nvim_feedkeys("R", "x", false)
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      end)
+
+      assert(vim.fn.foldclosed(heading) == heading, "the re-read re-opened a section the user closed")
+    end)
+  end,
+
   ["makes the buffer unmodifiable, unlisted and scratch"] = function()
     with_window(function()
       local buf = window.buffer()
