@@ -6,8 +6,8 @@
 -- one. A spec file returns a table of `["what it does"] = function() ... end`
 -- cases and asserts with plain `assert`. No plenary, no busted.
 --
--- No spec reaches the network and no spec runs the real `dam`. Every spec here
--- is a pure one; a spec that needs `dam` gets a fake at the front of PATH.
+-- No spec reaches the network and no spec runs the real `dam`. Every spec
+-- here is a pure one.
 
 local tests_dir = arg[0]:match("(.*)/") or "."
 local project_root = tests_dir .. "/.."

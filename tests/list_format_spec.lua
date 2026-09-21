@@ -141,7 +141,7 @@ return {
   end,
 
   ["a task captured from code carries the location icon, and one without carries none"] = function()
-    local captured = { id = "a", content = "Hold the width", description = "damnit.nvim lua/todoist/list.lua:42" }
+    local captured = { id = "a", content = "Hold the width", description = "damnit.nvim lua/damnit/list.lua:42" }
     local plain = { id = "b", content = "Buy milk", description = "at the shop on the corner" }
 
     assert(vim.endswith(format.task_line(captured, "", location.parse(captured.description)), location.ICON))
@@ -163,7 +163,7 @@ return {
     local task = {
       id = "a",
       content = "Hold the sidebar at the width it was configured with",
-      description = "damnit.nvim lua/todoist/sidebar.lua:42",
+      description = "damnit.nvim lua/damnit/sidebar.lua:42",
     }
 
     local with_icon = format.task_line(task, "", location.parse(task.description))

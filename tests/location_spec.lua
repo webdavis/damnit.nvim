@@ -2,7 +2,7 @@
 --
 -- A description is text a person can edit on their phone, so these cases are
 -- mostly about what `jump` does with one it cannot use. Nothing here reaches
--- Todoist: a location is a string, and the files are made by the spec.
+-- a task store: a location is a string, and the files are made by the spec.
 
 local location = require("damnit.location")
 
@@ -60,11 +60,11 @@ end
 
 return {
   ["reads a repository, a path and a line out of a description"] = function()
-    local parsed = location.parse("damnit.nvim lua/todoist/list.lua:42")
+    local parsed = location.parse("damnit.nvim lua/damnit/list.lua:42")
 
     assert(parsed, "no location parsed")
     assert(parsed.repo == "damnit.nvim", vim.inspect(parsed))
-    assert(parsed.path == "lua/todoist/list.lua", vim.inspect(parsed))
+    assert(parsed.path == "lua/damnit/list.lua", vim.inspect(parsed))
     assert(parsed.line == 42, vim.inspect(parsed))
   end,
 
@@ -78,7 +78,7 @@ return {
   end,
 
   ["finds the location under a note somebody typed above it"] = function()
-    local parsed = location.parse("ask about this first\n\ndamnit.nvim lua/todoist/list.lua:3\n")
+    local parsed = location.parse("ask about this first\n\ndamnit.nvim lua/damnit/list.lua:3\n")
 
     assert(parsed and parsed.line == 3, vim.inspect(parsed))
   end,
@@ -93,11 +93,11 @@ return {
   end,
 
   ["what a location is written as is what parses back"] = function()
-    local written = location.describe({ repo = "damnit.nvim", path = "lua/todoist/list.lua", line = 42 })
+    local written = location.describe({ repo = "damnit.nvim", path = "lua/damnit/list.lua", line = 42 })
     local parsed = location.parse(written)
 
-    assert(written == "damnit.nvim lua/todoist/list.lua:42", written)
-    assert(parsed and parsed.path == "lua/todoist/list.lua" and parsed.line == 42, vim.inspect(parsed))
+    assert(written == "damnit.nvim lua/damnit/list.lua:42", written)
+    assert(parsed and parsed.path == "lua/damnit/list.lua" and parsed.line == 42, vim.inspect(parsed))
   end,
 
   ["jumps to the file and the line"] = function()
