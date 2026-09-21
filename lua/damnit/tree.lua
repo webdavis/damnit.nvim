@@ -11,6 +11,34 @@
 
 local M = {}
 
+---@param value any
+---@return string
+local function text_of(value)
+  if value == nil or value == vim.NIL then
+    return ""
+  end
+
+  return tostring(value)
+end
+
+--- The path one level up. `work/parent/child/` becomes `work/parent/`, and a
+--- path with one segment becomes the root.
+---@param path any
+---@return string
+function M.parent_path(path)
+  local trimmed = (text_of(path):gsub("/$", ""))
+  local parent = trimmed:match("^(.*)/[^/]*$")
+
+  return parent and (parent .. "/") or ""
+end
+
+--- The object's own last segment, which `dam mv` carries along.
+---@param path any
+---@return string
+function M.own_segment(path)
+  return (text_of(path):gsub("/$", ""):match("([^/]*)$")) or ""
+end
+
 --- The id of a task's parent, or the empty string when it has none.
 ---@param task table?
 ---@return string

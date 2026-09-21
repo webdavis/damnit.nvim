@@ -1,160 +1,159 @@
--- The task buffer's text: that it round-trips, what it refuses, and what a
--- write sends. Pure functions over tables and lines, so no buffer and no
--- request appear here.
+-- The frontmatter, both directions, and the flags one edit becomes.
+--
+-- Both objects are the shape dam 0.2.0 writes, captured from `dam show --json`
+-- against a store in a temporary directory.
 
-local format = require("damnit.task_format")
+local task_format = require("damnit.task_format")
 
---- One task as the API describes it.
----@param overrides table?
----@return table
-local function task(overrides)
-  return vim.tbl_extend("force", {
-    id = "6XGgmFVcrG5RRjVr",
-    content = "Buy oat milk",
-    description = "The kind in the grey carton.\n\n- [ ] check the date",
-    due = { string = "tomorrow 9am", date = "2026-09-18" },
-    priority = 3,
-    labels = { "errands", "home" },
-    project_id = "2203306141",
-    section_id = "7025",
-  }, overrides or {})
-end
+local TASK = {
+  oid = "c30414962aa4332b6e5dfc2e0360e2b328735efe",
+  kind = "task",
+  subject = "buy oat milk",
+  body = "The kind in the grey carton.",
+  path = "inbox/",
+  labels = { "errand", "home" },
+  depends = {},
+  reminders = {},
+  task = { done = false, priority = 1, due = "2026-09-25" },
+}
 
----@param overrides table?
----@return table header
----@return string description
-local function read_back(overrides)
-  local header, description, err = format.parse(format.render(task(overrides)))
-  assert(not err, err)
+local EVENT = {
+  oid = "668db41d2c37143e7d1e37f45a5ba0bf5e028841",
+  kind = "event",
+  subject = "standup",
+  body = "",
+  path = "work/",
+  labels = {},
+  depends = {},
+  reminders = {},
+  event = {
+    start = "2026-09-21T09:00:00-06:00[America/Denver]",
+    ["end"] = "2026-09-21T09:15:00-06:00[America/Denver]",
+    location = "room 3",
+    attendees = {},
+    status = "confirmed",
+    transparency = "busy",
+    visibility = "default",
+    event_type = "default",
+    attachments = {},
+  },
+}
 
-  return header, description
+---@param object table
+---@param edits table<string, string>
+---@return { edit: string[], move: string? }?
+---@return { message: string, line: integer }?
+local function after(object, edits)
+  local lines = task_format.render(object)
+
+  for index, line in ipairs(lines) do
+    local key = line:match("^(%l[%l_]*):")
+    if key and edits[key] then
+      lines[index] = ("%s: %s"):format(key, edits[key])
+    end
+  end
+
+  local header, body = task_format.parse(lines)
+
+  return task_format.changes(object, header, body)
 end
 
 return {
-  ["renders the header as markdown frontmatter and the description below it"] = function()
-    local lines = format.render(task())
+  ["renders the header dam's way, priority first and reversed"] = function()
+    local lines = task_format.render(TASK)
 
     assert(lines[1] == "---", lines[1])
-    assert(lines[2] == "content: Buy oat milk", lines[2])
-    assert(lines[3] == "due: tomorrow 9am", lines[3])
-    assert(lines[4] == "priority: 3", lines[4])
-    assert(lines[5] == "labels: errands, home", lines[5])
-    assert(lines[6] == "project: 2203306141", lines[6])
-    assert(lines[7] == "section: 7025", lines[7])
-    assert(lines[8] == "---", lines[8])
-    assert(lines[9] == "The kind in the grey carton.", lines[9])
-    assert(lines[10] == "", lines[10])
-    assert(lines[11] == "- [ ] check the date", lines[11])
+    assert(vim.tbl_contains(lines, "subject: buy oat milk"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "path: inbox/"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "priority: 1"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "labels: errand, home"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "depends:"), "an empty field is `key:` with no trailing space")
+    assert(vim.tbl_contains(lines, "# priority: 1 is highest"), vim.inspect(lines))
+    assert(lines[#lines] == "The kind in the grey carton.", lines[#lines])
   end,
 
-  ["round-trips a task through the text and back with nothing to send"] = function()
-    local original = task()
-    local header, description = read_back()
+  ["sends only what changed"] = function()
+    local changes = after(TASK, { subject = "buy the oat milk" })
 
-    assert(header.content == original.content, header.content)
-    assert(description == original.description, vim.inspect(description))
-
-    local fields, err = format.changes(original, header, description)
-    assert(not err, err)
-    assert(vim.tbl_isempty(fields), vim.inspect(fields))
+    assert(vim.deep_equal(changes.edit, { "--subject", "buy the oat milk" }), vim.inspect(changes.edit))
   end,
 
-  ["round-trips a task with no due date, no labels and no section"] = function()
-    local bare = { id = "1", content = "Think", description = "", priority = 1, labels = {}, project_id = "2" }
+  ["clears a due date with --no-due rather than an empty --due"] = function()
+    local changes = after(TASK, { due = "" })
 
-    local header, description, unreadable = format.parse(format.render(bare))
-    assert(not unreadable, unreadable)
-
-    assert(header.due == "", vim.inspect(header))
-    assert(header.section == "", vim.inspect(header))
-    assert(description == "", vim.inspect(description))
-
-    local fields, err = format.changes(bare, header, description)
-    assert(not err, err)
-    assert(vim.tbl_isempty(fields), vim.inspect(fields))
+    assert(vim.deep_equal(changes.edit, { "--no-due" }), vim.inspect(changes.edit))
   end,
 
-  ["sends only the fields that changed"] = function()
-    local header, description = read_back()
-    header.content = "Buy oat milk and bread"
-    header.priority = "4"
-    header.labels = "home,  errands "
+  ["diffs labels and depends as sets"] = function()
+    local changes = after(TASK, { labels = "home, slow" })
 
-    local fields, err = format.changes(task(), header, description .. "\n- [ ] and the lid")
-    assert(not err, err)
-
-    assert(fields.content == "Buy oat milk and bread", vim.inspect(fields))
-    assert(fields.priority == 4, vim.inspect(fields))
-    assert(fields.description:find("and the lid", 1, true), vim.inspect(fields))
-    assert(fields.due_string == nil, "an unchanged due string was sent, which would reparse it")
-    assert(vim.deep_equal(fields.labels, { "home", "errands" }), vim.inspect(fields.labels))
+    assert(vim.deep_equal(changes.edit, { "--label", "slow", "--unlabel", "errand" }), vim.inspect(changes.edit))
   end,
 
-  ["sends a due string only when it changed"] = function()
-    local header, description = read_back()
-    header.due = "every monday"
+  ["moves into the container a changed path names"] = function()
+    local changes = after(TASK, { path = "home/inbox/" })
 
-    local fields = format.changes(task(), header, description)
-    assert(fields.due_string == "every monday", vim.inspect(fields))
+    assert(changes.move == "home/", tostring(changes.move))
+    assert(#changes.edit == 0, vim.inspect(changes.edit))
   end,
 
-  ["refuses a buffer with no opening fence"] = function()
-    local _, _, err = format.parse({ "content: Buy milk", "---" })
-    assert(err and err:find("first line"), vim.inspect(err))
+  ["sends a root object's new path whole, since it has no segment of its own"] = function()
+    local rooted = vim.tbl_extend("force", TASK, { path = "" })
+    local changes = after(rooted, { path = "home/errands/" })
+
+    assert(changes.move == "home/errands/", tostring(changes.move))
   end,
 
-  ["refuses a buffer with no closing fence"] = function()
-    local _, _, err = format.parse({ "---", "content: Buy milk" })
-    assert(err and err:find("closing"), vim.inspect(err))
+  ["refuses a path that renames the object, which dam mv cannot do"] = function()
+    local _, refused = after(TASK, { path = "home/errands/" })
+
+    assert(refused.message:find("inbox", 1, true), refused.message)
+    assert(refused.message:find("errands", 1, true), refused.message)
+    assert(refused.line > 1, tostring(refused.line))
   end,
 
-  ["refuses a header line that is not a key and a value"] = function()
-    local _, _, err = format.parse({ "---", "content: Buy milk", "tomorrow 9am", "---" })
-    assert(err and err:find("line 3"), vim.inspect(err))
+  ["refuses a path with an empty segment"] = function()
+    local _, refused = after(TASK, { path = "home//inbox/" })
+
+    assert(refused.message:find("empty segment", 1, true), refused.message)
   end,
 
-  ["refuses an unknown header field rather than dropping it"] = function()
-    local _, _, err = format.parse({ "---", "priorty: 2", "---" })
-    assert(err and err:find("priorty"), vim.inspect(err))
+  ["refuses an empty subject and a priority outside dam's range, on the right line"] = function()
+    local _, refused = after(TASK, { subject = "" })
+    assert(refused.message:find("subject", 1, true), refused.message)
+    assert(refused.line > 1, tostring(refused.line))
+
+    local _, bad = after(TASK, { priority = "9" })
+    assert(bad.message:find("1, 2, 3 or 4", 1, true), bad.message)
+    assert(bad.message:find("1 is the most urgent", 1, true), bad.message)
   end,
 
-  ["refuses a repeated header field"] = function()
-    local _, _, err = format.parse({ "---", "due: today", "due: tomorrow", "---" })
-    assert(err and err:find("repeats"), vim.inspect(err))
+  ["refuses a depends entry too short to be an oid prefix"] = function()
+    local _, refused = after(TASK, { depends = "abc" })
+
+    assert(refused.message:find("four", 1, true), refused.message)
   end,
 
-  ["refuses a header missing a field"] = function()
-    local _, _, err = format.parse({ "---", "content: Buy milk", "---" })
-    assert(err and err:find("missing"), vim.inspect(err))
-    assert(err:find("priority"), vim.inspect(err))
-  end,
+  ["reads an event's own fields and leaves out the ones dam does not keep"] = function()
+    local lines = task_format.render(EVENT)
 
-  ["refuses an empty content"] = function()
-    local header, description = read_back()
-    header.content = ""
+    assert(vim.tbl_contains(lines, "start: 2026-09-21T09:00:00-06:00[America/Denver]"), vim.inspect(lines))
+    assert(vim.tbl_contains(lines, "location: room 3"), vim.inspect(lines))
+    assert(not vim.tbl_contains(lines, "priority: 1"), "an event has no priority")
 
-    local fields, err = format.changes(task(), header, description)
-    assert(not fields, vim.inspect(fields))
-    assert(err:find("content"), err)
-  end,
-
-  ["refuses a priority the API has no room for"] = function()
-    local header, description = read_back()
-
-    for _, bad in ipairs({ "0", "5", "high", "2.5", "" }) do
-      header.priority = bad
-      local fields, err = format.changes(task(), header, description)
-      assert(not fields, bad .. " was accepted")
-      assert(err:find("priority"), err)
+    -- dam 0.2.0 keeps no timezone field and `dam edit` takes no --timezone: the
+    -- zone rides inside start and end.
+    for _, line in ipairs(lines) do
+      assert(not vim.startswith(line, "timezone:"), line)
     end
   end,
 
-  ["refuses a move dressed up as an edit"] = function()
-    local header, description = read_back()
-    header.project = "9999"
+  ["sends an event's changed end through its own flag"] = function()
+    local changes = after(EVENT, { ["end"] = "2026-09-21T09:30:00-06:00[America/Denver]" })
 
-    local fields, err = format.changes(task(), header, description)
-    assert(not fields, vim.inspect(fields))
-    assert(err:find("moving a task"), err)
+    assert(
+      vim.deep_equal(changes.edit, { "--end", "2026-09-21T09:30:00-06:00[America/Denver]" }),
+      vim.inspect(changes.edit)
+    )
   end,
 }

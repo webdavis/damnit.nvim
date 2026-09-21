@@ -1,34 +1,36 @@
--- The text a task looks like in a buffer, and the reading of it back.
+-- The text one object looks like in a buffer, and the reading of it back.
 --
--- One task is a header of `key: value` lines between two `---` fences and the
--- description as the markdown body below them. That shape is markdown
--- frontmatter, which means the operator already knows it, an editor already
--- highlights it, and a hand that retypes the block by hand produces something
--- this module reads rather than something it guesses at.
+-- A header of `key: value` lines between two `---` fences and the body as
+-- markdown below them. Comment lines inside the header start with `#` and are
+-- read only: they carry what dam has no edit flag for.
 --
--- Everything here is a pure function over lines and tables: no buffer, no
--- request, no notification. The buffer module is what has side effects.
+-- Pure: no buffer, no call, no notification.
 
 local M = {}
 
---- The fence that opens and closes the header.
+local tree = require("damnit.tree")
+
 M.FENCE = "---"
 
---- Every header key, in the order they are rendered. A rendered buffer always
---- carries all of them, so a missing one on the way back in is a hand edit that
---- went wrong rather than a field left out on purpose.
-M.KEYS = { "content", "due", "priority", "labels", "project", "section" }
+M.TASK_KEYS = { "subject", "path", "priority", "due", "deadline", "labels", "depends", "recurrence" }
+M.EVENT_KEYS = { "subject", "path", "start", "end", "location", "labels", "depends" }
 
---- The keys a write may change. `project` and `section` are shown so the buffer
---- says where the task lives, but moving a task is a different API call than
---- editing one, so an edit to either is refused rather than dropped.
-local WRITABLE = { content = true, due = true, priority = true, labels = true }
+--- The flag that sets a field, and the flag that clears it. `false` means the
+--- field cannot be cleared, so an empty value is refused.
+local FLAGS = {
+  subject = { "--subject", false },
+  priority = { "-p", false },
+  due = { "--due", "--no-due" },
+  deadline = { "--deadline", "--no-deadline" },
+  recurrence = { "--recurrence", "--no-recurrence" },
+  start = { "--start", false },
+  ["end"] = { "--end", false },
+  location = { "--location", "--no-location" },
+}
 
 ---@param value any
 ---@return string
 local function text(value)
-  -- A JSON null decodes to `vim.NIL`, which every optional field on a task can
-  -- be: no section, no description, no due date.
   if value == nil or value == vim.NIL then
     return ""
   end
@@ -36,18 +38,21 @@ local function text(value)
   return tostring(value)
 end
 
---- The due string Todoist last recorded, which is the thing a human edits. The
---- date and the recurrence are derived from it by the API, not by this plugin.
----@param task table
+---@param object table
+---@param field string
 ---@return string
-local function due_string(task)
-  return type(task.due) == "table" and text(task.due.string) or ""
-end
+local function field_value(object, field)
+  local group = object.kind == "event" and object.event or object.task
 
----@param task table
----@return string[]
-local function labels(task)
-  return type(task.labels) == "table" and task.labels or {}
+  if field == "labels" or field == "depends" then
+    return table.concat(object[field] or {}, ", ")
+  end
+
+  if object[field] ~= nil then
+    return text(object[field])
+  end
+
+  return text((group or {})[field])
 end
 
 --- One header line. An empty field is `key:` rather than `key: `, so no line
@@ -55,7 +60,7 @@ end
 ---@param key string
 ---@param value string
 ---@return string
-local function field(key, value)
+local function line_of(key, value)
   if value == "" then
     return key .. ":"
   end
@@ -63,33 +68,41 @@ local function field(key, value)
   return ("%s: %s"):format(key, value)
 end
 
---- The lines one task becomes.
----@param task table as the API returned it
+--- The keys one object's kind uses.
+---@param object table
 ---@return string[]
-function M.render(task)
-  local lines = {
-    M.FENCE,
-    field("content", text(task.content)),
-    field("due", due_string(task)),
-    field("priority", text(task.priority or 1)),
-    field("labels", table.concat(labels(task), ", ")),
-    field("project", text(task.project_id)),
-    field("section", text(task.section_id)),
-    M.FENCE,
-  }
+function M.keys(object)
+  return object.kind == "event" and M.EVENT_KEYS or M.TASK_KEYS
+end
 
-  vim.list_extend(lines, vim.split(text(task.description), "\n", { plain = true }))
+--- The lines one object becomes.
+---@param object table
+---@return string[]
+function M.render(object)
+  local lines = { M.FENCE }
+
+  for _, key in ipairs(M.keys(object)) do
+    lines[#lines + 1] = line_of(key, field_value(object, key))
+  end
+
+  -- Read only: dam has no edit flag for reminders, and dam's priority scale is
+  -- the reverse of Todoist's.
+  lines[#lines + 1] = line_of("# reminders", table.concat(object.reminders or {}, ", "))
+
+  if object.kind ~= "event" then
+    lines[#lines + 1] = "# priority: 1 is highest"
+  end
+
+  lines[#lines + 1] = M.FENCE
+  vim.list_extend(lines, vim.split(text(object.body), "\n", { plain = true }))
 
   return lines
 end
 
---- Read a buffer back into a header table and the description.
----
---- A refusal names what is wrong with which line, because the operator is
---- looking at the text it is talking about.
+--- Read a buffer back into a header and a body.
 ---@param lines string[]
----@return table? header keyed by the names in `M.KEYS`
----@return string? description
+---@return table? header key to { value, line }
+---@return string? body
 ---@return string? err
 function M.parse(lines)
   if lines[1] ~= M.FENCE then
@@ -97,125 +110,249 @@ function M.parse(lines)
   end
 
   local header, closed = {}, nil
+
   for index = 2, #lines do
     local line = lines[index]
+
     if line == M.FENCE then
       closed = index
       break
     end
 
-    local key, value = line:match("^(%l[%l_]*):%s*(.-)%s*$")
-    if not key then
-      return nil, nil, ("line %d is not a `key: value` header line: %s"):format(index, line)
-    end
+    if not vim.startswith(line, "#") then
+      local key, value = line:match("^(%l[%l_]*):%s*(.-)%s*$")
 
-    if not vim.tbl_contains(M.KEYS, key) then
-      return nil, nil, ("line %d names an unknown field `%s`"):format(index, key)
-    end
+      if not key then
+        return nil, nil, ("line %d is not a `key: value` header line: %s"):format(index, line)
+      end
 
-    if header[key] then
-      return nil, nil, ("line %d repeats the field `%s`"):format(index, key)
-    end
+      if header[key] then
+        return nil, nil, ("line %d repeats the field `%s`"):format(index, key)
+      end
 
-    header[key] = value
+      header[key] = { value = value, line = index }
+    end
   end
 
   if not closed then
     return nil, nil, ("the header has no closing %s fence"):format(M.FENCE)
   end
 
-  local missing = {}
-  for _, key in ipairs(M.KEYS) do
-    if not header[key] then
-      missing[#missing + 1] = key
-    end
-  end
-
-  if #missing > 0 then
-    return nil, nil, ("the header is missing %s"):format(table.concat(missing, ", "))
-  end
-
   return header, table.concat(vim.list_slice(lines, closed + 1), "\n")
 end
 
---- Split a labels line into label names.
 ---@param value string
 ---@return string[]
-local function split_labels(value)
-  local names = {}
-  for name in value:gmatch("[^,]+") do
-    local trimmed = vim.trim(name)
+local function split(value)
+  local items = {}
+
+  for item in value:gmatch("[^,]+") do
+    local trimmed = vim.trim(item)
+
     if trimmed ~= "" then
-      names[#names + 1] = trimmed
+      items[#items + 1] = trimmed
     end
   end
 
-  return names
+  return items
 end
 
----@param left string[]
----@param right string[]
----@return boolean
-local function same_list(left, right)
-  return table.concat(left, "\0") == table.concat(right, "\0")
+---@param wanted string[]
+---@param held string[]
+---@return string[] added
+---@return string[] removed
+local function set_diff(wanted, held)
+  local have, want = {}, {}
+
+  for _, item in ipairs(held) do
+    have[item] = true
+  end
+  for _, item in ipairs(wanted) do
+    want[item] = true
+  end
+
+  local added, removed = {}, {}
+
+  for _, item in ipairs(wanted) do
+    if not have[item] then
+      added[#added + 1] = item
+    end
+  end
+  for _, item in ipairs(held) do
+    if not want[item] then
+      removed[#removed + 1] = item
+    end
+  end
+
+  return added, removed
 end
 
---- What a write should send, given the task as the API last described it and the
---- buffer as the operator left it.
+--- One refusal, on the line the operator is looking at.
+---@param message string
+---@param entry { value: string, line: integer }
+---@return { message: string, line: integer }
+local function refuse(message, entry)
+  return { message = message, line = entry.line }
+end
+
+--- What `dam mv` should be given for a path the buffer changed.
 ---
---- Only what changed is sent. A due string in particular is left out when it did
---- not change, because sending it makes Todoist parse it again, and a reparse is
---- what loses a recurrence.
----
---- Local refusals are the ones this plugin can be sure of without asking: an
---- empty content, a priority outside the API's range, and a move dressed up as
---- an edit. Everything else, the due string above all, is the API's to judge,
---- and its answer is better wording than a guess made here.
----@param task table
+--- `dam mv <oid> <to>` puts the object inside `to` and keeps its own last
+--- segment, except at the root, where it has none and becomes `to` itself
+--- (`relocate`, dam-application). So the argument is the container of the path
+--- that was typed, and a typed path that changes the object's own segment is a
+--- rename, which dam has no verb for.
+---@param entry { value: string, line: integer }
+---@param held string
+---@return string? destination
+---@return { message: string, line: integer }? refusal
+local function move_to(entry, held)
+  if entry.value:find("//", 1, true) then
+    return nil, refuse("`path` has an empty segment", entry)
+  end
+
+  if held == "" then
+    return entry.value
+  end
+
+  if tree.own_segment(entry.value) ~= tree.own_segment(held) then
+    return nil,
+      refuse(
+        ("`path` renames this object from %q to %q, and dam mv only moves one: keep the last segment and change what comes before it"):format(
+          tree.own_segment(held),
+          tree.own_segment(entry.value)
+        ),
+        entry
+      )
+  end
+
+  return tree.parent_path(entry.value)
+end
+
+---@param object table
+---@param key string
+---@param entry { value: string, line: integer }
+---@param edit string[] appended to in place
+---@return { message: string, line: integer }? refusal
+local function append_flags(object, key, entry, edit)
+  if key == "labels" or key == "depends" then
+    local added, removed = set_diff(split(entry.value), object[key] or {})
+    local set = key == "labels" and "--label" or "--depends"
+    local clear = key == "labels" and "--unlabel" or "--undepends"
+
+    for _, item in ipairs(added) do
+      vim.list_extend(edit, { set, item })
+    end
+    for _, item in ipairs(removed) do
+      vim.list_extend(edit, { clear, item })
+    end
+
+    return nil
+  end
+
+  if entry.value == "" then
+    local clear = FLAGS[key][2]
+
+    if not clear then
+      return refuse(("`%s` cannot be cleared"):format(key), entry)
+    end
+
+    edit[#edit + 1] = clear
+
+    return nil
+  end
+
+  vim.list_extend(edit, { FLAGS[key][1], entry.value })
+
+  return nil
+end
+
+--- Everything the plugin can refuse without asking dam.
+---@param object table
 ---@param header table
----@param description string
----@return table? fields empty when nothing changed
----@return string? err
-function M.changes(task, header, description)
-  for key in pairs(header) do
-    if not WRITABLE[key] and header[key] ~= text(task[key .. "_id"]) then
-      return nil, ("`%s` cannot be changed here: moving a task is not an edit to it"):format(key)
+---@return { message: string, line: integer }? refusal
+local function refusal_in(object, header)
+  local allowed = M.keys(object)
+
+  for key, entry in pairs(header) do
+    if not vim.tbl_contains(allowed, key) then
+      return refuse(("`%s` is not a field of a %s"):format(key, object.kind or "task"), entry)
     end
   end
 
-  if header.content == "" then
-    return nil, "`content` is empty, and a task has to say something"
+  local subject = header.subject
+  if subject and subject.value == "" then
+    return refuse("`subject` is empty, and an object has to say something", subject)
   end
 
-  local priority = tonumber(header.priority)
-  if not priority or priority % 1 ~= 0 or priority < 1 or priority > 4 then
-    return nil, ("`priority` is %s: it has to be 1, 2, 3 or 4, where 4 is the most urgent"):format(header.priority)
+  local priority = header.priority
+  if priority then
+    local number = tonumber(priority.value)
+
+    if not number or number % 1 ~= 0 or number < 1 or number > 4 then
+      return refuse(
+        ("`priority` is %s: it has to be 1, 2, 3 or 4, where 1 is the most urgent"):format(priority.value),
+        priority
+      )
+    end
   end
 
-  local fields = {}
-
-  if header.content ~= text(task.content) then
-    fields.content = header.content
+  local depends = header.depends
+  if depends then
+    for _, oid in ipairs(split(depends.value)) do
+      if not oid:match("^%x%x%x%x%x*$") then
+        return refuse(("`%s` is not an oid: at least four hex characters"):format(oid), depends)
+      end
+    end
   end
 
-  if description ~= text(task.description) then
-    fields.description = description
+  return nil
+end
+
+--- What a write should send, given the object dam last described and the buffer
+--- as the operator left it.
+---
+--- Only what changed is sent, which matters most for `due`: dam parses a due
+--- string, and a round trip through an unchanged one could move a recurrence.
+---@param object table
+---@param header table
+---@param body string
+---@return { edit: string[], move: string? }?
+---@return { message: string, line: integer }?
+function M.changes(object, header, body)
+  local refusal = refusal_in(object, header)
+  if refusal then
+    return nil, refusal
   end
 
-  if priority ~= (task.priority or 1) then
-    fields.priority = priority
+  local edit, move = {}, nil
+
+  local path = header.path
+  if path and path.value ~= field_value(object, "path") then
+    local destination, refused = move_to(path, field_value(object, "path"))
+    if refused then
+      return nil, refused
+    end
+
+    move = destination
   end
 
-  if header.due ~= due_string(task) then
-    fields.due_string = header.due
+  for _, key in ipairs(M.keys(object)) do
+    local entry = header[key]
+
+    if entry and key ~= "path" and entry.value ~= field_value(object, key) then
+      local refused = append_flags(object, key, entry, edit)
+      if refused then
+        return nil, refused
+      end
+    end
   end
 
-  local wanted = split_labels(header.labels)
-  if not same_list(wanted, labels(task)) then
-    fields.labels = wanted
+  if body ~= text(object.body) then
+    vim.list_extend(edit, { "--body", body })
   end
 
-  return fields
+  return { edit = edit, move = move }
 end
 
 return M
