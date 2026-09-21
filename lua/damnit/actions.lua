@@ -76,4 +76,144 @@ function M.help(filetype)
   })
 end
 
+--- The objects the cursor or the visual range covers.
+---
+--- A section heading contributes every change in its section, which is what
+--- makes `-` on a heading one call rather than one per line. A conflict or a
+--- notice line contributes nothing.
+---@return { oids: string[], section: string? }
+function M.targets()
+  local buf = vim.api.nvim_get_current_buf()
+  local kinds = vim.b[buf].damnit_kinds or {}
+  local sections = vim.b[buf].damnit_sections or {}
+  local oids = vim.b[buf].damnit_oids or {}
+
+  local first = vim.api.nvim_win_get_cursor(0)[1]
+  local last = first
+
+  local mode = vim.fn.mode()
+  if mode == "v" or mode == "V" or mode == "\22" then
+    first, last = vim.fn.line("v"), vim.fn.line(".")
+
+    if first > last then
+      first, last = last, first
+    end
+  end
+
+  local picked, seen, section = {}, {}, nil
+
+  ---@param index integer
+  local function take(index)
+    local oid = oids[index]
+
+    if oid and kinds[index] == "change" and not seen[oid] then
+      seen[oid] = true
+      picked[#picked + 1] = oid
+      section = section or sections[index]
+    end
+  end
+
+  for lnum = first, last do
+    if kinds[lnum] == "section" then
+      section = section or sections[lnum]
+
+      for index, owner in ipairs(sections) do
+        if owner == sections[lnum] then
+          take(index)
+        end
+      end
+    else
+      take(lnum)
+    end
+  end
+
+  return { oids = picked, section = section }
+end
+
+---@param verb string
+---@param oids string[]
+---@return string[]
+local function verb_args(verb, oids)
+  local args = { verb }
+  vim.list_extend(args, oids)
+  args[#args + 1] = "--json"
+
+  return args
+end
+
+--- Queue one write, report a failure, and re-read the status either way.
+---
+--- The window shows what dam holds, never what a refused write intended.
+---@param args string[]
+---@param label string
+function M.write(args, label)
+  require("damnit.queue").submit({
+    args = args,
+    label = label,
+    on_done = function(_, err)
+      if err then
+        message.report(err)
+      end
+
+      require("damnit.window").refresh()
+    end,
+  })
+end
+
+function M.stage()
+  local picked = M.targets()
+
+  if #picked.oids == 0 then
+    return message.warn("nothing to stage on this line")
+  end
+
+  if picked.section == "staged" then
+    return message.warn("already staged")
+  end
+
+  M.write(verb_args("add", picked.oids), "add")
+end
+
+function M.unstage()
+  local picked = M.targets()
+
+  if #picked.oids == 0 then
+    return message.warn("nothing to stage on this line")
+  end
+
+  if picked.section ~= "staged" then
+    return message.warn("not staged")
+  end
+
+  M.write(verb_args("reset", picked.oids), "reset")
+end
+
+--- Stage what is not staged, unstage what is.
+function M.toggle_stage()
+  local picked = M.targets()
+
+  if #picked.oids == 0 then
+    return message.warn("nothing to stage on this line")
+  end
+
+  local verb = picked.section == "staged" and "reset" or "add"
+  M.write(verb_args(verb, picked.oids), verb)
+end
+
+--- `dam reset` with no oids unstages everything.
+function M.unstage_all()
+  local model = require("damnit.window").model()
+  local staged = false
+
+  for _, section in ipairs((model or {}).sections or {}) do
+    staged = staged or section.kind == "staged"
+  end
+
+  if not staged then
+    return message.warn("nothing is staged")
+  end
+
+  M.write({ "reset", "--json" }, "reset")
+end
+
 return M

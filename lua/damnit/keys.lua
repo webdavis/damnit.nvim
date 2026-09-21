@@ -14,15 +14,25 @@ local function jump(name, heading)
   end
 end
 
----@param fn string the name of a function on damnit.actions
+---@param module string
+---@param fn string the name of a function on that module
+---@param ... any the arguments it is called with
 ---@return fun()
-local function act(fn)
+local function call(module, fn, ...)
+  local args = { ... }
+
   return function()
-    require("damnit.actions")[fn]()
+    require(module)[fn](unpack(args))
   end
 end
 
----@type table<string, { [1]: string, [2]: string, [3]: fun(), [4]: string }[]>
+---@param fn string the name of a function on damnit.actions
+---@return fun()
+local function act(fn)
+  return call("damnit.actions", fn)
+end
+
+---@type table<string, { [1]: string|string[], [2]: string, [3]: fun(), [4]: string }[]>
 M.MAPS = {
   damstatus = {
     { "n", "R", act("refresh"), "re-read the status" },
@@ -31,6 +41,10 @@ M.MAPS = {
     { "n", "gp", jump("unpushed", "Unpushed"), "jump to Unpushed" },
     { "n", "gn", jump("notices", "Notices"), "jump to Notices" },
     { "n", "gc", jump("conflicts", "Conflicts"), "jump to Conflicts" },
+    { { "n", "x" }, "-", act("toggle_stage"), "stage or unstage this object" },
+    { { "n", "x" }, "s", act("stage"), "stage this object" },
+    { { "n", "x" }, "u", act("unstage"), "unstage this object" },
+    { "n", "U", act("unstage_all"), "unstage everything" },
     { "n", "<C-c>", act("cancel"), "cancel the running operation" },
     { "n", "q", act("close"), "close the window" },
     { "n", "gq", act("close"), "close the window" },
