@@ -18,6 +18,16 @@ local SUBCOMMANDS = {
   cancel = function()
     require("damnit.queue").cancel()
   end,
+  list = function(args)
+    require("damnit").open(args[1])
+  end,
+  task = function(args)
+    if #args ~= 1 then
+      return require("damnit.message").fail("usage is :Dam task <oid>")
+    end
+
+    require("damnit.task_buffer").open(args[1])
+  end,
 }
 
 ---@return string
@@ -33,9 +43,18 @@ local function usage()
   return "usage is :Dam, " .. table.concat(names, ", ")
 end
 
----@param lead string
+---@param lead string what has been typed of the argument being completed
+---@param line string the whole command line so far
 ---@return string[]
-local function complete(lead)
+local function complete(lead, line)
+  local typed = vim.split(vim.trim(line), "%s+")
+
+  if #typed > 1 and typed[2] == "list" then
+    return vim.tbl_filter(function(name)
+      return vim.startswith(name, lead)
+    end, require("damnit.views").declared())
+  end
+
   local names = {}
   for name in pairs(SUBCOMMANDS) do
     if name ~= "" and vim.startswith(name, lead) then

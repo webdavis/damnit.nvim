@@ -32,6 +32,12 @@ local function act(fn)
   return call("damnit.actions", fn)
 end
 
+---@param fn string the name of a function on damnit.quick_edit
+---@return fun()
+local function edit(fn)
+  return call("damnit.quick_edit", fn)
+end
+
 ---@type table<string, { [1]: string|string[], [2]: string, [3]: fun(), [4]: string }[]>
 M.MAPS = {
   damstatus = {
@@ -61,6 +67,30 @@ M.MAPS = {
       "g?",
       function()
         require("damnit.actions").help("damstatus")
+      end,
+      "show this help",
+    },
+  },
+  damlist = {
+    { "n", "<CR>", call("damnit.list", "open_under_cursor"), "open this object" },
+    { "n", "R", call("damnit.list", "refresh"), "re-read this view" },
+    { "n", "za", call("damnit.list", "toggle_fold"), "fold or unfold what is nested here" },
+    { "n", "gd", call("damnit.list", "jump_to_location_under_cursor"), "jump to the code this came from" },
+    { "n", "x", call("damnit.done", "complete"), "complete this object" },
+    { "n", "X", edit("reopen"), "reopen this object" },
+    { "n", "dd", edit("delete"), "remove this object, after the confirm" },
+    { "n", "p", edit("cycle_priority"), "cycle this object's priority" },
+    { "n", "s", edit("schedule"), "set this object's due date" },
+    { "n", "l", edit("labels"), "toggle a label on this object" },
+    { "n", "m", edit("move"), "move this object into another path" },
+    { "n", "a", edit("add"), "add an object where the cursor is" },
+    { "n", ">", edit("indent"), "move this object under the one above" },
+    { "n", "<", edit("promote"), "move this object out from under its parent" },
+    {
+      "n",
+      "g?",
+      function()
+        require("damnit.actions").help("damlist")
       end,
       "show this help",
     },

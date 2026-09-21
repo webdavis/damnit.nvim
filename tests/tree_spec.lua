@@ -1,143 +1,141 @@
--- The shape of a tree, and where a reparent sends a task.
+-- The shape of a tree, and where a reparent sends an object.
 --
--- Pure functions over tables: no buffer, no request. Every task here carries a
--- `parent_id`, because the API always sends one, and the top-level ones carry
--- it as `vim.NIL`, which is what `vim.json.decode` makes of a JSON null and is
--- truthy.
+-- dam models the tree as `path`: an object's parent is the object whose path is
+-- this one's with the last segment removed (`children_of`, dam-application).
+-- Pure functions over tables: no buffer, no call.
 
 local tree = require("damnit.tree")
 
-local PARENT = { id = "p", content = "Ship the release", project_id = "1", section_id = "9", parent_id = vim.NIL }
-local CHILD = { id = "c", content = "Tag it", project_id = "1", section_id = "9", parent_id = "p" }
-local GRANDCHILD = { id = "g", content = "Sign the tag", project_id = "1", section_id = "9", parent_id = "c" }
-
----@param tasks table[]
----@return damnit.Tree
-local function indexed(tasks)
-  return tree.index(tasks)
+---@param subject string
+---@param path string
+---@return table
+local function object(subject, path)
+  return {
+    oid = ("%040x"):format(#subject * 7 + #path),
+    kind = "task",
+    subject = subject,
+    body = "",
+    path = path,
+    labels = {},
+    depends = {},
+    reminders = {},
+    task = { done = false, priority = 4 },
+  }
 end
 
---- Every task a walk visits, as `id@depth`.
----@param forest damnit.Tree
+local PARENT = object("parent", "work/parent/")
+local CHILD = object("child", "work/parent/child/")
+local GRANDCHILD = object("grandchild", "work/parent/child/note/")
+local OTHER = object("other", "work/other/")
+local TOP = object("top", "work/")
+local ROOTED = object("rooted", "")
+
+--- Every object a walk visits, as `subject@depth`.
+---@param index damnit.Tree
 ---@param root table
 ---@param collapsed table<string, boolean>?
 ---@return string
-local function walked(forest, root, collapsed)
+local function walked(index, root, collapsed)
   local seen = {}
 
-  tree.descend(forest, root, collapsed or {}, function(task, depth)
-    seen[#seen + 1] = ("%s@%d"):format(task.id, depth)
+  tree.descend(index, root, collapsed or {}, function(node, depth)
+    seen[#seen + 1] = ("%s@%d"):format(node.subject, depth)
   end)
 
   return table.concat(seen, " ")
 end
 
 return {
-  ["reads a null parent as no parent at all"] = function()
-    assert(tree.parent_of({ id = "p", parent_id = vim.NIL }) == "")
-    assert(tree.parent_of({ id = "p" }) == "")
-    assert(tree.parent_of({ id = "c", parent_id = "p" }) == "p")
+  ["reads a parent path by dropping the last segment"] = function()
+    assert(tree.parent_path("work/parent/child/") == "work/parent/", tree.parent_path("work/parent/child/"))
+    assert(tree.parent_path("work/") == "", tree.parent_path("work/"))
+    assert(tree.parent_path("") == "", tree.parent_path(""))
+    assert(tree.own_segment("work/parent/child/") == "child", tree.own_segment("work/parent/child/"))
+    assert(tree.own_segment("") == "", tree.own_segment(""))
   end,
 
-  ["a task whose parent is in the view is not a root, and one whose parent is not is"] = function()
-    local forest = indexed({ PARENT, CHILD })
+  ["indexes children under the object whose path they extend"] = function()
+    local index = tree.index({ PARENT, CHILD, GRANDCHILD, OTHER })
 
-    assert(tree.is_root(forest, PARENT))
-    assert(not tree.is_root(forest, CHILD))
-    assert(tree.is_root(indexed({ CHILD }), CHILD), "an orphan heads a tree of its own")
+    assert(tree.child_count(index, "work/parent/") == 1, tostring(tree.child_count(index, "work/parent/")))
+    assert(tree.descendant_count(index, "work/parent/") == 2, tostring(tree.descendant_count(index, "work/parent/")))
+    assert(tree.is_root(index, PARENT), "its parent is not in the view, so it heads the tree")
+    assert(not tree.is_root(index, CHILD))
   end,
 
-  ["a walk visits a task, then its children, then theirs"] = function()
-    local forest = indexed({ PARENT, CHILD, GRANDCHILD })
+  ["leaves an object whose parent the view does not hold at the top"] = function()
+    local index = tree.index({ CHILD })
 
-    assert(walked(forest, PARENT) == "p@0 c@1 g@2", walked(forest, PARENT))
+    assert(tree.is_root(index, CHILD), "an orphan heads a tree of its own")
   end,
 
-  ["a collapsed task is visited and its descendants are not"] = function()
-    local forest = indexed({ PARENT, CHILD, GRANDCHILD })
+  ["nests nothing under an object sitting at the root, which every one shares"] = function()
+    local index = tree.index({ ROOTED, TOP })
 
-    assert(walked(forest, PARENT, { p = true }) == "p@0", walked(forest, PARENT, { p = true }))
-    assert(walked(forest, PARENT, { c = true }) == "p@0 c@1", walked(forest, PARENT, { c = true }))
+    assert(tree.is_root(index, TOP), "work/ is not inside a root object")
+    assert(tree.child_count(index, "") == 0, tostring(tree.child_count(index, "")))
+
+    -- An object at the root is its own parent under the path rule, so a walk
+    -- that let the root parent anything would never return.
+    assert(walked(index, ROOTED) == "rooted@0", walked(index, ROOTED))
   end,
 
-  ["counts the children a task has in this view"] = function()
-    local second = { id = "c2", content = "Write the notes", parent_id = "p" }
-    local forest = indexed({ PARENT, CHILD, second, GRANDCHILD })
+  ["walks an object, then its children, then theirs, and stops at a collapsed one"] = function()
+    local index = tree.index({ PARENT, CHILD, GRANDCHILD })
 
-    -- GRANDCHILD sits under CHILD, so "p" has a grandchild: child_count(p)
-    -- must stay 2, not fall through to a descendant total of 3.
-    assert(tree.child_count(forest, "p") == 2, tostring(tree.child_count(forest, "p")))
-    assert(tree.child_count(forest, "c") == 1, tostring(tree.child_count(forest, "c")))
-    assert(tree.child_count(forest, "g") == 0)
+    assert(walked(index, PARENT) == "parent@0 child@1 grandchild@2", walked(index, PARENT))
+    assert(walked(index, PARENT, { ["work/parent/"] = true }) == "parent@0", walked(index, PARENT))
+    assert(
+      walked(index, PARENT, { ["work/parent/child/"] = true }) == "parent@0 child@1",
+      walked(index, PARENT, { ["work/parent/child/"] = true })
+    )
   end,
 
-  ["> puts a task under the one above it, whatever level that one is at"] = function()
-    local sibling = { id = "s", content = "Draft the notes", project_id = "1", section_id = "9", parent_id = vim.NIL }
+  ["walks what is nested under a shared path once, from the object holding the seat"] = function()
+    local alpha = object("alpha", "work/")
+    local beta = object("beta", "work/")
+    local gamma = object("gamma", "work/sub/")
+    local index = tree.index({ alpha, beta, gamma })
 
-    assert(vim.deep_equal(tree.indent_to(sibling, PARENT), { parent_id = "p" }))
-    assert(vim.deep_equal(tree.indent_to(sibling, GRANDCHILD), { parent_id = "g" }))
+    assert(tree.is_root(index, alpha) and tree.is_root(index, beta), "both sit at the top of this view")
+    assert(index.by_path["work/"] == beta, "the last object indexed at a path holds its seat")
+
+    local drawn = walked(index, alpha) .. " " .. walked(index, beta)
+    local seen = select(2, drawn:gsub("gamma@", ""))
+    assert(seen == 1, drawn)
   end,
 
-  ["> on the first task in the view moves nothing and says why"] = function()
-    local destination, refusal = tree.indent_to(PARENT, nil)
+  ["indents by naming the path dam mv keeps the object's own segment under"] = function()
+    local destination, refusal = tree.indent_to(CHILD, OTHER)
 
-    assert(destination == nil)
-    assert(refusal:find("nothing above", 1, true), refusal)
+    assert(destination == "work/other/", tostring(destination) .. " " .. tostring(refusal))
   end,
 
-  ["> under the parent it already has moves nothing and says why"] = function()
-    local destination, refusal = tree.indent_to(CHILD, PARENT)
+  ["refuses to indent what is already there, what has no row above, and a root object"] = function()
+    local _, already = tree.indent_to(CHILD, PARENT)
+    assert(already:find("already under", 1, true), already)
 
-    assert(destination == nil)
-    assert(refusal:find("already under Ship the release", 1, true), refusal)
+    local _, nothing = tree.indent_to(CHILD, nil)
+    assert(nothing:find("nothing above", 1, true), nothing)
+
+    local _, rooted = tree.indent_to(ROOTED, PARENT)
+    assert(rooted:find("no path of its own", 1, true), rooted)
+
+    local _, under_root = tree.indent_to(CHILD, ROOTED)
+    assert(under_root:find("the root", 1, true), under_root)
   end,
 
-  ["> on the first task of a later project moves nothing and says why"] = function()
-    local errand = { id = "e", content = "Buy milk", project_id = "2", section_id = vim.NIL, parent_id = vim.NIL }
-    local destination, refusal = tree.indent_to(PARENT, errand)
+  ["promotes to the container its parent sits in"] = function()
+    local destination = tree.promote_to(CHILD, tree.index({ PARENT, CHILD }))
 
-    assert(destination == nil)
-    assert(refusal:find("project", 1, true), refusal)
+    assert(destination == "work/", tostring(destination))
   end,
 
-  ["> on the first task of a later section moves nothing and says why"] = function()
-    local other_section =
-      { id = "o", content = "Draft the notes", project_id = "1", section_id = "8", parent_id = vim.NIL }
-    local destination, refusal = tree.indent_to(other_section, PARENT)
+  ["refuses to promote what this view already draws at the top"] = function()
+    local _, top = tree.promote_to(PARENT, tree.index({ PARENT }))
+    assert(top:find("top level", 1, true), top)
 
-    assert(destination == nil)
-    assert(refusal:find("section", 1, true), refusal)
-  end,
-
-  ["< sends a grandchild beside the parent it left"] = function()
-    local forest = indexed({ PARENT, CHILD, GRANDCHILD })
-
-    assert(vim.deep_equal(tree.promote_to(GRANDCHILD, forest), { parent_id = "p" }))
-  end,
-
-  ["< sends a child to the section its parent sits in"] = function()
-    local forest = indexed({ PARENT, CHILD })
-
-    assert(vim.deep_equal(tree.promote_to(CHILD, forest), { section_id = "9" }))
-  end,
-
-  ["< sends a child with no section to its project"] = function()
-    local parent = { id = "p", content = "Ship", project_id = "1", parent_id = vim.NIL, section_id = vim.NIL }
-    local child = { id = "c", content = "Tag it", project_id = "1", parent_id = "p", section_id = vim.NIL }
-
-    assert(vim.deep_equal(tree.promote_to(child, indexed({ parent, child })), { project_id = "1" }))
-  end,
-
-  ["< on a top-level task moves nothing and says why"] = function()
-    local destination, refusal = tree.promote_to(PARENT, indexed({ PARENT }))
-
-    assert(destination == nil)
-    assert(refusal:find("already at the top level", 1, true), refusal)
-  end,
-
-  ["< on an orphan makes it top level, since the view holds no parent to climb"] = function()
-    local forest = indexed({ CHILD })
-
-    assert(vim.deep_equal(tree.promote_to(CHILD, forest), { section_id = "9" }))
+    local _, rooted = tree.promote_to(ROOTED, tree.index({ ROOTED }))
+    assert(rooted:find("top level", 1, true), rooted)
   end,
 }
