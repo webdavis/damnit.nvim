@@ -393,14 +393,18 @@ function M.tick(key)
     return draw(key, lines)
   end
 
+  local head = {}
   local text = {}
   for index = 1, headers do
+    head[index] = lines[index]
     text[index] = lines[index].text
   end
 
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, headers, false, text)
   vim.bo[buf].modifiable = false
+
+  render.mark(buf, head, 0)
 end
 
 queue.on_tick(M.tick)

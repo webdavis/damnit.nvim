@@ -5,6 +5,7 @@ dofile(((arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"))
 
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
+local render = require("damnit.render")
 local window = require("damnit.window")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
@@ -76,6 +77,13 @@ return {
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
       assert(header[3]:find("Running: push fake", 1, true), vim.inspect(header))
       assert(header[3]:find("[C-c to cancel]", 1, true), header[3])
+
+      -- The header-only rewrite replaces the lines, which takes their extmarks
+      -- with it, so every header row is re-marked rather than left unstyled.
+      for lnum = 0, 3 do
+        local marks = vim.api.nvim_buf_get_extmarks(buf, render.NAMESPACE, { lnum, 0 }, { lnum, -1 }, {})
+        assert(#marks > 0, ("header row %d lost every mark"):format(lnum))
+      end
 
       fake_dam.settle(function()
         return #fake_dam.argv_log(fake) > before and queue.running() == nil

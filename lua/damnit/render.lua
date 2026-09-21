@@ -287,6 +287,26 @@ function M.lines(model, state)
   return lines
 end
 
+--- Colour a run of lines, clearing whatever the rows held before.
+---
+--- Replacing a buffer's lines takes their extmarks with them, so every writer
+--- of those rows re-marks them.
+---@param buf integer
+---@param lines damnit.Line[] the lines now occupying the rows
+---@param from integer the zero-based row `lines[1]` sits on
+function M.mark(buf, lines, from)
+  vim.api.nvim_buf_clear_namespace(buf, M.NAMESPACE, from, from + #lines)
+
+  for index, line in ipairs(lines) do
+    for _, mark in ipairs(line.marks) do
+      vim.api.nvim_buf_set_extmark(buf, M.NAMESPACE, from + index - 1, mark.col, {
+        end_col = mark.col + mark.length,
+        hl_group = mark.group,
+      })
+    end
+  end
+end
+
 --- Put the lines in a buffer and colour them.
 ---
 --- The buffer is unmodifiable, so the write is bracketed. Every mark is cleared
@@ -316,16 +336,7 @@ function M.draw(buf, lines)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, text)
   vim.bo[buf].modifiable = false
 
-  vim.api.nvim_buf_clear_namespace(buf, M.NAMESPACE, 0, -1)
-
-  for index, line in ipairs(lines) do
-    for _, mark in ipairs(line.marks) do
-      vim.api.nvim_buf_set_extmark(buf, M.NAMESPACE, index - 1, mark.col, {
-        end_col = mark.col + mark.length,
-        hl_group = mark.group,
-      })
-    end
-  end
+  M.mark(buf, lines, 0)
 end
 
 return M
