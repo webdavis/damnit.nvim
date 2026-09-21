@@ -87,6 +87,38 @@ return {
     assert(err.code == 3, tostring(err.code))
   end,
 
+  ["reads a call a signal killed as cancelled, whichever signal it was"] = function()
+    for name, signal in pairs({ sigint = 2, sigterm = 15, sigkill = 9 }) do
+      local _, err = dam.interpret({ code = 0, signal = signal, stdout = "", stderr = "" }, "push todoist")
+
+      assert(err ~= nil and err.kind == "cancelled", name .. ": " .. vim.inspect(err))
+      assert(err.code == 3, name .. ": " .. tostring(err.code))
+    end
+  end,
+
+  ["says who was stopped when the signal left no message behind"] = function()
+    local _, err = dam.interpret({ code = 0, signal = 9, stdout = "", stderr = "" }, "push todoist")
+
+    assert(err.message == "push todoist was stopped", err.message)
+    assert(err.plugin == true, "the plugin wrote this one")
+  end,
+
+  ["keeps dam's own word for the cancellation when it managed to write one"] = function()
+    local out = { code = 0, signal = 2, stdout = "", stderr = "dam: cancelled" }
+    local _, err = dam.interpret(out, "push todoist")
+
+    assert(err.message == "cancelled", err.message)
+    assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
+  end,
+
+  ["keeps the timeout on its own path, signal and all"] = function()
+    local _, err = dam.interpret({ code = 124, signal = 15, stdout = "", stderr = "" }, "push todoist")
+
+    assert(err.kind == "timeout", vim.inspect(err))
+    assert(err.code == 124, tostring(err.code))
+    assert(err.message:find("took longer than", 1, true), err.message)
+  end,
+
   ["calls an undecodable answer on a clean exit malformed rather than raising"] = function()
     local fake = fake_dam.install()
     vim.env.DAMNIT_TEST_FIXTURES = fake.dir

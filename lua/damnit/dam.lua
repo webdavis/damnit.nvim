@@ -116,6 +116,18 @@ function M.interpret(out, label)
     return nil, { kind = "missing", code = -1, plugin = true, message = M.MISSING }
   end
 
+  -- A process a signal killed reports code 0, so an unguarded code 0 reads a
+  -- cancelled call as an empty answer.
+  if out.code == 0 and (out.signal or 0) ~= 0 then
+    local text = M.message_of(out.stderr)
+    if text == "" then
+      return nil,
+        { kind = "cancelled", code = 3, plugin = true, message = ("%s was stopped"):format(label or "a dam call") }
+    end
+
+    return nil, { kind = "cancelled", code = 3, message = text }
+  end
+
   if out.code == 0 then
     local ok, decoded = pcall(vim.json.decode, out.stdout or "", { luanil = { object = true } })
     if not ok or type(decoded) ~= "table" then
