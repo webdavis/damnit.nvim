@@ -231,14 +231,14 @@ stands in for it. That trade moves to `dam`, which documents the same constraint
 
 ### No compatibility shim
 
-**Recommendation: ship no shim.** No `:Todoist` alias, no `require("todoist")` forwarding module, no
+**No shim ships.** No `:Todoist` alias, no `require("todoist")` forwarding module, no
 deprecation period. The plugin is pre-1.0 and has one user. A shim would have to translate Todoist
 filter syntax into dam's grammar to be worth anything, and it cannot: `#Work & !@waiting` has no
 mechanical translation into `path:` and `!label:`. A silent half-translation is worse than a command
 that does not exist.
 
-**Cost if wrong:** one editing session re-typing seven keymaps and three view queries, which is the
-diff shown above.
+Decided 2026-09-20: no shim, the recommended option. Cost to reverse: one editing session re-typing
+seven keymaps and three view queries, which is the diff shown above.
 
 ______________________________________________________________________
 
@@ -844,7 +844,7 @@ terminal with no Nerd Font loses nothing but decoration.
 
 ### Window shape
 
-**Recommendation: a split, not a float.** `:Dam` opens a horizontal split of the current window,
+**`:Dam` opens a split, not a float.** `:Dam` opens a horizontal split of the current window,
 the way `:Git` opens its summary. `opts.window.float = true` opens a snacks-style centred float
 instead, through `Snacks.win` when snacks is loaded and a plain `nvim_open_win` when it is not.
 
@@ -853,7 +853,8 @@ with `<CR>`, comes back, and commits. A float that closes on focus loss fights a
 operator's snacks configuration uses floats for pickers and notifications rather than for working
 surfaces.
 
-**Cost if wrong:** one option flip. The renderer does not know which kind of window it is in.
+Decided 2026-09-20: a split, the recommended option. Cost to reverse: one option flip. The renderer
+does not know which kind of window it is in.
 
 `vim.ui.select` is used for every choice with a fixed set (which remote, ours or theirs when the key
 is ambiguous, which path to move to), so the operator's snacks input and picker configuration is what
@@ -1644,40 +1645,46 @@ characters of noise where seven identify it.
 - Any daemon, socket or long-lived `dam`. One process per call, which is dam's own model for
   version one (dam spec 388 to 390).
 
-### Open decisions
+### Decisions
 
-Each with a recommendation and what it costs if the recommendation is wrong.
+Each decided 2026-09-20 on the recommended option, with what it costs to reverse.
 
-1. **Split or float for the status window.** Recommend a split, `opts.window.float` for the other.
-   Cost if wrong: one option flip; the renderer does not know the difference.
-1. **`p` for pull.** Recommend it, and leave `gP` unbound. Cost if wrong: a fugitive hand presses `p`
-   expecting a preview and starts a network operation. Mitigated by the operation being cancellable
-   with `<C-c>` and by `Running` appearing in the header immediately.
-1. **`cc` opening a message buffer versus `vim.ui.input`.** Recommend the buffer, because a commit
-   message is worth more than one line and `vim.ui.input` gives one. Cost if wrong: a two-word commit
-   costs a `:w`. An `opts.commit.prompt = true` would switch it, and is not built.
-1. **Reading dam's saved filters at all.** Recommend yes, with `opts.views` winning a collision. Cost
-   if wrong: one extra `dam ls` per unknown name, and a name that resolves differently in the editor
-   than in a terminal when the operator declares it in both places with different queries.
-1. **No shim for `:Todoist`.** Recommend none. Cost stated in section 2: one editing session.
-1. **Dropping the hand-off record.** Recommend dropping it. The alternative is appending a line to
-   the object's `body` through `dam edit --body`, which works but turns every hand-off into an
-   unstaged working change the operator has to stage and commit. Cost if wrong: an agent hand-off
-   leaves no trace in the store, only in the notification.
-1. **The supported dam range, `>=0.1.0 <0.2.0`.** Recommend it while dam is pre-1.0, widened by hand
-   on each dam minor whose JSON shapes are unchanged. Cost if wrong: a dam minor release refuses to
-   work with the plugin until one constant moves.
-1. **Warning on `_command` credentials in health.** Recommend warning. Cost if wrong: a noisy health
-   report on a machine whose credential command is non-interactive, such as a keychain read. The
-   warning names the interactive case explicitly so it reads as information rather than as a fault.
-1. **Blocking `X` for updates rather than reconstructing the old value with `dam edit` flags.**
-   Recommend blocking. Reconstructing it would mean reimplementing a dam verb in Lua, incompletely:
-   `reminders` has no edit flag, `labels` and `depends` are sets that need a diff, and a partial
-   restore that looks complete is worse than a refusal. Cost if wrong: `X` is useful on one of three
-   change kinds until `dam restore` ships.
-1. **The 2,000-object performance target being a warning rather than a failure.** Recommend warning,
-   for the CI-flake reason stated above. Cost if wrong: a performance regression ships and is caught
-   by a human reading the warning rather than by a red build.
+1. **The status window opens as a split, not a float.** `opts.window.float` opens the other.
+   Decided 2026-09-20: a split, the recommended option. Cost to reverse: one option flip; the
+   renderer does not know the difference.
+1. **`p` pulls, and `gP` stays unbound.** Decided 2026-09-20: `p` for pull, the recommended option.
+   Cost to reverse: a fugitive hand presses `p` expecting a preview and starts a network operation.
+   Mitigated by the operation being cancellable with `<C-c>` and by `Running` appearing in the header
+   immediately.
+1. **`cc` opens a message buffer, not `vim.ui.input`**, because a commit message is worth more than
+   one line and `vim.ui.input` gives one. Decided 2026-09-20: the message buffer, the recommended
+   option. Cost to reverse: a two-word commit costs a `:w`. An `opts.commit.prompt = true` would
+   switch it, and is not built.
+1. **dam's saved filters are read, with `opts.views` winning a collision.** Decided 2026-09-20: read
+   them, the recommended option. Cost to reverse: one extra `dam ls` per unknown name, and a name
+   that resolves differently in the editor than in a terminal when the operator declares it in both
+   places with different queries.
+1. **No shim for `:Todoist`.** Decided 2026-09-20: none, the recommended option. Cost stated in
+   section 2: one editing session.
+1. **The hand-off record is dropped.** The alternative is appending a line to the object's `body`
+   through `dam edit --body`, which works but turns every hand-off into an unstaged working change
+   the operator has to stage and commit. Decided 2026-09-20: drop it, the recommended option. Cost to
+   reverse: an agent hand-off leaves no trace in the store, only in the notification.
+1. **The supported dam range is `>=0.1.0 <0.2.0`** while dam is pre-1.0, widened by hand on each dam
+   minor whose JSON shapes are unchanged. Decided 2026-09-20: this range, the recommended option.
+   Cost to reverse: a dam minor release refuses to work with the plugin until one constant moves.
+1. **Health warns on `_command` credentials.** Decided 2026-09-20: warn, the recommended option. Cost
+   to reverse: a noisy health report on a machine whose credential command is non-interactive, such
+   as a keychain read. The warning names the interactive case explicitly so it reads as information
+   rather than as a fault.
+1. **`X` blocks on updates rather than reconstructing the old value with `dam edit` flags.**
+   Reconstructing it would mean reimplementing a dam verb in Lua, incompletely: `reminders` has no
+   edit flag, `labels` and `depends` are sets that need a diff, and a partial restore that looks
+   complete is worse than a refusal. Decided 2026-09-20: block, the recommended option. Cost to
+   reverse: `X` is useful on one of three change kinds until `dam restore` ships.
+1. **The 2,000-object performance target warns rather than fails**, for the CI-flake reason stated
+   above. Decided 2026-09-20: warn, the recommended option. Cost to reverse: a performance regression
+   ships and is caught by a human reading the warning rather than by a red build.
 
 ______________________________________________________________________
 
