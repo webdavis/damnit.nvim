@@ -124,6 +124,50 @@ return {
     assert(change.oid == "78b8950b02735107aa608659dcf19f6f50adfeb1", tostring(change.oid))
   end,
 
+  ["records every line's kind, oid and section, with no hole for a line that has none"] = function()
+    local lines = lines_of(fixture("full/status.json"))
+    local buf = vim.api.nvim_create_buf(false, true)
+    render.draw(buf, lines)
+
+    local kinds = vim.b[buf].damnit_kinds
+    local oids = vim.b[buf].damnit_oids
+    local sections = vim.b[buf].damnit_sections
+
+    -- A buffer variable turns a hole into vim.NIL, which is truthy, and drops a
+    -- trailing one, so every line records something falsy rather than nothing.
+    assert(#oids == #lines, ("%d oids for %d lines"):format(#oids, #lines))
+    assert(#sections == #lines, ("%d sections for %d lines"):format(#sections, #lines))
+
+    for index, line in ipairs(lines) do
+      assert(kinds[index] == line.kind, ("line %d kind %s"):format(index, tostring(kinds[index])))
+      assert(oids[index] == (line.oid or false), ("line %d oid %s"):format(index, tostring(oids[index])))
+      assert(
+        sections[index] == (line.section or false),
+        ("line %d section %s"):format(index, tostring(sections[index]))
+      )
+    end
+
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end,
+
+  ["names the section every entry and heading belongs to"] = function()
+    local lines = lines_of(fixture("full/status.json"))
+    local seen = {}
+
+    for _, line in ipairs(lines) do
+      if line.section then
+        seen[line.section] = (seen[line.section] or 0) + 1
+      end
+    end
+
+    -- One heading plus its entries: conflicts 1+1, working 1+2, staged 1+1,
+    -- unpushed 1+1, notices 1+1.
+    assert(
+      vim.deep_equal(seen, { conflicts = 2, working = 3, staged = 2, unpushed = 2, notices = 2 }),
+      vim.inspect(seen)
+    )
+  end,
+
   ["links every group to a standard one and writes no colour"] = function()
     for group, target in pairs(render.HIGHLIGHTS) do
       assert(type(target) == "string" and target ~= "", group)

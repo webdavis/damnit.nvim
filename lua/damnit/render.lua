@@ -263,10 +263,14 @@ function M.lines(model, state)
   end
 
   for _, section in ipairs(model.sections) do
-    lines[#lines + 1] = section_line(section)
+    local heading = section_line(section)
+    heading.section = section.kind
+    lines[#lines + 1] = heading
 
     for _, entry in ipairs(section.entries) do
-      lines[#lines + 1] = ENTRY_LINES[entry.kind](entry)
+      local line = ENTRY_LINES[entry.kind](entry)
+      line.section = section.kind
+      lines[#lines + 1] = line
     end
 
     lines[#lines + 1] = blank()
@@ -282,12 +286,16 @@ end
 ---@param buf integer
 ---@param lines damnit.Line[]
 function M.draw(buf, lines)
-  local text, kinds, oids = {}, {}, {}
+  local text, kinds, oids, sections = {}, {}, {}, {}
 
+  -- `false` rather than nil on a line that has none: a buffer variable turns a
+  -- hole into vim.NIL, which is truthy, and drops a trailing one, so the line
+  -- numbers would stop lining up with the buffer's.
   for index, line in ipairs(lines) do
     text[index] = line.text
     kinds[index] = line.kind
-    oids[index] = line.oid
+    oids[index] = line.oid or false
+    sections[index] = line.section or false
   end
 
   vim.bo[buf].modifiable = true
@@ -307,6 +315,7 @@ function M.draw(buf, lines)
 
   vim.b[buf].damnit_kinds = kinds
   vim.b[buf].damnit_oids = oids
+  vim.b[buf].damnit_sections = sections
 end
 
 return M
