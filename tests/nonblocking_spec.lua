@@ -83,6 +83,40 @@ return {
     assert(queue.running() == nil, "the lane is empty once the cancelled entry exits")
   end,
 
+  ["cancels a call that the handshake has not let spawn yet"] = function()
+    local fake = fake_dam.install({ sleep = "5" })
+    queue.reset()
+    local grace = queue.GRACE_MS
+    queue.GRACE_MS = 20
+
+    local answered, data, err = false, nil, nil
+    queue.submit({
+      args = { "push", "--json" },
+      label = "push todoist",
+      verb = "push",
+      network = true,
+      on_done = function(value, failure)
+        answered, data, err = true, value, failure
+      end,
+    })
+
+    -- No settle first: the cancel lands while the version handshake is still in
+    -- flight, so there is nothing spawned to signal.
+    assert(queue.cancel())
+
+    fake_dam.settle(function()
+      return answered
+    end)
+
+    queue.GRACE_MS = grace
+    fake_dam.remove(fake)
+    queue.reset()
+
+    assert(data == nil, "a cancelled push must not answer with a result: " .. vim.inspect(data))
+    assert(err ~= nil and err.kind == "cancelled", vim.inspect(err))
+    assert(queue.running() == nil, "the lane is empty once the cancelled entry exits")
+  end,
+
   ["drops the pending entries when the running one is cancelled"] = function()
     local fake = fake_dam.install({ sleep = "5" })
     queue.reset()

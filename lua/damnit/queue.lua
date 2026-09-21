@@ -123,6 +123,12 @@ local function advance(key)
     label = entry.label,
     on_spawn = function(handle)
       entry.handle = handle
+
+      -- A cancel that arrived while the handshake ran had nothing to signal, so
+      -- the signal is sent here instead.
+      if entry.cancelled and handle then
+        handle:kill("sigint")
+      end
     end,
   }, function(data, err)
     entry.finished = true
