@@ -305,4 +305,9 @@ function M.open_under_cursor()
   require("damnit.task_buffer").open(entry.oid)
 end
 
+--- Commit what is staged, through a message buffer.
+function M.commit()
+  require("damnit.commit_buffer").open()
+end
+
 return M

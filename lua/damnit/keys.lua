@@ -46,6 +46,7 @@ M.MAPS = {
     { { "n", "x" }, "u", act("unstage"), "unstage this object" },
     { "n", "U", act("unstage_all"), "unstage everything" },
     { "n", "<CR>", act("open_under_cursor"), "open what the cursor is on" },
+    { "n", "cc", act("commit"), "commit what is staged" },
     { "n", "X", act("discard"), "discard this working change" },
     { "n", "=", act("toggle_diff"), "show or hide this change's fields" },
     { "n", "<C-c>", act("cancel"), "cancel the running operation" },

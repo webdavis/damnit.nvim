@@ -1,0 +1,39 @@
+{
+  "id": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+  "at": "2026-09-20T10:00:00Z",
+  "message": "buy the milk",
+  "changes": [
+    {
+      "oid": "5cf398f699045d551091eccc347f6b70f41f9bcf",
+      "op": "create",
+      "fields": [
+        "subject",
+        "due"
+      ],
+      "kind": "task",
+      "subject": "book dentist appointment",
+      "path": "",
+      "labels": [],
+      "done": false,
+      "priority": 4,
+      "due": "2026-10-15"
+    },
+    {
+      "oid": "badb4903b653809e591c31118004e07de7c8183c",
+      "op": "update",
+      "fields": [
+        "subject",
+        "priority"
+      ],
+      "kind": "task",
+      "subject": "buy soy milk",
+      "path": "inbox/",
+      "labels": [
+        "errand"
+      ],
+      "done": false,
+      "priority": 3,
+      "due": "2026-09-25"
+    }
+  ]
+}
