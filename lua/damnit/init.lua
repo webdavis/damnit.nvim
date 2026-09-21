@@ -12,6 +12,10 @@ local M = {}
 ---@field sidebar damnit.SidebarOptions how `toggle` puts a view beside your work
 ---@field refresh_interval integer seconds between the background reads behind `status()`
 ---@field reminders boolean whether a task with a time raises a notification when it comes due
+---@field store string? the store to pass as `--store`, or nil for dam's own resolution
+---@field config string? the config to pass as `--config`, or nil for dam's own resolution
+---@field timeout integer seconds one `dam` call may run before it is stopped
+---@field window damnit.WindowOptions how the status window opens
 M.options = {
   views = {},
   picker = "auto",
@@ -22,6 +26,12 @@ M.options = {
   },
   refresh_interval = 60,
   reminders = false,
+  store = nil,
+  config = nil,
+  timeout = 120,
+  window = {
+    float = false,
+  },
 }
 
 --- The sidebar's own options.
@@ -29,6 +39,10 @@ M.options = {
 ---@field side "left"|"right" the edge the split sits on
 ---@field width integer columns the split is held at
 ---@field view string the name of the view it opens
+
+--- The status window's own options.
+---@class damnit.WindowOptions
+---@field float boolean open a centred float instead of a horizontal split
 
 ---@param opts damnit.Options?
 function M.setup(opts)
