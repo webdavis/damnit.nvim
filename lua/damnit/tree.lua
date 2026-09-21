@@ -50,8 +50,9 @@ end
 --- Index one view's objects by path and by parent.
 ---
 --- Two objects can share a path, which dam allows, and the last one indexed
---- wins the parent seat. Both are still drawn: the seat decides only which of
---- them the deeper rows nest under.
+--- takes the seat for it. Both are still drawn. `descend` reads the seat and
+--- walks what hangs off a path only from its holder, so a shared path does not
+--- repeat its nested rows once per sharer.
 ---@param objects table[]
 ---@return damnit.Tree
 function M.index(objects)
