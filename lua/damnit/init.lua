@@ -49,6 +49,23 @@ function M.setup(opts)
 
   -- A handshake made under the old options is not the one the new options name.
   require("damnit.dam").forget()
+
+  -- A reminder has to arrive without a statusline component to start the
+  -- poller. Turning them off leaves a running poller alone: the statusline may
+  -- still be reading its count.
+  if M.options.reminders then
+    require("damnit.poll").start()
+  end
+end
+
+--- The statusline string: the running dam operation, or what is due and
+--- overdue, or nothing at all.
+---
+--- Called on every redraw, so it does no work of its own:
+--- `vim.o.statusline = "%{%v:lua.require('damnit').status()%}"`.
+---@return string
+function M.status()
+  return require("damnit.poll").status()
 end
 
 --- Open the staging window, which is this plugin's default surface.
