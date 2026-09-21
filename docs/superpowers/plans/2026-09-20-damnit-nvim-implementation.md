@@ -7109,9 +7109,21 @@ Start from `git show <rename sha>:lua/damnit/picker.lua`, which already has the 
 
 **Interfaces:**
 
-- Produces: `picker.line(object) -> string`, `picker.entries(objects) -> { text, oid }[]`,
-  `picker.pick(name)`, `picker.open_entry(entry)`, `picker.complete_entry(entry)`,
-  `damnit.pick(name)`.
+- Produces: `picker.line(object) -> string`,
+  `picker.entries(objects) -> { oid, text, object }[]`, `picker.pick(name)`,
+  `picker.open_entry(entry)`, `picker.complete_entry(entry)`, `damnit.pick(name)`.
+
+**Ruling: an entry carries the object, not a count of its open children.** / The old picker counted
+subtasks because Todoist cascaded a completion and the picker had no buffer to count a tree in. dam
+refuses a blocked parent and names the blockers, so `complete_entry` hands the object to
+`done.send(object, false)` and dam's own refusal drives the offer. / Cost if wrong: nothing; the
+count had no reader left.
+
+**Ruling: the third case stubs `vim.ui.select`.** / The step's own code lets the real front end open
+in a headless run, where `inputlist` has no terminal to read: it prints the entries to standard
+output and the case waits on it. The stub records what it was offered, which is also what the case
+waits on, because the argv log grows when the call is spawned and the entries exist only once the
+answer has been read. / Cost if wrong: the case would hang rather than fail.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -7215,8 +7227,32 @@ with `completed_history.lua`; this task makes sure nothing brings it back.
 
 **Interfaces:**
 
-- Produces: `damnit.completed() -> integer buf`, and `damnit.ListSpec` gains `flat: boolean?`, which
-  `list_format.render` reads to skip the tree.
+- Produces: `damnit.completed() -> integer buf`, `list_format.by_completion(objects)`, and
+  `damnit.ListSpec` gains `flat: boolean?`, which `list_format.render` reads to skip the tree and
+  order by completion instead.
+
+**Ruling: the history sorts itself, newest completion first.** / `dam ls` orders by path, then due
+date, then priority, then subject (`crates/dam-application/src/use_cases/list.rs:59`), so the order
+it answers in says nothing about when anything was completed; measured, a listing of three objects
+completed in a known order came back in path order. Every done object carries
+`task.completed_at`, an RFC 3339 timestamp in UTC (measured), so comparing the text compares the
+instant. `spec.flat` therefore means both halves of what the history is: no tree, newest first. An
+object with no timestamp, which is what a pull from a remote gives, sorts after every one that has
+one and keeps dam's order among its own kind. / Cost if wrong: one comparator in `list_format`.
+
+**Ruling: `u` reopens for real, and the third case pins the argv.** / `dam edit <oid> --undone`
+ships at 0.2.0 and answers the whole object with `task.done` false and `completed_at` gone
+(measured), and Task 19 already bound `X` to it. The step's own case asserts a sentence saying dam
+has no such verb, which would be a false sentence shipped to the operator. `u` is bound to the same
+`quick_edit.reopen` in `keys.MAPS.damlist`, which is the spec's own pairing of the two keys. / Cost
+if wrong: two keys reach one action, which is what the spec asks for.
+
+**Ruling: the fixture is the captured document, so its first object is not the newest.** / Every
+fixture derives from a real 0.2.0 answer, and dam answers in path order. The document holds
+`took out the bins` (`errands/`), `paid the rent` (`home/`) and `filed the report` (`work/`),
+completed in the order rent, bins, report, so the drawn order is report, bins, rent and differs from
+the document's own. That is what makes the sort pinned rather than passing by accident. / Cost if
+wrong: none; the step's `paid the rent` sentence assumed an order dam does not answer in.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -7255,7 +7291,7 @@ return {
     assert(calls == 1, "the whole history is one query, so there is nothing to page")
   end,
 
-  ["draws it flat, in the order dam answered"] = function()
+  ["draws it flat, newest completion first"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/done" })
     queue.reset()
 
@@ -7281,7 +7317,7 @@ return {
     end
   end,
 
-  ["says dam has no verb that reopens one"] = function()
+  ["u reopens the object the cursor is on"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/done" })
     queue.reset()
 
@@ -7316,8 +7352,9 @@ return {
 }
 ```
 
-The fixture `tests/fixtures/done/ls.json` holds three completed objects, the first of them
-`paid the rent`, so the second case reads a real subject rather than a position.
+The fixture `tests/fixtures/done/ls.json` is dam's own answer to `ls done --json` over three
+completed objects, so the second case reads real subjects in an order the document does not itself
+carry.
 
 - [ ] **Step 2: Add the flat spec and the command**
 
@@ -7366,9 +7403,15 @@ call in the file today is inside one of those two. Its parsing is text parsing a
 
 **Interfaces:**
 
-- Produces: `capture.content(lines) -> string`, `capture.create(content, location)`,
-  `capture.capture(range)`, `location.parse(body)`, `location.describe(location)`,
-  `location_edit.of_buffer(buf, line)`, `location_edit.jump(location)`.
+- Produces: `capture.content(lines) -> string`, `capture.args(content, location)`,
+  `capture.create(content, location)`, `capture.capture(range)`, `location.parse(body)`,
+  `location.describe(location)`, `location_edit.of_buffer(buf, line)`,
+  `location_edit.jump(location)`.
+
+**Ruling: the README's `gd` and capture sections lose the word "description" here.** / Both name a
+field that no longer exists, in the same sentences this task rewrites the module's own header for.
+Leaving them for Task 28 would ship a document naming a field of the Todoist API. / Cost if wrong:
+Task 28 finds four fewer lines to change.
 
 - [ ] **Step 1: Move the editor half of a location into its own module**
 
@@ -7667,7 +7710,27 @@ clipboard fallback and the four failure cases all come across unchanged.
 **Interfaces:**
 
 - Produces: `send.brief(object, note) -> string`, `send.pasted(brief)`, `send.agent_in(listing, workspace, me)`,
-  `send.hand_off(object, note, host)`, `send.host()`, `send.send()`.
+  `send.hand_off(object, note, host)`, `send.host()`, `send.send()`. Also
+  `dam.spawn(argv, seconds, on_exit)`, `dam.timeout_seconds()` and `window.store_display(key)`,
+  which this task is the first caller of.
+
+**Ruling: the herdr spawn goes through `dam.spawn`.** / The Global Constraints and the spec both say
+`vim.system` is called in exactly one module, and the CI grep excludes only `lua/damnit/dam.lua`, so
+the host's own `pcall(vim.system, ...)` would fail the gate this task cannot weaken. `dam.lua`'s
+private `spawn` already wraps the throw-on-missing-binary case and marshals through `vim.schedule`;
+it is split into an exported `M.spawn(argv, ...)` over a whole command line and a private one that
+puts `M.argv`'s global flags in front. `dam` is still the only module that spawns. / Cost if wrong:
+one exported function, and `dam.lua` grows six lines.
+
+**Ruling: the host keeps its `in_herdr` / `run` / `copy` shape.** / Step 1's case doubles a host of
+`{ kind, send, focus }`, which cannot reach `send.agent_in` at all, and `agent_in` is in the
+interface list above and is what chooses the pane. With the delivery "unchanged", the old shape is
+the one that keeps both true and keeps `agent_in` testable without a herdr binary. / Cost if wrong:
+the notification case doubles three fields instead of three.
+
+**Ruling: the `S` binding lives in `keys.MAPS.damlist`.** / `keys.MAPS` is what `g?` reads, so a
+second binding site would let the help and the bindings drift. This is Task 18's standing ruling
+applied again. / Cost if wrong: nothing.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -7758,12 +7821,34 @@ git show <rename sha>:tests/sidebar_spec.lua > tests/sidebar_spec.lua
 **Interfaces:**
 
 - Produces: `sidebar.toggle()`, `sidebar.open()`, `sidebar.close()`, `sidebar.window()`,
-  `damnit.toggle()`.
+  `sidebar.leave_fixed_window()`, `damnit.toggle()`.
 
-- [ ] **Step 1: Run the restored spec and watch it fail**
+**Ruling: the spec is rewritten on the fake dam rather than restored.** / The restored file fakes
+four functions on the deleted `client` module, calls `list.open_task_under_cursor` and opens a task
+by a Todoist id, so it does not fail on the view resolution: it cannot load. It is rewritten around
+one `in_tab` helper that installs a fake dam, configures the sidebar and runs each case in a tabpage
+of its own, which is the pattern every other buffer spec in the suite now uses. / Cost if wrong: the
+restore is a starting point rather than the file.
+
+**Ruling: a name in neither source is refused on the second attempt, not before the split.** / The
+step says the view is refused before the split when the name is in neither source, and
+`views.resolve` cannot know that without asking dam: a bare word may be one of dam's own saved
+filters, so the first attempt probes and only a `parse` refusal records the name as unknown. The
+resolution still happens before the split, so a name dam has ALREADY refused leaves the layout
+alone; a first attempt opens the sidebar and draws dam's refusal in it, which is `list`'s own
+behaviour. / Cost if wrong: a typo costs one split and one `dam ls`.
+
+**Ruling: `task_buffer.open` gets the same call as `jump`.** / Step 3 names `location_edit.jump` as
+`leave_fixed_window`'s only caller. At the rename commit the callers were `location.jump`,
+`task_buffer.open` and `completed.lua`; the first two survive into this plan, and without the call
+`<CR>` in the sidebar raises `E1513: Cannot switch buffer. 'winfixbuf' is enabled` rather than
+opening the object beside it. Two of the rewritten spec's cases pin it. / Cost if wrong: one lazy
+require in `task_buffer.lua`.
+
+- [ ] **Step 1: Rewrite the spec on the fake dam and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua sidebar_spec`
-Expected: FAILs where it resolves a view through the deleted `todoist.view`.
+Expected: `module 'damnit.sidebar' not found`.
 
 - [ ] **Step 2: Change the two lines**
 
@@ -7774,10 +7859,10 @@ untouched.
 
 - [ ] **Step 3: Give the jump its way out of a fixed window again**
 
-`leave_fixed_window` is the sidebar's, but its only caller is not: it sits in
-`location_edit.jump`, which Task 2 stripped of the call when it deleted `sidebar.lua`. The restore
-above cannot bring a caller back into a file the plan kept, so add it by hand, directly above the
-`vim.cmd.edit` line in `lua/damnit/location_edit.lua`:
+`leave_fixed_window` is the sidebar's, but its callers are not: they sit in `location_edit.jump` and
+in `task_buffer.open`, both of which Task 2 stripped of the call when it deleted `sidebar.lua`. The
+restore above cannot bring a caller back into a file the plan kept, so add it by hand, directly
+above the `vim.cmd.edit` line in `lua/damnit/location_edit.lua`:
 
 ```lua
   require("damnit.sidebar").leave_fixed_window()
@@ -7785,7 +7870,8 @@ above cannot bring a caller back into a file the plan kept, so add it by hand, d
 ```
 
 Without it, `gd` inside the sidebar hits `winfixbuf` and the `:edit` fails instead of opening the
-file in a window that can hold it.
+file in a window that can hold it. The same line goes above the `nvim_win_set_buf` in
+`task_buffer.open`, for the same reason: `<CR>` in the sidebar opens the object beside it.
 
 The require stays inside the function. `sidebar.lua` registers its `WinNew` and `WinResized`
 autocommand at file scope, so requiring it at the head of `location_edit.lua` would install the
