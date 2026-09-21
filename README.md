@@ -1,18 +1,15 @@
 # damnit.nvim
 
-Todoist from inside Neovim. So far: an async client for the Todoist API, a token that never touches
-your configuration, a health check that proves both without printing the token, one task as an
-editable buffer, every open task as a list you can name your own views of, one of those views as a
-sidebar beside your work, a task captured from the code in front of you that `gd` takes you back to,
-and the completed history a page at a time with `u` to reopen one.
+Todoist from inside Neovim. So far: an async client for the Todoist API, a health check, one task as
+an editable buffer, every open task as a list you can name your own views of, one of those views as
+a sidebar beside your work, a task captured from the code in front of you that `gd` takes you back
+to, and the completed history a page at a time with `u` to reopen one.
 
 ## Requirements
 
 - Neovim with `vim.system`, `vim.uv`, `vim.uri_encode` and `vim.health`. Developed and tested on
   0.12.5.
 - `curl` on your `PATH`.
-- A Todoist API token, and somewhere to keep it that is not a file in your dotfiles. A password
-  manager with a command line interface is the usual answer.
 
 ## Install
 
@@ -21,9 +18,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
   "webdavis/damnit.nvim",
-  cmd = "Dam",
   opts = {
-    token_command = { "keepassxc-cli", "show", "--attributes", "Password", "<database>", "<entry>" },
     views = {
       today = "today | overdue",
       work = "#Work & !@waiting",
@@ -43,64 +38,10 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 }
 ```
 
-Or name an environment variable instead:
-
-```lua
-{
-  "webdavis/damnit.nvim",
-  opts = { token_env = "TODOIST_API_TOKEN" },
-}
-```
-
-Or, on a machine with neither a vault nor a keychain, give it the token:
-
-```lua
-{
-  "webdavis/damnit.nvim",
-  opts = { token = "<the token>" },
-}
-```
-
-## The token
-
-There are three ways a token reaches this plugin, and every one of them is yours to name:
-
-| Option          | What it is                                                            |
-| --------------- | --------------------------------------------------------------------- |
-| `token_command` | A command, as a list. Its first line of standard output is the token. |
-| `token_env`     | The name of an environment variable holding the token.                |
-| `token`         | The token itself.                                                     |
-
-Set more than one and they are tried in the order `token`, `token_command`, `token_env`.
-
-`token_command` is the one to reach for. It names a vault or keychain call, so the token lives
-wherever you already keep passwords and the configuration holds only the way to ask for it. Any
-command works: the entry title, the database and the flags are words you write, and the plugin
-passes the list through untouched.
-
-`token` is the escape hatch, for a machine with no vault and no keychain. It puts the token in clear
-text in a file, which means the token is also in your backups, in a diff, and in a public repository
-the day that configuration is shared. The health report warns when it is set. There is still no
-fourth way: the plugin never looks in a well-known file for a token and has no default location to
-fall back to.
-
-A resolved token is remembered for the session, so a vault command runs once rather than once per
-request, and it is forgotten when `setup` runs again or when the API refuses it. It is handed to
-curl on curl's standard input as a configuration file, which keeps it out of the process table. It
-never appears in a message, a notification, a log line or the health report: those say that the
-token resolved, and nothing else about it.
-
-`token_command` failing is reported by its exit code alone. Its output is dropped rather than
-quoted, in case a program printed the secret on the stream the error was read from.
-
 ## Options
 
 | Option             | Default                          | What it does                                   |
 | ------------------ | -------------------------------- | ---------------------------------------------- |
-| `token`            | unset                            | The token itself, in clear text. See above.    |
-| `token_command`    | unset                            | A command whose standard output is the token.  |
-| `token_env`        | unset                            | The name of an environment variable with it.   |
-| `base_url`         | `https://api.todoist.com/api/v1` | The API root requests are built against.       |
 | `curl`             | `"curl"`                         | The curl to run, found on `PATH` if bare.      |
 | `timeout`          | `15`                             | Seconds a request may take before curl stops.  |
 | `views`            | `{}`                             | Named Todoist filter queries. See below.       |
