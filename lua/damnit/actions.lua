@@ -267,4 +267,42 @@ function M.toggle_diff()
   window.redraw_current()
 end
 
+--- Open whatever the cursor is on.
+---
+--- A change opens in the window `:Dam` was opened from, or in a split when the
+--- status window is the only one.
+function M.open_under_cursor()
+  local window = require("damnit.window")
+  local found = window.entry_under_cursor()
+
+  if not found then
+    return
+  end
+
+  local entry = found.entry
+  local open = require("damnit.open")
+
+  if entry.kind == "conflict" then
+    return open.conflict(entry)
+  end
+
+  if entry.kind == "remote" then
+    return open.unpushed(entry)
+  end
+
+  if entry.kind ~= "change" then
+    return
+  end
+
+  local origin = window.origin()
+
+  if origin then
+    vim.api.nvim_set_current_win(origin)
+  else
+    vim.cmd("split")
+  end
+
+  require("damnit.task_buffer").open(entry.oid)
+end
+
 return M
