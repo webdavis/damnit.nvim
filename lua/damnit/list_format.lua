@@ -157,10 +157,10 @@ end
 ---@return string
 function M.title(spec)
   if spec.filter then
-    return ("Todoist: %s  (%s)"):format(spec.title, spec.filter)
+    return ("dam: %s  (%s)"):format(spec.title, spec.filter)
   end
 
-  return "Todoist: " .. spec.title
+  return "dam: " .. spec.title
 end
 
 --- What a view looks like when the request failed.

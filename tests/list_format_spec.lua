@@ -49,8 +49,8 @@ end
 
 return {
   ["names the view, and the filter when there is one"] = function()
-    assert(format.title({ title = "all open tasks" }) == "Todoist: all open tasks")
-    assert(format.title({ title = "today", filter = "today | overdue" }) == "Todoist: today  (today | overdue)")
+    assert(format.title({ title = "all open tasks" }) == "dam: all open tasks")
+    assert(format.title({ title = "today", filter = "today | overdue" }) == "dam: today  (today | overdue)")
   end,
 
   ["puts a task's due date, priority and labels on its line"] = function()
