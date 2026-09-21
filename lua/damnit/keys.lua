@@ -78,6 +78,7 @@ M.MAPS = {
     { "n", "gd", call("damnit.list", "jump_to_location_under_cursor"), "jump to the code this came from" },
     { "n", "x", call("damnit.done", "complete"), "complete this object" },
     { "n", "X", edit("reopen"), "reopen this object" },
+    { "n", "u", edit("reopen"), "reopen this object" },
     { "n", "dd", edit("delete"), "remove this object, after the confirm" },
     { "n", "p", edit("cycle_priority"), "cycle this object's priority" },
     { "n", "s", edit("schedule"), "set this object's due date" },

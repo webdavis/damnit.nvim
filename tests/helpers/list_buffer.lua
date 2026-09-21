@@ -23,7 +23,7 @@ M.FIXTURES = TESTS_DIR .. "/fixtures/full"
 
 --- Open a list against a fake dam and hand it to `run`.
 ---@param run fun(buf: integer, fake: damnit.FakeDam, notifications: string[])
----@param opts { views: table?, name: string?, fixtures: string?, exit: integer?, stderr: string? }?
+---@param opts { views: table?, name: string?, fixtures: string?, exit: integer?, stderr: string?, open: fun(): integer? }?
 function M.with(run, opts)
   opts = opts or {}
 
@@ -46,7 +46,7 @@ function M.with(run, opts)
     table.insert(notifications, text)
   end
 
-  local buf = damnit.open(opts.name)
+  local buf = opts.open and opts.open() or damnit.open(opts.name)
   fake_dam.settle(function()
     return queue.running() == nil
   end)

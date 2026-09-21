@@ -1,0 +1,52 @@
+{
+  "objects": [
+    {
+      "oid": "f35490cde91e64e9ac5e33ada0fef4021584a737",
+      "kind": "task",
+      "subject": "took out the bins",
+      "body": "",
+      "path": "errands/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": true,
+        "completed_at": "2026-09-21T08:17:20.138851Z",
+        "priority": 4,
+        "due": "2026-09-19"
+      }
+    },
+    {
+      "oid": "c146fd5f6c76b49d36ac3ff8745fa34652d0793d",
+      "kind": "task",
+      "subject": "paid the rent",
+      "body": "",
+      "path": "home/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": true,
+        "completed_at": "2026-09-21T08:17:19.961728Z",
+        "priority": 4
+      }
+    },
+    {
+      "oid": "37b186f6e73ed2c4d25a4854023c694e6bec8715",
+      "kind": "task",
+      "subject": "filed the report",
+      "body": "",
+      "path": "work/",
+      "labels": [
+        "admin"
+      ],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": true,
+        "completed_at": "2026-09-21T08:17:20.300729Z",
+        "priority": 2
+      }
+    }
+  ]
+}

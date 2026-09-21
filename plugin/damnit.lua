@@ -23,6 +23,9 @@ local SUBCOMMANDS = {
   cancel = function()
     require("damnit.queue").cancel()
   end,
+  done = function()
+    require("damnit").completed()
+  end,
   list = function(args)
     require("damnit").open(args[1])
   end,

@@ -13,6 +13,7 @@ local message = require("damnit.message")
 ---@field title string what the buffer's first line calls it
 ---@field query string? the dam query, or nil for every open task
 ---@field probing boolean? true when the query is a bare name dam has yet to judge
+---@field flat boolean? draw no tree and order by completion, newest first
 
 --- Names dam refused this session, so the second attempt costs no call.
 ---@type table<string, boolean>
