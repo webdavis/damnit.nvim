@@ -60,6 +60,13 @@ function M.open_status()
   return require("damnit.window").open()
 end
 
+--- Search one view's objects, in fzf-lua or `vim.ui.select`. No name follows
+--- the screen: the view the list buffer is showing, or every open object.
+---@param name string?
+function M.pick(name)
+  require("damnit.picker").pick(name)
+end
+
 --- Open one view in the current window, by the name `setup` or dam's own config
 --- declares. No name means every open object.
 ---@param name string?
