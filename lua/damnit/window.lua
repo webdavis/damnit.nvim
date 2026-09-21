@@ -26,9 +26,12 @@ local origin = nil
 
 --- The store as the header names it. dam does not report its own default path,
 --- and this plugin does not hardcode one.
+---
+--- Exported because the agent brief names the same store as the header, and one
+--- helper is what keeps the two saying the same thing.
 ---@param key string
 ---@return string
-local function store_display(key)
+function M.store_display(key)
   if key == "default" then
     return "dam's default"
   end
@@ -277,7 +280,7 @@ function M.redraw_current(key)
     return
   end
 
-  draw(key, render.lines(models[key], { store = store_display(key), running = queue.running(key) }))
+  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.running(key) }))
 end
 
 ---@param key string
@@ -290,7 +293,7 @@ function M.redraw(key, status)
 
   models[key] = status_model.build(status, remotes[key])
 
-  draw(key, render.lines(models[key], { store = store_display(key), running = queue.running(key) }))
+  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.running(key) }))
 end
 
 --- Ask dam for the status and redraw from the answer.
@@ -345,7 +348,7 @@ function M.tick(key)
     return
   end
 
-  local lines = render.lines(models[key], { store = store_display(key), running = queue.running(key) })
+  local lines = render.lines(models[key], { store = M.store_display(key), running = queue.running(key) })
 
   local headers = 0
   for _, line in ipairs(lines) do

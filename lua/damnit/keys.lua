@@ -85,6 +85,7 @@ M.MAPS = {
     { "n", "l", edit("labels"), "toggle a label on this object" },
     { "n", "m", edit("move"), "move this object into another path" },
     { "n", "a", edit("add"), "add an object where the cursor is" },
+    { "n", "S", call("damnit.send", "send"), "hand this object to the agent pane" },
     { "n", ">", edit("indent"), "move this object under the one above" },
     { "n", "<", edit("promote"), "move this object out from under its parent" },
     {

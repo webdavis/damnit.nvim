@@ -343,18 +343,19 @@ are and says what the API said.
 from the other side: there, every line is already completed, so reopening one is what undoing means.
 They are two buffers with their own keys, so neither shadows the other.
 
-### Sending a task to the agent
+### Sending an object to the agent
 
-`S` hands the task under the cursor to the agent working in this workspace. It asks for an optional
+`S` hands the object under the cursor to the agent working in this workspace. It asks for an optional
 note first, through `vim.ui.input`: `<CR>` sends, `<Esc>` cancels, and an empty line sends the brief
 with no note rather than refusing. Nothing here happens on its own.
 
-The brief is plain text, because an agent pane is a shell rather than a structure. It is the same
-text [herdr-todoist](https://github.com/webdavis/herdr-todoist) sends, character for character:
+The brief is plain text, because an agent pane is a shell rather than a structure:
 
 ```text
-Todoist task: file taxes
-url: https://app.todoist.com/app/task/6cfCrxxxxxxxxxxx
+dam task: file taxes
+oid: 78b8950
+store: ~/.local/share/dam/dam.db
+path: home/finances/
 due: 2026-09-20
 priority: p1
 labels: home, slow
@@ -364,9 +365,10 @@ receipts are in the drawer
 note: start with the receipts
 ```
 
-A field the task has nothing for is left out rather than written empty, so the brief carries no line
-an agent has to discount. The URL is built from the task id: the v1 task object has no `url` field,
-and `https://app.todoist.com/app/task/<id>` is the form the vendor documents in its place.
+A field the object has nothing for is left out rather than written empty, so the brief carries no
+line an agent has to discount. There is no URL, because a dam object is local. The `oid` is its first
+seven characters, which is what an agent would type at `dam show`, and the `store` line is the store
+the staging window's own header names.
 
 Inside herdr (`HERDR_ENV` set) the brief reaches the agent pane through `herdr pane send-text`, which
 writes literal text into a pane's input without a return, so the agent holds the brief until you
@@ -380,10 +382,9 @@ workspace, other than this one. The name it reports is the pane's name, then the
 `display_agent` is the auth profile a pane signed in with, which two panes running different agents
 can share, so it decides nothing.
 
-A comment on the task then records the hand-off (`Handed to the agent <name> from the Neovim Todoist
-list.`). It names the agent rather than its pane, which means nothing a day later, and WHEN is the
-comment's own posted date, which Todoist stamps. A refused comment says `sent to <name>, comment
-refused` rather than pretending the send failed: the agent has the work either way.
+Nothing records the hand-off, because dam has no comments. Every notification ends in `no hand-off
+record written`, on the path that delivered as well as on the ones that fell back, so no line of it
+can be read as a record that exists.
 
 ### When the agent pane cannot take it
 
@@ -398,8 +399,8 @@ anywhere else. Four cases reach it, and each says which in the notification:
 | No agent pane in this workspace           | The same, saying so.                                    |
 | herdr refused the send                    | The same, naming the pane it refused.                   |
 
-The clipboard is a copy rather than a hand-off, so it writes no comment, and every one of those
-notifications ends in `no hand-off comment written` so the two paths can never be confused. A build
+The clipboard is a copy rather than a hand-off, and every one of those notifications ends in
+`no hand-off record written` for the same reason the delivered one does. A build
 with no clipboard provider, which is the normal state of a bare server, has no `+` register to write:
 the brief goes to the unnamed register and the notification says `no clipboard provider` rather than
 reading like a whole copy.
