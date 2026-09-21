@@ -67,10 +67,10 @@ return {
   end,
 
   ["keeps the timeout on its own path, signal and all"] = function()
-    local _, err = answer.interpret({ code = 124, signal = 15, stdout = "", stderr = "" }, "push todoist")
+    local _, err = answer.interpret({ code = 124, signal = 15, stdout = "", stderr = "" }, "push todoist", 45)
 
     assert(err.kind == "timeout", vim.inspect(err))
     assert(err.code == 124, tostring(err.code))
-    assert(err.message:find("took longer than", 1, true), err.message)
+    assert(err.message == "push todoist took longer than 45s and was stopped", err.message)
   end,
 }

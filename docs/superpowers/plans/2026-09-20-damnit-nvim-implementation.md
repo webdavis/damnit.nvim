@@ -540,8 +540,8 @@ spawn, the real argv, the real exit code and the real standard error are all exe
   - `dam.argv(args) -> string[]`, the full argv including `dam` and any `--store`/`--config`.
   - `dam.call(args, opts, callback)` where `opts` is `{ label: string?, on_spawn: fun(handle) }?` and
     `callback` is `fun(data: table?, err: damnit.Error?)`. This is the one entry point every caller uses.
-  - `answer.interpret(out, label) -> table?, damnit.Error?`, pure over a `vim.SystemCompleted`,
-    and `answer.MISSING`, the sentence for a dam that is not on `PATH`.
+  - `answer.interpret(out, label, seconds) -> table?, damnit.Error?`, pure over a
+    `vim.SystemCompleted`, and `answer.MISSING`, the sentence for a dam that is not on `PATH`.
   - `dam.supported(version) -> boolean`, `dam.forget()`, `dam.version` (a string or nil).
   - `damnit.Error` = `{ kind, code, message, rule, oids, plugin }`. `kind` is dam's own word where
     dam wrote a document (`refused`, `store`, `helper`, `credential`, `parse`, `usage`,
@@ -1100,9 +1100,10 @@ end
 --- One finished process into a result or an error.
 ---@param out table a vim.SystemCompleted, or one this module synthesised
 ---@param label string? what to call the call in a timeout message
+---@param seconds integer? how long the call was allowed to run
 ---@return table? data
 ---@return damnit.Error? err
-function M.interpret(out, label)
+function M.interpret(out, label, seconds)
   if out.missing then
     return nil, { kind = "missing", code = -1, plugin = true, message = M.MISSING }
   end
@@ -1118,13 +1119,11 @@ function M.interpret(out, label)
   end
 
   if out.code == 124 then
-    local seconds = tonumber(require("damnit").options.timeout) or 120
-
     return nil, {
       kind = "timeout",
       code = 124,
       plugin = true,
-      message = ("%s took longer than %ds and was stopped"):format(label or "a dam call", seconds),
+      message = ("%s took longer than %ds and was stopped"):format(label or "a dam call", seconds or 120),
     }
   end
 
@@ -1156,12 +1155,17 @@ end
 ---
 --- `vim.system` throws when the binary is absent rather than calling back, so
 --- the spawn is wrapped and the absence arrives as an ordinary answer.
+--- How long one call may run before `vim.system` stops it.
+---@return integer seconds
+local function timeout_seconds()
+  return math.max(tonumber(require("damnit").options.timeout) or 120, 1)
+end
+
 ---@param args string[]
+---@param seconds integer how long the call may run
 ---@param on_exit fun(out: table)
 ---@return table? handle
-local function spawn(args, on_exit)
-  local seconds = math.max(tonumber(require("damnit").options.timeout) or 120, 1)
-
+local function spawn(args, seconds, on_exit)
   local ok, handle = pcall(vim.system, M.argv(args), { text = true, timeout = seconds * 1000 }, function(out)
     vim.schedule(function()
       on_exit(out)
@@ -1206,7 +1210,7 @@ local function handshake(callback)
     return
   end
 
-  spawn({ "--version" }, function(out)
+  spawn({ "--version" }, timeout_seconds(), function(out)
     local banner = vim.trim(tostring(out.stdout or ""))
     local version = banner:match("dam%s+(%d+%.%d+%.%d+)")
 
@@ -1261,8 +1265,10 @@ function M.call(args, opts, callback)
       return callback(nil, err)
     end
 
-    local handle = spawn(args, function(out)
-      callback(M.interpret(out, opts.label))
+    local seconds = timeout_seconds()
+
+    local handle = spawn(args, seconds, function(out)
+      callback(M.interpret(out, opts.label, seconds))
     end)
 
     if opts.on_spawn then
@@ -1314,7 +1320,9 @@ found by a measurement rather than by reading:
    strings, because the first thing a caller does with `oids` is iterate it.
 1. The module is two: `dam.lua` spawns and shakes hands, `answer.lua` reads one finished process,
    and `tests/answer_spec.lua` holds the cases that drive `interpret` directly. `answer.lua` is
-   pure in the sense the constraints use, so it belongs in Task 27's list.
+   pure in the sense the constraints use, so it belongs in Task 27's list, and the timeout it names
+   is passed in rather than read from the options, which is what keeps it a function of its
+   arguments and names the same seconds the spawn was given.
 
 ---
 

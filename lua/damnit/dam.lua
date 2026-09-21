@@ -87,16 +87,21 @@ function M.supported(text)
   return compare(parts, parts_of(M.MIN_VERSION)) >= 0 and compare(parts, parts_of(M.MAX_VERSION)) < 0
 end
 
+--- How long one call may run before `vim.system` stops it.
+---@return integer seconds
+local function timeout_seconds()
+  return math.max(tonumber(require("damnit").options.timeout) or 120, 1)
+end
+
 --- Spawn one `dam`, answering on the main loop.
 ---
 --- `vim.system` throws when the binary is absent rather than calling back, so
 --- the spawn is wrapped and the absence arrives as an ordinary answer.
 ---@param args string[]
+---@param seconds integer how long the call may run
 ---@param on_exit fun(out: table)
 ---@return table? handle
-local function spawn(args, on_exit)
-  local seconds = math.max(tonumber(require("damnit").options.timeout) or 120, 1)
-
+local function spawn(args, seconds, on_exit)
   local ok, handle = pcall(vim.system, M.argv(args), { text = true, timeout = seconds * 1000 }, function(out)
     vim.schedule(function()
       on_exit(out)
@@ -143,7 +148,7 @@ local function handshake(callback)
 
   local session = generation
 
-  spawn({ "--version" }, function(out)
+  spawn({ "--version" }, timeout_seconds(), function(out)
     -- A probe begun under the options of an earlier session says nothing about
     -- the dam the current options name.
     if session ~= generation then
@@ -213,8 +218,10 @@ function M.call(args, opts, callback)
       return callback(nil, err)
     end
 
-    local handle = spawn(args, function(out)
-      callback(answer.interpret(out, opts.label))
+    local seconds = timeout_seconds()
+
+    local handle = spawn(args, seconds, function(out)
+      callback(answer.interpret(out, opts.label, seconds))
     end)
 
     if opts.on_spawn then

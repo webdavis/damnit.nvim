@@ -8,6 +8,10 @@ local M = {}
 
 M.MISSING = "dam was not found on PATH; install it with cargo install damnit"
 
+--- The seconds a timeout names when the caller did not say. It is the default
+--- of the option the caller reads.
+local DEFAULT_TIMEOUT = 120
+
 --- Exit code to error kind, for a failure that carried no document. 0 is
 --- success and is handled before this table. dam's own kind is used instead
 --- wherever it wrote one.
@@ -84,9 +88,10 @@ end
 --- One finished process into a result or an error.
 ---@param out table a vim.SystemCompleted, or one this module synthesised
 ---@param label string? what to call the call in a timeout message
+---@param seconds integer? how long the call was allowed to run
 ---@return table? data
 ---@return damnit.Error? err
-function M.interpret(out, label)
+function M.interpret(out, label, seconds)
   if out.missing then
     return nil, { kind = "missing", code = -1, plugin = true, message = M.MISSING }
   end
@@ -114,14 +119,15 @@ function M.interpret(out, label)
   end
 
   if out.code == 124 then
-    local seconds = tonumber(require("damnit").options.timeout) or 120
-
     return nil,
       {
         kind = "timeout",
         code = 124,
         plugin = true,
-        message = ("%s took longer than %ds and was stopped"):format(label or "a dam call", seconds),
+        message = ("%s took longer than %ds and was stopped"):format(
+          label or "a dam call",
+          tonumber(seconds) or DEFAULT_TIMEOUT
+        ),
       }
   end
 
