@@ -7411,7 +7411,7 @@ call in the file today is inside one of those two. Its parsing is text parsing a
 **Ruling: the README's `gd` and capture sections lose the word "description" here.** / Both name a
 field that no longer exists, in the same sentences this task rewrites the module's own header for.
 Leaving them for Task 28 would ship a document naming a field of the Todoist API. / Cost if wrong:
-Task 28 finds four fewer lines to change.
+Task 28 finds six fewer lines to change.
 
 - [ ] **Step 1: Move the editor half of a location into its own module**
 
@@ -7726,7 +7726,7 @@ one exported function, and `dam.lua` grows six lines.
 `{ kind, send, focus }`, which cannot reach `send.agent_in` at all, and `agent_in` is in the
 interface list above and is what chooses the pane. With the delivery "unchanged", the old shape is
 the one that keeps both true and keeps `agent_in` testable without a herdr binary. / Cost if wrong:
-the notification case doubles three fields instead of three.
+the notification case doubles three fields instead of one.
 
 **Ruling: the `S` binding lives in `keys.MAPS.damlist`.** / `keys.MAPS` is what `g?` reads, so a
 second binding site would let the help and the bindings drift. This is Task 18's standing ruling
