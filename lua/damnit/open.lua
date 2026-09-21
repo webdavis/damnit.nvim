@@ -78,10 +78,12 @@ local function commit_lines(commit)
   return lines
 end
 
---- The commits one remote has not pushed yet.
+--- One remote's newest commits, with what the status says it is behind by.
 ---
---- dam counts them rather than naming them, and `dam log` answers newest first,
---- so a remote's unpushed commits are the first `commits` of the log.
+--- dam counts a remote's unpushed commits rather than naming them, so this
+--- shows the newest ones the log holds and says so. They are not the unpushed
+--- set: a push marks a later commit pushed while an earlier one whose objects
+--- the helper did not answer stays behind. Naming them is a dam change.
 ---@param entry table the Unpushed row under the cursor
 function M.unpushed(entry)
   require("damnit.queue").submit({
@@ -92,7 +94,11 @@ function M.unpushed(entry)
         return message.report(err)
       end
 
-      local lines = { ("%s: %d unpushed"):format(entry.remote, entry.commits), "" }
+      local lines = {
+        ("%s: the newest %d commit(s)"):format(entry.remote, entry.commits),
+        ("%d unpushed; dam does not name which commits are unpushed"):format(entry.commits),
+        "",
+      }
 
       for index, commit in ipairs((data or {}).commits or {}) do
         if index > entry.commits then

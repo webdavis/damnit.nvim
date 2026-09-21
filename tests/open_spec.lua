@@ -71,8 +71,14 @@ return {
       assert(body:find("stage the shopping list", 1, true), body)
       assert(body:find("buy oat milk", 1, true), body)
 
-      -- fake has one unpushed commit, so the older one is not its business.
+      -- fake is one commit behind, so the older one is not drawn.
       assert(not body:find("renew the passport", 1, true), body)
+
+      -- dam skips past a commit whose objects failed and marks later ones
+      -- pushed, so the newest are not necessarily the unpushed ones.
+      assert(body:find("the newest 1 commit", 1, true), body)
+      assert(body:find("1 unpushed", 1, true), body)
+      assert(body:find("dam does not name which commits are unpushed", 1, true), body)
     end)
   end,
 
