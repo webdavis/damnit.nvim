@@ -1,19 +1,23 @@
--- Subtasks as a tree: who is under whom, and where a task goes when it is
--- indented or promoted.
+-- Subtasks as a tree, which in dam is a tree of paths.
 --
--- Pure functions over the tasks the API gave. Nothing here touches a buffer, a
--- request or a notification, so the shape of the tree is testable on its own.
+-- An object's parent is the object whose path is this one's path with the last
+-- segment removed, which is what dam's own `children_of` answers. A view that
+-- holds a child and not its parent draws the child at the top level, because a
+-- query can match one without the other.
 --
--- The API names a task's parent `parent_id`, a string or `null`, and it is
--- always present. `vim.json.decode` turns that null into `vim.NIL`, which is
--- truthy, so every read of the field goes through `parent_of` rather than
--- through `task.parent_id or ""`.
+-- The root path is the exception: every top-level object shares it, so it
+-- names no object and nothing nests under it. dam says the same where it
+-- refuses a move into a path that contains the mover.
+--
+-- Pure: no buffer, no call, no notification.
 
 local M = {}
 
+local ROOT = ""
+
 ---@param value any
 ---@return string
-local function text_of(value)
+local function text(value)
   if value == nil or value == vim.NIL then
     return ""
   end
@@ -26,212 +30,154 @@ end
 ---@param path any
 ---@return string
 function M.parent_path(path)
-  local trimmed = (text_of(path):gsub("/$", ""))
+  local trimmed = (text(path):gsub("/$", ""))
   local parent = trimmed:match("^(.*)/[^/]*$")
 
-  return parent and (parent .. "/") or ""
+  return parent and (parent .. "/") or ROOT
 end
 
 --- The object's own last segment, which `dam mv` carries along.
 ---@param path any
 ---@return string
 function M.own_segment(path)
-  return (text_of(path):gsub("/$", ""):match("([^/]*)$")) or ""
-end
-
---- The id of a task's parent, or the empty string when it has none.
----@param task table?
----@return string
-function M.parent_of(task)
-  local parent = task and task.parent_id
-  if parent == nil or parent == vim.NIL then
-    return ""
-  end
-
-  return tostring(parent)
+  return (text(path):gsub("/$", ""):match("([^/]*)$")) or ""
 end
 
 ---@class damnit.Tree
----@field by_id table<string, table> every task in the view, by id
----@field children table<string, table[]> a task's children, in the API's order
+---@field by_path table<string, table> the object at each path this view holds
+---@field children table<string, table[]> a path's objects, in the order dam gave
 
---- Index one view's tasks by id and by parent.
----@param tasks table[]
+--- Index one view's objects by path and by parent.
+---
+--- Two objects can share a path, which dam allows, and the last one indexed
+--- wins the parent seat. Both are still drawn: the seat decides only which of
+--- them the deeper rows nest under.
+---@param objects table[]
 ---@return damnit.Tree
-function M.index(tasks)
-  local tree = { by_id = {}, children = {} }
+function M.index(objects)
+  local index = { by_path = {}, children = {} }
 
-  for _, task in ipairs(tasks or {}) do
-    tree.by_id[tostring(task.id)] = task
-  end
+  for _, object in ipairs(objects or {}) do
+    local path = text(object.path)
 
-  for _, task in ipairs(tasks or {}) do
-    local parent = M.parent_of(task)
-    if parent ~= "" and tree.by_id[parent] then
-      tree.children[parent] = tree.children[parent] or {}
-      table.insert(tree.children[parent], task)
+    if path ~= ROOT then
+      index.by_path[path] = object
     end
   end
 
-  return tree
-end
+  for _, object in ipairs(objects or {}) do
+    local parent = M.parent_path(text(object.path))
 
---- Whether a task heads a tree in this view.
----
---- A task whose parent the view does not hold is one too: a filter can match a
---- subtask without matching its parent, and an orphan drawn at the top level is
---- better than an orphan dropped.
----@param tree damnit.Tree
----@param task table
----@return boolean
-function M.is_root(tree, task)
-  local parent = M.parent_of(task)
-
-  return parent == "" or tree.by_id[parent] == nil
-end
-
---- How many children a task has in this view.
----@param tree damnit.Tree
----@param id string
----@return integer
-function M.child_count(tree, id)
-  return #(tree.children[id] or {})
-end
-
---- How many tasks sit under a task in this view, at every depth.
----
---- What a fold hides: `descend` stops at a collapsed node, so the badge on a
---- folded line has to count the whole subtree, not the one level of it
---- `child_count` gives.
----@param tree damnit.Tree
----@param id string
----@return integer
-function M.descendant_count(tree, id)
-  local count = 0
-  for _, child in ipairs(tree.children[id] or {}) do
-    count = count + 1 + M.descendant_count(tree, tostring(child.id))
+    if parent ~= ROOT and index.by_path[parent] then
+      index.children[parent] = index.children[parent] or {}
+      table.insert(index.children[parent], object)
+    end
   end
+
+  return index
+end
+
+--- Whether an object heads a tree in this view.
+---@param index damnit.Tree
+---@param object table
+---@return boolean
+function M.is_root(index, object)
+  return index.by_path[M.parent_path(text(object.path))] == nil
+end
+
+---@param index damnit.Tree
+---@param path string
+---@return integer
+function M.child_count(index, path)
+  return #(index.children[path] or {})
+end
+
+--- How many objects sit under this path at every depth, which is what a folded
+--- line's badge counts.
+---@param index damnit.Tree
+---@param path string
+---@return integer
+function M.descendant_count(index, path)
+  local count = 0
+
+  for _, child in ipairs(index.children[path] or {}) do
+    count = count + 1 + M.descendant_count(index, text(child.path))
+  end
+
   return count
 end
 
---- A task's project or section id, or the empty string when the field is
---- absent. Same null guard as `parent_of`: `vim.NIL` reads as absent.
----@param task table?
----@param field string
----@return string
-local function field_of(task, field)
-  local value = task and task[field]
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
-
---- Walk a task and its descendants, deepest last, calling `visit` with each
---- task and how far under the root it sits.
+--- Walk an object and its descendants, calling `visit` with each and its depth.
 ---
---- A collapsed task is visited itself and its descendants are not, which is
---- what folding is here: the lines are never drawn rather than hidden.
----@param tree damnit.Tree
----@param task table
+--- A collapsed object is visited and its descendants are not, so a fold means
+--- lines that were never drawn.
+---@param index damnit.Tree
+---@param object table
 ---@param collapsed table<string, boolean>
----@param visit fun(task: table, depth: integer)
+---@param visit fun(object: table, depth: integer)
 ---@param depth integer?
-function M.descend(tree, task, collapsed, visit, depth)
+function M.descend(index, object, collapsed, visit, depth)
   local level = depth or 0
-  visit(task, level)
+  visit(object, level)
 
-  local id = tostring(task.id)
-  if collapsed[id] then
+  local path = text(object.path)
+  if collapsed[path] then
     return
   end
 
-  for _, child in ipairs(tree.children[id] or {}) do
-    M.descend(tree, child, collapsed, visit, level + 1)
+  for _, child in ipairs(index.children[path] or {}) do
+    M.descend(index, child, collapsed, visit, level + 1)
   end
 end
 
---- Where `>` sends the task on the cursor: under the task on the row above it.
+--- Where `>` sends the object on the cursor: into the path of the object on the
+--- row above.
 ---
---- The row above is whatever task is drawn there, at whatever depth, which is
---- how the app's own indent behaves: the task becomes that task's child and
---- takes its own children with it, because Todoist moves a subtree whole.
----
---- Refused across a project or a section, even though the rows sit next to
---- each other on screen: the row above the first task of a later group is
---- that group's own heading's neighbour, not a task to indent under, and
---- indenting under it would move the whole subtree into a project or section
---- it was never in.
----@param task table
----@param above table? the task on the nearest row above holding one
----@return table? destination a move body, or nil with a reason
+--- `dam mv <oid> <to>` puts the object inside `to` and keeps its own last
+--- segment, so the answer is that row's whole path rather than a path built
+--- here. An object at the root has no segment to keep and would land beside the
+--- row above rather than under it, and nothing nests under a row that is at the
+--- root, so both are refused.
+---@param object table
+---@param above table?
+---@return string? destination
 ---@return string? refusal
-function M.indent_to(task, above)
+function M.indent_to(object, above)
   if not above then
-    return nil, "nothing above this task to indent it under"
+    return nil, "nothing above this object to indent it under"
   end
 
-  if M.parent_of(task) == tostring(above.id) then
-    return nil, "already under " .. tostring(above.content)
+  local path = text(object.path)
+  if path == ROOT then
+    return nil, "this object has no path of its own to nest under another"
   end
 
-  if field_of(task, "project_id") ~= field_of(above, "project_id") then
-    return nil, "nothing above this task in its project"
+  local destination = text(above.path)
+  if destination == ROOT then
+    return nil,
+      ("%s is at the root, which every object shares, so nothing nests under it"):format(tostring(above.subject))
   end
 
-  if field_of(task, "section_id") ~= field_of(above, "section_id") then
-    return nil, "nothing above this task in its section"
+  if M.parent_path(path) == destination then
+    return nil, "already under " .. tostring(above.subject)
   end
 
-  return { parent_id = tostring(above.id) }
+  return destination
 end
 
---- Where `<` sends the task on the cursor: out from under its parent, one level
---- up.
----
---- Its old parent's parent when the view holds one, so the task lands beside
---- the parent it just left. Otherwise the section or the project it is already
---- in, which is what makes it top level. A task with no parent has nowhere to
---- go and says so.
----@param task table
----@param tree damnit.Tree
----@return table? destination a move body, or nil with a reason
+--- Where `<` sends it: into the path its parent sits in, one level up.
+---@param object table
+---@param index damnit.Tree
+---@return string? destination
 ---@return string? refusal
-function M.promote_to(task, tree)
-  local parent_id = M.parent_of(task)
-  if parent_id == "" then
-    return nil, "already at the top level"
+function M.promote_to(object, index)
+  local parent = M.parent_path(text(object.path))
+
+  if parent == ROOT or index.by_path[parent] == nil then
+    return nil, "already at the top level of this view"
   end
 
-  local parent = tree.by_id[parent_id]
-  local grandparent = M.parent_of(parent)
-  if grandparent ~= "" then
-    return { parent_id = grandparent }
-  end
-
-  local function id_of(field)
-    for _, holder in ipairs({ task, parent }) do
-      local value = holder and holder[field]
-      if type(value) == "string" and value ~= "" then
-        return value
-      end
-    end
-
-    return nil
-  end
-
-  local section_id = id_of("section_id")
-  if section_id then
-    return { section_id = section_id }
-  end
-
-  local project_id = id_of("project_id")
-  if project_id then
-    return { project_id = project_id }
-  end
-
-  return nil, "neither its section nor its project is known here"
+  return M.parent_path(parent)
 end
 
 return M
