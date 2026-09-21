@@ -18,6 +18,13 @@ local SUBCOMMANDS = {
   cancel = function()
     require("damnit.queue").cancel()
   end,
+  task = function(args)
+    if #args ~= 1 then
+      return require("damnit.message").fail("usage is :Dam task <oid>")
+    end
+
+    require("damnit.task_buffer").open(args[1])
+  end,
 }
 
 ---@return string

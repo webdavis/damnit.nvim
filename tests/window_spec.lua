@@ -117,10 +117,11 @@ return {
     with_window(function(_, notifications)
       vim.cmd("Dam bogus")
 
-      assert(
-        notifications[#notifications] == "damnit.nvim: usage is :Dam, :Dam cancel",
-        tostring(notifications[#notifications])
-      )
+      -- The list grows with every subcommand, so the case pins the shape and
+      -- one member rather than the whole literal.
+      local said = notifications[#notifications]
+      assert(vim.startswith(tostring(said), "damnit.nvim: usage is :Dam, "), tostring(said))
+      assert(tostring(said):find(":Dam cancel", 1, true), tostring(said))
     end)
   end,
 
