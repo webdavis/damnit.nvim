@@ -1,0 +1,7 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (clean)  flaky (clean)
+Help:    g?
+
+Staged (1)
+- new      5cf398f  book dentist appointment
+

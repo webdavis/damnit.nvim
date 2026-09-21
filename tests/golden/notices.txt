@@ -1,0 +1,11 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (clean)  flaky (clean)
+Help:    g?
+
+Notices (5)
+  fake: 4aa4fab push failed upstream rejected the write: rate limited
+  fedffd5 kind changed upstream
+  5c82abc cancelled upstream "quarterly review"
+  fake: fedffd5 removed upstream "from upstream"
+  flaky: pull failed talking to the helper: the helper closed its output
+

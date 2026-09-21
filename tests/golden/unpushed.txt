@@ -1,0 +1,8 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (1 unpushed)  flaky (7 unpushed)
+Help:    g?
+
+Unpushed (2)
+> fake              1 unpushed
+> flaky             7 unpushed
+

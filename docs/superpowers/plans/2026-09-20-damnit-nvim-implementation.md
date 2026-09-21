@@ -118,7 +118,7 @@ proposed one:
 | 31 | dam PR A: `dam done --children/--depends` |
 | 32 | dam PR B, landed: the error document on standard error, exit 4 for refusals only |
 | 33 | dam PR B, landed: `fields` in change documents |
-| 34 | dam PR B, landed: `status` without embedded objects |
+| 34 | nothing: its premise is false at dam 0.2.0, see the task |
 | 35 | dam PR C: `--no-pull`, and last-pull times in `remote list` |
 | 36 | dam PR D: the saved-filters command and the category catalogue |
 
@@ -8544,11 +8544,19 @@ SKIP_AI_COMMIT=1 git commit -m "refactor: read a change's field list from dam"
 
 ### Task 34: Conflicts without their embedded objects
 
-**dam PR B landed as dam 0.2.0 on 2026-09-20: `dam status --json` no longer carries the two objects
-inside each conflict unless `--full` is passed.**
-Confirm with `dam status --json | jq '.conflicts[0] | keys'`.
+**This task's premise is false and the task is not to be done as written.** Measured against a real
+dam 0.2.0 on 2026-09-20: `conflict_json` embeds `ours` and `theirs` on every conflict
+unconditionally, with no `--full` gate (`crates/dam-cli/src/commands/status/rows.rs`). What dam 0.2.0
+did put behind `--full` is a **change** row's `before` and `after`, which is a different half of the
+same document and which Task 7 already reads correctly: a change row carries the object's own columns
+flat instead. Confirm with `dam status --json | jq '.conflicts[0] | keys'` before doing anything here;
+at 0.2.0 it lists `oid`, `ours`, `remote`, `theirs`.
 
-This one is a removal rather than an addition, so it breaks `<CR>` on a conflict, which reads
+Leave the task in place, unstarted, against a future dam that does gate the conflict sides. Step 2's
+design is still the right one for that day. If dam 0.3.0 arrives without such a change, delete the
+task.
+
+This one would be a removal rather than an addition, so it breaks `<CR>` on a conflict, which reads
 `conflicts[].ours` and `conflicts[].theirs` today. Do it the day dam's own change lands, not before.
 
 **Files:** `lua/damnit/status_model.lua`, `lua/damnit/actions.lua`, `tests/open_spec.lua`,

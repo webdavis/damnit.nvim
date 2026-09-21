@@ -1,0 +1,125 @@
+{
+  "staged": [
+    {
+      "oid": "5cf398f699045d551091eccc347f6b70f41f9bcf",
+      "op": "create",
+      "fields": [
+        "subject",
+        "due"
+      ],
+      "kind": "task",
+      "subject": "book dentist appointment",
+      "path": "",
+      "labels": [],
+      "done": false,
+      "priority": 4,
+      "due": "2026-10-15"
+    },
+    {
+      "oid": "e648ce077ff286a30e5d984a2d93a24739e090ad",
+      "op": "delete",
+      "fields": [],
+      "kind": "task",
+      "subject": "cancel gym membership",
+      "path": "",
+      "labels": [],
+      "done": false,
+      "priority": 4,
+      "due": null
+    }
+  ],
+  "unstaged": [
+    {
+      "oid": "badb4903b653809e591c31118004e07de7c8183c",
+      "op": "update",
+      "fields": [
+        "subject",
+        "priority"
+      ],
+      "kind": "task",
+      "subject": "buy soy milk",
+      "path": "inbox/",
+      "labels": [
+        "errand"
+      ],
+      "done": false,
+      "priority": 3,
+      "due": "2026-09-25"
+    }
+  ],
+  "conflicts": [
+    {
+      "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
+      "remote": "fake",
+      "ours": {
+        "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
+        "kind": "task",
+        "subject": "shared shopping list (our edit)",
+        "body": "",
+        "path": "",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": {
+          "done": false,
+          "priority": 2
+        }
+      },
+      "theirs": {
+        "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
+        "kind": "task",
+        "subject": "shared shopping list (upstream edit)",
+        "body": "",
+        "path": "",
+        "labels": [],
+        "depends": [],
+        "reminders": [],
+        "task": {
+          "done": false,
+          "priority": 2
+        }
+      }
+    }
+  ],
+  "notices": [
+    {
+      "kind": "push_failed",
+      "remote": "fake",
+      "oid": "4aa4fabf5454eabdde38388404cc4a1d9f71a05c",
+      "why": "upstream rejected the write: rate limited"
+    },
+    {
+      "kind": "kind_changed",
+      "oid": "fedffd502272f700da0ea09d3f3d69142b46e40f",
+      "ours": "task",
+      "theirs": "event"
+    },
+    {
+      "kind": "event_cancelled",
+      "oid": "5c82abc667b2f9d6aa01f9320d2d72ccf34f0b72",
+      "subject": "quarterly review",
+      "attached": 1
+    },
+    {
+      "kind": "removed_upstream",
+      "remote": "fake",
+      "oid": "fedffd502272f700da0ea09d3f3d69142b46e40f",
+      "subject": "from upstream"
+    },
+    {
+      "kind": "pull_failed",
+      "remote": "flaky",
+      "why": "talking to the helper: the helper closed its output"
+    }
+  ],
+  "unpushed": [
+    {
+      "remote": "fake",
+      "commits": 1
+    },
+    {
+      "remote": "flaky",
+      "commits": 7
+    }
+  ]
+}

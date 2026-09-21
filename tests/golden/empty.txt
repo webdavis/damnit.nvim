@@ -1,0 +1,5 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (clean)  flaky (clean)
+Help:    g?
+
+nothing staged, nothing changed

@@ -318,12 +318,26 @@ window's entire input.
 }
 ```
 
-A `<change>` is `{ "oid", "op": "create"|"update"|"delete", "before": <object>|null, "after":
-<object>|null }`. A `<notice>` carries a `kind` of `removed_upstream`, `event_cancelled`,
-`push_failed`, `pull_failed` or `kind_changed`, each with its own fields
-(`crates/dam-cli/src/commands/status.rs:167`).
+A `<change>` is a flat row: `{ "oid", "op": "create"|"update"|"delete", "fields": ["subject", ...]
+}` followed by the object's own columns, `kind`, `subject`, `path`, `labels`, and then `done`,
+`priority`, `due` for a task or `start`, `end` for an event. `before` and `after` hold the whole
+`<object>` on each side and are present **only under `--full`**, which this plugin never passes
+(`crates/dam-cli/src/commands/status/rows.rs`, and section 5 of **Needed from dam** below). The
+object columns are absent only where a change has neither side.
 
-An `<object>` is the wire object from `crates/dam-application/src/wire.rs`:
+A `<notice>` carries a `kind` of `removed_upstream`, `event_cancelled`, `push_failed`, `pull_failed`
+or `kind_changed`, each with its own fields (`crates/dam-cli/src/commands/status.rs:167`):
+`removed_upstream` has `remote`, `oid`, `subject`; `event_cancelled` has `oid`, `subject`,
+`attached`; `push_failed` has `remote`, `oid`, `why`; `pull_failed` has `remote`, `why`;
+`kind_changed` has `oid`, `ours`, `theirs`.
+
+`dam remote list --json` is `{ "remotes": [ { "name", "helper", "url", "path", "stale_seconds" } ]
+}`. The key is `name`; `remote` is what the `unpushed` rows above use for the same thing. An
+`unpushed` row is written for every configured remote, including one with `"commits": 0`, which the
+human form filters out.
+
+An `<object>`, which `conflicts` embeds on both sides and a change carries only under `--full`, is
+the wire object from `crates/dam-application/src/wire.rs`:
 
 ```json
 {
@@ -1796,7 +1810,11 @@ a read of dam's answer.
 **Delivered** by dam 0.2.0 (`webdavis/damnit` PR #4): a change document carries
 `"fields": ["subject", "due"]`, an update names what moved, a create names every field the new
 object carries beyond its defaults, and a delete names none. The same release makes `status --json`
-answer rows without their embedded objects unless `--full` is passed.
+answer rows without their embedded objects unless `--full` is passed, and writes the object's own
+columns flat on the row instead. Section 3's shape block above is the one to read for the row.
+
+The window draws the field summary for an update only, which is what `dam status`'s own human form
+does: its `new` and `removed` lines carry no parenthetical even though those rows name fields.
 
 ### 6. `--no-pull`
 

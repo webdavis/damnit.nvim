@@ -1,0 +1,7 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (clean)  flaky (clean)
+Help:    g?
+
+Conflicts (1)
+! f378432           shared shopping list (our edit) fake
+

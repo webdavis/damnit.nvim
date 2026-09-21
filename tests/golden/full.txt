@@ -1,0 +1,25 @@
+Store:   ~/.local/share/dam/dam.db
+Remotes: fake (1 unpushed)  flaky (7 unpushed)
+Help:    g?
+
+Conflicts (1)
+! f378432           shared shopping list (our edit) fake
+
+Working (2)
+- changed  badb490  buy soy milk                (subject, priority)     inbox/
+- removed  e648ce0  cancel gym membership
+
+Staged (1)
+- new      5cf398f  book dentist appointment
+
+Unpushed (2)
+> fake              1 unpushed
+> flaky             7 unpushed
+
+Notices (5)
+  fake: 4aa4fab push failed upstream rejected the write: rate limited
+  fedffd5 kind changed upstream
+  5c82abc cancelled upstream "quarterly review"
+  fake: fedffd5 removed upstream "from upstream"
+  flaky: pull failed talking to the helper: the helper closed its output
+
