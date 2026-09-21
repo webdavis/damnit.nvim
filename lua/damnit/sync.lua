@@ -57,10 +57,10 @@ end
 
 --- What to do about a credential dam could not resolve.
 ---
---- A credential command cannot prompt from here: vim.system closes standard
---- input, so an interactive vault CLI never sees a terminal. dam names all
---- three credential failures with the one kind and no rule, so the advice
---- covers the command and the source together.
+--- A credential command cannot prompt from here: the process this plugin spawns
+--- is given no terminal, so an interactive vault CLI never gets to ask. dam
+--- names all three credential failures with the one kind and no rule, so the
+--- advice covers the command and the source together.
 ---@param verb string
 ---@return string
 local function credential_advice(verb)
