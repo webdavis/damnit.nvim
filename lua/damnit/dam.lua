@@ -11,13 +11,16 @@ local M = {}
 local message = require("damnit.message")
 
 --- The dam versions this plugin speaks to, low inclusive and high exclusive.
-M.MIN_VERSION = "0.1.0"
-M.MAX_VERSION = "0.2.0"
+--- 0.2.0 is the release that answers a failure with an error document.
+M.MIN_VERSION = "0.2.0"
+M.MAX_VERSION = "0.3.0"
 
 M.MISSING = "dam was not found on PATH; install it with cargo install damnit"
 
---- Exit code to error kind. 0 is success and is handled before this table.
-local KINDS = { [1] = "error", [2] = "refused", [3] = "cancelled" }
+--- Exit code to error kind, for a failure that carried no document. 0 is
+--- success and is handled before this table. dam's own kind is used instead
+--- wherever it wrote one.
+local KINDS = { [1] = "error", [2] = "usage", [3] = "cancelled", [4] = "refused" }
 
 --- The version this session read, or nil when the banner was unreadable.
 ---@type string?
@@ -36,9 +39,11 @@ local waiting = {}
 local generation = 0
 
 ---@class damnit.Error
----@field kind "error"|"refused"|"cancelled"|"timeout"|"missing"|"unsupported"|"malformed"
+---@field kind "refused"|"store"|"helper"|"credential"|"parse"|"usage"|"cancelled"|"error"|"timeout"|"missing"|"unsupported"|"malformed"
 ---@field code integer the exit code, or -1 when nothing ran
----@field message string ready to show: dam's own line, or this plugin's sentence
+---@field message string ready to show: dam's own sentence, or this plugin's
+---@field rule string? the rule a refusal broke, as dam names it
+---@field oids string[]? the objects dam's message names, in the order it names them
 ---@field plugin boolean? true when this plugin composed the message
 
 --- The full argv for a call, `dam` and the global flags included.
@@ -60,14 +65,32 @@ function M.argv(args)
   return argv
 end
 
---- dam writes its errors as one plain line prefixed `dam: `, even under --json,
---- and a refusal's detail follows on further lines.
+--- Standard error that is not a document: clap's own usage text, or the plain
+--- line a human format writes.
 ---@param stderr string?
 ---@return string
 function M.message_of(stderr)
   local text = vim.trim(tostring(stderr or ""))
 
   return (text:gsub("^dam: ", ""))
+end
+
+--- The error document dam writes on standard error under --json, or nil when
+--- standard error holds something else.
+---@param stderr string?
+---@return table?
+local function document_of(stderr)
+  local text = vim.trim(tostring(stderr or ""))
+  if text == "" then
+    return nil
+  end
+
+  local ok, decoded = pcall(vim.json.decode, text, { luanil = { object = true } })
+  if not ok or type(decoded) ~= "table" or type(decoded.error) ~= "table" then
+    return nil
+  end
+
+  return decoded.error
 end
 
 ---@param text string
@@ -150,7 +173,30 @@ function M.interpret(out, label)
       }
   end
 
-  return nil, { kind = KINDS[out.code] or "error", code = out.code, message = M.message_of(out.stderr) }
+  local document = document_of(out.stderr)
+  if document then
+    return nil,
+      {
+        kind = type(document.kind) == "string" and document.kind or (KINDS[out.code] or "error"),
+        code = out.code,
+        rule = document.rule,
+        oids = document.oids,
+        message = tostring(document.message or ""),
+      }
+  end
+
+  local text = M.message_of(out.stderr)
+  if text == "" then
+    return nil,
+      {
+        kind = KINDS[out.code] or "error",
+        code = out.code,
+        plugin = true,
+        message = ("%s failed with exit %d and said nothing"):format(label or "a dam call", out.code),
+      }
+  end
+
+  return nil, { kind = KINDS[out.code] or "error", code = out.code, message = text }
 end
 
 --- Spawn one `dam`, answering on the main loop.

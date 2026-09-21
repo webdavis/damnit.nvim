@@ -72,12 +72,52 @@ return {
     assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
   end,
 
-  ["calls exit 2 a refusal and keeps every line of a multi-line one"] = function()
-    local stderr = "dam: 98d8780 cannot be completed:\n  child a9db854 is open"
-    local _, err = call({ exit = 2, stderr = stderr }, { "done", "98d8780", "--json" })
+  ["reads a refusal out of dam's error document, rule and oids included"] = function()
+    local document = vim.json.encode({
+      error = {
+        kind = "refused",
+        rule = "blocked",
+        message = "98d8780 cannot be completed: child a9db854 is open",
+        oids = { "98d878013fb0e026d37170e7ceed6707192ae99a", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77" },
+      },
+    })
+    local _, err = call({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
 
     assert(err.kind == "refused", err.kind)
-    assert(err.message == "98d8780 cannot be completed:\n  child a9db854 is open", vim.inspect(err.message))
+    assert(err.code == 4, tostring(err.code))
+    assert(err.rule == "blocked", tostring(err.rule))
+    assert(err.message == "98d8780 cannot be completed: child a9db854 is open", err.message)
+    assert(#err.oids == 2 and err.oids[2]:sub(1, 7) == "a9db854", vim.inspect(err.oids))
+    assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
+  end,
+
+  ["takes dam's own kind for a failure that is not a rule"] = function()
+    local document = vim.json.encode({
+      error = { kind = "credential", rule = vim.NIL, message = "no credential for todoist", oids = {} },
+    })
+    local _, err = call({ exit = 1, stderr = document }, { "push", "--json" })
+
+    assert(err.kind == "credential", err.kind)
+    assert(err.rule == nil, tostring(err.rule))
+    assert(err.message == "no credential for todoist", err.message)
+  end,
+
+  ["carries standard error that is not a document as the message it is"] = function()
+    local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
+    local _, err = call({ exit = 2, stderr = usage }, { "dpne", "--json" })
+
+    assert(err.kind == "usage", err.kind)
+    assert(err.code == 2, tostring(err.code))
+    assert(err.rule == nil, "clap wrote this, so there is no rule")
+    assert(err.message == usage, vim.inspect(err.message))
+  end,
+
+  ["says which call failed when dam failed and wrote nothing at all"] = function()
+    local _, err = call({ exit = 1 }, { "status", "--json" })
+
+    assert(err.kind == "error", err.kind)
+    assert(err.message == "a dam call failed with exit 1 and said nothing", err.message)
+    assert(err.plugin == true, "the plugin wrote this one")
   end,
 
   ["calls exit 3 cancelled"] = function()

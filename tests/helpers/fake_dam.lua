@@ -18,7 +18,7 @@ trap 'kill $sleeper 2>/dev/null; exit 3' TERM
 printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
 
 case "$1" in
-  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.1.0}"; exit 0 ;;
+  --version) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
 esac
 
 # The subcommand is the first argument that is not a flag and is not the value
@@ -91,7 +91,7 @@ function M.install(opts)
   vim.env.PATH = dir .. ":" .. vim.env.PATH
   vim.env.DAMNIT_TEST_LOG = fake.log
   vim.env.DAMNIT_TEST_FIXTURES = opts.fixtures or (TESTS_DIR .. "/fixtures/default")
-  vim.env.DAMNIT_TEST_VERSION = opts.version or "0.1.0"
+  vim.env.DAMNIT_TEST_VERSION = opts.version or "0.2.0"
   vim.env.DAMNIT_TEST_SLEEP = opts.sleep or ""
   vim.env.DAMNIT_TEST_STDERR = opts.stderr or ""
   vim.env.DAMNIT_TEST_EXIT = opts.exit and tostring(opts.exit) or ""

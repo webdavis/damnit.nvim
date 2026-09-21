@@ -34,8 +34,8 @@ local function first_call(version)
 end
 
 return {
-  ["accepts 0.1.0 and goes on to make the call"] = function()
-    local err, _, log = first_call("0.1.0")
+  ["accepts 0.2.0 and goes on to make the call"] = function()
+    local err, _, log = first_call("0.2.0")
 
     assert(err == nil, err and err.message)
     assert(log[1] == "--version", vim.inspect(log))
@@ -43,18 +43,18 @@ return {
   end,
 
   ["refuses a version above the range and never spawns the call"] = function()
-    local err, _, log = first_call("0.3.0")
+    local err, _, log = first_call("0.9.0")
 
     assert(err.kind == "unsupported", vim.inspect(err))
-    assert(err.message == "dam 0.3.0 is outside the supported range >=0.1.0 <0.2.0; update damnit.nvim", err.message)
+    assert(err.message == "dam 0.9.0 is outside the supported range >=0.2.0 <0.3.0; update damnit.nvim", err.message)
     assert(#log == 1 and log[1] == "--version", vim.inspect(log))
   end,
 
-  ["refuses 0.2.0, which is the first version outside the range"] = function()
-    assert(dam.supported("0.1.0"))
-    assert(dam.supported("0.1.9"))
-    assert(not dam.supported("0.2.0"))
-    assert(not dam.supported("0.0.9"))
+  ["refuses 0.3.0, which is the first version outside the range"] = function()
+    assert(dam.supported("0.2.0"))
+    assert(dam.supported("0.2.9"))
+    assert(not dam.supported("0.3.0"))
+    assert(not dam.supported("0.1.9"))
   end,
 
   ["warns once about a banner it cannot read, then makes the call anyway"] = function()
