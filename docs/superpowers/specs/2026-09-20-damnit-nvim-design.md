@@ -388,7 +388,8 @@ error at all.
 
 ```json
 {"error": {"kind": "refused", "rule": "blocked",
- "message": "98d8780 cannot be completed: child a9db854 is open",
+ "message": "98d8780 cannot be completed:\n  child a9db854 is open\nuse --force to complete it
+anyway, or --force --interactive to decide what happens to them",
  "oids": ["98d878013fb0e026d37170e7ceed6707192ae99a",
           "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}
 ```
@@ -396,6 +397,13 @@ error at all.
 `kind` is one of `refused`, `store`, `helper`, `credential`, `parse`, `usage` and `cancelled`.
 `rule` names the rule a refusal broke, one stable snake_case word per rule, and is null for every
 other kind. `oids` names the objects the message names, in the order it names them, in full.
+
+`message` is the sentence the human form prints after `dam: `, carried verbatim
+(`crates/dam-cli/src/error.rs:86` sends `self.to_string()`), so it is one line for most failures and
+several for a refusal that lists what stands in the way. A blocked completion is a header line, one
+indented line per blocker, and a closing line of advice aimed at a terminal
+(`crates/dam-application/src/errors.rs:113`). A plugin that shows it shows all of it, which is why
+the blockers are read from `oids` rather than from the sentence.
 
 The exit code says the same thing more coarsely, and the two agree:
 
@@ -1177,7 +1185,8 @@ Measured against the built binary:
 ```
 $ dam done 98d8780 --json
 {"error": {"kind": "refused", "rule": "blocked",
- "message": "98d8780 cannot be completed: child a9db854 is open",
+ "message": "98d8780 cannot be completed:\n  child a9db854 is open\nuse --force to complete it
+anyway, or --force --interactive to decide what happens to them",
  "oids": ["98d878013fb0e026d37170e7ceed6707192ae99a",
           "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}
 [exit 4]

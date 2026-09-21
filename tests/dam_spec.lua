@@ -73,11 +73,14 @@ return {
   end,
 
   ["reads a refusal out of dam's error document, rule and oids included"] = function()
+    -- dam writes a header, one indented line per blocker, then its advice.
+    local blocked = "98d8780 cannot be completed:\n  child a9db854 is open\n"
+      .. "use --force to complete it anyway, or --force --interactive to decide what happens to them"
     local document = vim.json.encode({
       error = {
         kind = "refused",
         rule = "blocked",
-        message = "98d8780 cannot be completed: child a9db854 is open",
+        message = blocked,
         oids = { "98d878013fb0e026d37170e7ceed6707192ae99a", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77" },
       },
     })
@@ -86,7 +89,7 @@ return {
     assert(err.kind == "refused", err.kind)
     assert(err.code == 4, tostring(err.code))
     assert(err.rule == "blocked", tostring(err.rule))
-    assert(err.message == "98d8780 cannot be completed: child a9db854 is open", err.message)
+    assert(err.message == blocked, vim.inspect(err.message))
     assert(#err.oids == 2 and err.oids[2]:sub(1, 7) == "a9db854", vim.inspect(err.oids))
     assert(err.plugin == nil, "dam wrote this message, so it takes no prefix")
   end,
