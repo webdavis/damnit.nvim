@@ -1,7 +1,7 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: todoist (clean)
+Remotes: fake (clean)  flaky (clean)
 Help:    g?
 
 Conflicts (1)
-! 7257572           file taxes here             todoist
+! f378432           shared shopping list (our edit) fake
 

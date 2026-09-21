@@ -90,11 +90,20 @@ local function row()
     bytes = bytes + #text
     display = display + vim.fn.strdisplaywidth(text)
 
-    if column and display < column then
-      local fill = (" "):rep(column - display)
+    if column then
+      local fill = ""
+
+      if display < column then
+        fill = (" "):rep(column - display)
+      elseif display > column then
+        -- One space where the segment already overran its column, so a long
+        -- subject pushes the next field along rather than running into it.
+        fill = " "
+      end
+
       parts[#parts + 1] = fill
       bytes = bytes + #fill
-      display = column
+      display = display + #fill
     end
   end
 
@@ -173,10 +182,9 @@ end
 ---@param entry table
 ---@return damnit.Line
 local function change_line(entry)
-  local object = entry.after or entry.before or {}
   local built = row()
 
-  built.add(M.icon(object.kind or "task"))
+  built.add(M.icon(entry.object_kind or "task"))
   built.add(" ", nil, M.COLUMNS.verb)
   built.add(entry.verb, OP_GROUPS[entry.op], M.COLUMNS.oid)
   built.add(entry.oid:sub(1, 7), "DamOid", M.COLUMNS.subject)

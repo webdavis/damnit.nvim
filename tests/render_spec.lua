@@ -121,7 +121,7 @@ return {
     assert(vim.tbl_contains(groups, "DamOpChanged"), vim.inspect(groups))
     assert(vim.tbl_contains(groups, "DamOid"), vim.inspect(groups))
     assert(vim.tbl_contains(groups, "DamPath"), vim.inspect(groups))
-    assert(change.oid == "78b8950b02735107aa608659dcf19f6f50adfeb1", tostring(change.oid))
+    assert(change.oid == "badb4903b653809e591c31118004e07de7c8183c", tostring(change.oid))
   end,
 
   ["records every line's kind, oid and section, with no hole for a line that has none"] = function()
@@ -161,11 +161,38 @@ return {
     end
 
     -- One heading plus its entries: conflicts 1+1, working 1+2, staged 1+1,
-    -- unpushed 1+1, notices 1+1.
+    -- unpushed 1+2, notices 1+5.
     assert(
-      vim.deep_equal(seen, { conflicts = 2, working = 3, staged = 2, unpushed = 2, notices = 2 }),
+      vim.deep_equal(seen, { conflicts = 2, working = 3, staged = 2, unpushed = 3, notices = 6 }),
       vim.inspect(seen)
     )
+  end,
+
+  ["puts a space after a segment too wide for its column"] = function()
+    local wide = {
+      unstaged = {
+        {
+          oid = "badb4903b653809e591c31118004e07de7c8183c",
+          op = "update",
+          fields = { "subject" },
+          kind = "task",
+          subject = ("s"):rep(60),
+          path = "inbox/",
+          labels = {},
+        },
+      },
+    }
+
+    local line = nil
+    for _, each in ipairs(lines_of(wide)) do
+      if each.kind == "change" then
+        line = each
+        break
+      end
+    end
+
+    assert(line.text:find("s %(subject%)"), line.text)
+    assert(line.text:find("%(subject%) inbox/"), line.text)
   end,
 
   ["links every group to a standard one and writes no colour"] = function()

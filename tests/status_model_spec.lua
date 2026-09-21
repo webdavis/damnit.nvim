@@ -64,13 +64,43 @@ return {
     assert(vim.deep_equal(kinds, { "notices" }), vim.inspect(kinds))
   end,
 
-  ["names an update's changed fields in dam's own order"] = function()
+  ["names an update's changed fields, as dam itself named them"] = function()
     local model = status_model.build(fixture("full/status.json"), nil)
     local change = section(model, "working").entries[1]
 
     assert(change.verb == "changed", change.verb)
-    assert(change.oid == "78b8950b02735107aa608659dcf19f6f50adfeb1", change.oid)
-    assert(vim.deep_equal(change.fields, { "subject", "labels", "due" }), vim.inspect(change.fields))
+    assert(change.oid == "badb4903b653809e591c31118004e07de7c8183c", change.oid)
+    assert(vim.deep_equal(change.fields, { "subject", "priority" }), vim.inspect(change.fields))
+  end,
+
+  ["reads the flat change row dam writes when --full is not passed"] = function()
+    local model = status_model.build(fixture("full/status.json"), nil)
+    local change = section(model, "working").entries[1]
+
+    assert(change.subject == "buy soy milk", change.subject)
+    assert(change.path == "inbox/", change.path)
+    assert(change.object_kind == "task", tostring(change.object_kind))
+    assert(change.after == nil, "dam embeds no object without --full")
+  end,
+
+  ["falls back to the embedded objects when dam wrote no flat row"] = function()
+    local nested = {
+      unstaged = {
+        {
+          oid = "78b8950b02735107aa608659dcf19f6f50adfeb1",
+          op = "update",
+          before = { kind = "task", subject = "oat milk", path = "inbox/", task = { priority = 1 } },
+          after = { kind = "task", subject = "buy oat milk", path = "inbox/", task = { priority = 2 } },
+        },
+      },
+    }
+
+    local change = section(status_model.build(nested, nil), "working").entries[1]
+
+    assert(change.subject == "buy oat milk", change.subject)
+    assert(change.path == "inbox/", change.path)
+    assert(change.object_kind == "task", tostring(change.object_kind))
+    assert(vim.deep_equal(change.fields, { "subject", "priority" }), vim.inspect(change.fields))
   end,
 
   ["leaves the field list empty on a create and on a delete"] = function()
@@ -100,16 +130,27 @@ return {
     assert(vim.deep_equal(moved({ event = { start = "09:00" } }, { event = { start = "10:00" } }), { "start" }))
   end,
 
-  ["carries a remote's unpushed count beside its name"] = function()
+  ["carries a remote's unpushed count beside the name dam lists it under"] = function()
     local model = status_model.build(fixture("full/status.json"), fixture("full/remote.json"))
+    local want = { { remote = "fake", commits = 1 }, { remote = "flaky", commits = 7 } }
 
-    assert(vim.deep_equal(model.remotes, { { remote = "todoist", commits = 1 } }), vim.inspect(model.remotes))
+    assert(vim.deep_equal(model.remotes, want), vim.inspect(model.remotes))
   end,
 
   ["builds a notice line out of the fields the notice actually carries"] = function()
     local model = status_model.build(fixture("full/status.json"), nil)
-    local notice = section(model, "notices").entries[1]
+    local lines = vim.tbl_map(function(each)
+      return each.text
+    end, section(model, "notices").entries)
 
-    assert(notice.text == "todoist: c1d2e3f removed upstream", notice.text)
+    local want = {
+      "fake: 4aa4fab push failed upstream rejected the write: rate limited",
+      "fedffd5 kind changed upstream",
+      '5c82abc cancelled upstream "quarterly review"',
+      'fake: fedffd5 removed upstream "from upstream"',
+      "flaky: pull failed talking to the helper: the helper closed its output",
+    }
+
+    assert(vim.deep_equal(lines, want), vim.inspect(lines))
   end,
 }

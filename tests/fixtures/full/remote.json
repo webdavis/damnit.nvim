@@ -1,1 +1,18 @@
-{"remotes": [{"remote": "todoist", "helper": "dam-remote-todoist", "url": "todoist::", "stale_seconds": 300}]}
+{
+  "remotes": [
+    {
+      "name": "fake",
+      "helper": "fake",
+      "url": "fake::",
+      "path": null,
+      "stale_seconds": null
+    },
+    {
+      "name": "flaky",
+      "helper": "flaky",
+      "url": "flaky::",
+      "path": "work/",
+      "stale_seconds": 1
+    }
+  ]
+}

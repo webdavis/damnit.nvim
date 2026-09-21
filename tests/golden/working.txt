@@ -1,8 +1,8 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: todoist (clean)
+Remotes: fake (clean)  flaky (clean)
 Help:    g?
 
 Working (2)
-- changed  78b8950  buy oat milk                (subject, labels, due)  inbox/
-- removed  a9db854  child                                               work/proj/
+- changed  badb490  buy soy milk                (subject, priority)     inbox/
+- removed  e648ce0  cancel gym membership
 

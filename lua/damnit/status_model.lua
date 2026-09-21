@@ -74,20 +74,39 @@ function M.changed_fields(before, after)
   return names
 end
 
+--- The fields an update moved. dam names them itself in every change row; the
+--- comparison stands in for a dam that did not.
+---@param change table
+---@return string[]
+local function fields_of(change)
+  if change.op ~= "update" then
+    return {}
+  end
+
+  if vim.islist(present(change.fields)) then
+    return change.fields
+  end
+
+  return M.changed_fields(change.before, change.after)
+end
+
+--- One change row. dam writes the object's own columns flat on the row, and
+--- embeds `before` and `after` only under `--full`, which this plugin does not
+--- pass, so the embedded objects stand in only for a dam that wrote no row.
 ---@param change table
 ---@return table entry
 local function change_entry(change)
   local object = present(change.after) or present(change.before) or {}
-  local fields = change.op == "update" and M.changed_fields(change.before, change.after) or {}
 
   return {
     kind = "change",
     oid = change.oid,
     op = change.op,
     verb = M.VERBS[change.op] or change.op,
-    subject = tostring(object.subject or ""),
-    path = tostring(object.path or ""),
-    fields = fields,
+    object_kind = present(change.kind) or present(object.kind),
+    subject = tostring(present(change.subject) or object.subject or ""),
+    path = tostring(present(change.path) or object.path or ""),
+    fields = fields_of(change),
     before = present(change.before),
     after = present(change.after),
   }
@@ -125,10 +144,13 @@ function M.notice_text(notice)
 
   parts[#parts + 1] = NOTICES[notice.kind] or tostring(notice.kind)
 
-  for _, extra in ipairs({ "why", "reason", "detail" }) do
-    if type(notice[extra]) == "string" then
-      parts[#parts + 1] = notice[extra]
-    end
+  -- Quoted the way dam quotes a subject in its own notice lines.
+  if type(notice.subject) == "string" and notice.subject ~= "" then
+    parts[#parts + 1] = ('"%s"'):format(notice.subject)
+  end
+
+  if type(notice.why) == "string" then
+    parts[#parts + 1] = notice.why
   end
 
   return table.concat(parts, " ")
@@ -196,9 +218,11 @@ function M.build(status, remotes)
     counts[entry.remote] = entry.commits
   end
 
+  -- dam lists a remote under `name`; `remote` is what its unpushed rows use.
   local listed = {}
   for _, entry in ipairs((remotes or {}).remotes or {}) do
-    listed[#listed + 1] = { remote = entry.remote, commits = counts[entry.remote] or 0 }
+    local name = present(entry.name) or entry.remote
+    listed[#listed + 1] = { remote = name, commits = counts[name] or 0 }
   end
 
   if #listed == 0 then

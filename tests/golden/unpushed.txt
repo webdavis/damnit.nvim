@@ -1,7 +1,8 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: todoist (1 unpushed)
+Remotes: fake (1 unpushed)  flaky (7 unpushed)
 Help:    g?
 
-Unpushed (1)
-> todoist           1 unpushed
+Unpushed (2)
+> fake              1 unpushed
+> flaky             7 unpushed
 

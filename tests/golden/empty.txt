@@ -1,5 +1,5 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: todoist (clean)
+Remotes: fake (clean)  flaky (clean)
 Help:    g?
 
 nothing staged, nothing changed

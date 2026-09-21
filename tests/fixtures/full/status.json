@@ -1,96 +1,125 @@
 {
   "staged": [
     {
-      "oid": "660a08d0a1f74c9a3c2e5d8b7f1049ab6c3d2e51",
+      "oid": "5cf398f699045d551091eccc347f6b70f41f9bcf",
       "op": "create",
-      "before": null,
-      "after": {
-        "oid": "660a08d0a1f74c9a3c2e5d8b7f1049ab6c3d2e51",
-        "kind": "task",
-        "subject": "write the spec",
-        "body": "",
-        "path": "work/",
-        "labels": [],
-        "depends": [],
-        "reminders": [],
-        "task": { "done": false, "priority": 2 }
-      }
+      "fields": [
+        "subject",
+        "due"
+      ],
+      "kind": "task",
+      "subject": "book dentist appointment",
+      "path": "",
+      "labels": [],
+      "done": false,
+      "priority": 4,
+      "due": "2026-10-15"
     }
   ],
   "unstaged": [
     {
-      "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
+      "oid": "badb4903b653809e591c31118004e07de7c8183c",
       "op": "update",
-      "before": {
-        "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
-        "kind": "task",
-        "subject": "oat milk",
-        "body": "",
-        "path": "inbox/",
-        "labels": ["home"],
-        "depends": [],
-        "reminders": [],
-        "task": { "done": false, "priority": 1 }
-      },
-      "after": {
-        "oid": "78b8950b02735107aa608659dcf19f6f50adfeb1",
-        "kind": "task",
-        "subject": "buy oat milk",
-        "body": "",
-        "path": "inbox/",
-        "labels": ["errand", "home"],
-        "depends": [],
-        "reminders": [],
-        "task": { "done": false, "priority": 1, "due": "2026-09-25" }
-      }
+      "fields": [
+        "subject",
+        "priority"
+      ],
+      "kind": "task",
+      "subject": "buy soy milk",
+      "path": "inbox/",
+      "labels": [
+        "errand"
+      ],
+      "done": false,
+      "priority": 3,
+      "due": "2026-09-25"
     },
     {
-      "oid": "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77",
+      "oid": "e648ce077ff286a30e5d984a2d93a24739e090ad",
       "op": "delete",
-      "before": {
-        "oid": "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77",
-        "kind": "task",
-        "subject": "child",
-        "body": "",
-        "path": "work/proj/",
-        "labels": [],
-        "depends": [],
-        "reminders": [],
-        "task": { "done": false, "priority": 4 }
-      },
-      "after": null
+      "fields": [],
+      "kind": "task",
+      "subject": "cancel gym membership",
+      "path": "",
+      "labels": [],
+      "done": false,
+      "priority": 4,
+      "due": null
     }
   ],
   "conflicts": [
     {
-      "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
-      "remote": "todoist",
+      "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
+      "remote": "fake",
       "ours": {
-        "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+        "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
         "kind": "task",
-        "subject": "file taxes here",
+        "subject": "shared shopping list (our edit)",
         "body": "",
-        "path": "home/finances/",
+        "path": "",
         "labels": [],
         "depends": [],
         "reminders": [],
-        "task": { "done": false, "priority": 1 }
+        "task": {
+          "done": false,
+          "priority": 2
+        }
       },
       "theirs": {
-        "oid": "7257572f1a0c4b3e9d8a6f2b5c1e7d0a3f4b6c8e",
+        "oid": "f3784324d2d2793b7daa6c532887b034bd365ddf",
         "kind": "task",
-        "subject": "file taxes there",
+        "subject": "shared shopping list (upstream edit)",
         "body": "",
-        "path": "home/finances/",
+        "path": "",
         "labels": [],
         "depends": [],
         "reminders": [],
-        "task": { "done": false, "priority": 1 }
+        "task": {
+          "done": false,
+          "priority": 2
+        }
       }
     }
   ],
   "notices": [
-    { "kind": "removed_upstream", "remote": "todoist", "oid": "c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e" }
+    {
+      "kind": "push_failed",
+      "remote": "fake",
+      "oid": "4aa4fabf5454eabdde38388404cc4a1d9f71a05c",
+      "why": "upstream rejected the write: rate limited"
+    },
+    {
+      "kind": "kind_changed",
+      "oid": "fedffd502272f700da0ea09d3f3d69142b46e40f",
+      "ours": "task",
+      "theirs": "event"
+    },
+    {
+      "kind": "event_cancelled",
+      "oid": "5c82abc667b2f9d6aa01f9320d2d72ccf34f0b72",
+      "subject": "quarterly review",
+      "attached": 1
+    },
+    {
+      "kind": "removed_upstream",
+      "remote": "fake",
+      "oid": "fedffd502272f700da0ea09d3f3d69142b46e40f",
+      "subject": "from upstream"
+    },
+    {
+      "kind": "pull_failed",
+      "remote": "flaky",
+      "why": "talking to the helper: the helper closed its output"
+    }
   ],
-  "unpushed": [{ "remote": "todoist", "commits": 1 }]
+  "unpushed": [
+    {
+      "remote": "fake",
+      "commits": 1
+    },
+    {
+      "remote": "flaky",
+      "commits": 7
+    }
+  ]
 }
