@@ -268,13 +268,15 @@ function M.on_tick(fn)
   table.insert(listeners, fn)
 end
 
---- Drop every lane. Specs call it between cases; nothing in the plugin does.
+--- Drop every lane and every tick listener. Specs call it between cases;
+--- nothing in the plugin does.
 function M.reset()
   for key, lane in pairs(lanes) do
     stop_timer(key, lane)
   end
 
   lanes = {}
+  listeners = {}
 end
 
 return M

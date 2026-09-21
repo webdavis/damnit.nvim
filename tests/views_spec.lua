@@ -7,6 +7,7 @@ local damnit = require("damnit")
 ---@param declared table<string, string>
 ---@param run fun(notifications: string[])
 local function with_views(declared, run)
+  views.reset()
   damnit.options.views = declared
 
   local notifications = {}
@@ -19,6 +20,7 @@ local function with_views(declared, run)
 
   vim.notify = real
   damnit.options.views = {}
+  views.reset()
 
   assert(ok, err)
 end

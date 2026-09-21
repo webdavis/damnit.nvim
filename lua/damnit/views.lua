@@ -64,6 +64,12 @@ function M.resolve(name)
   return { title = name, query = name, probing = true }
 end
 
+--- Forget every name dam refused. Specs call it between cases; nothing in the
+--- plugin does.
+function M.reset()
+  unknown = {}
+end
+
 --- The `ls` argv tail one spec becomes.
 ---@param spec damnit.ListSpec
 ---@return string[]
