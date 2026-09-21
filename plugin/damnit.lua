@@ -23,6 +23,11 @@ local SUBCOMMANDS = {
   cancel = function()
     require("damnit.queue").cancel()
   end,
+  capture = function(_, cmd)
+    local selection = cmd.range > 0 and { line1 = cmd.line1, line2 = cmd.line2 } or nil
+
+    require("damnit.capture").capture(selection)
+  end,
   done = function()
     require("damnit").completed()
   end,

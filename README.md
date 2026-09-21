@@ -478,23 +478,23 @@ line.
 require("damnit.capture").capture()
 ```
 
-A `TODO` you were never going to get back to becomes a task in your Inbox, and the description says
+A `TODO` you were never going to get back to becomes a task in `inbox/`, and the body says
 where it came from:
 
 ```text
-damnit.nvim lua/todoist/sidebar.lua:112
+damnit.nvim lua/damnit/sidebar.lua:112
 ```
 
 That is the repository name, then the path inside it, then the line. The name is the directory the
 `.git` lives in, so a linked worktree reports the worktree's own name and `gd` follows it back into
 that worktree. The path is relative to the
-repository root and never absolute: a description syncs to Todoist and onto your phone, so an
+repository root and never absolute: a body syncs to a remote and onto your phone, so an
 absolute path would put the layout of your machine there. A file in no repository goes out as its own
 name and its line, with no repository in front of it, for the same reason. A buffer that is not a
 file at all (a scratch buffer, a directory listing) has nowhere to point, so the task is made with no
-description.
+body.
 
-A visual selection becomes the content, by whole lines: the comment leader goes, a leading `TODO` or
+A visual selection becomes the subject, by whole lines: the comment leader goes, a leading `TODO` or
 `FIXME` goes with the `(author)` and punctuation after it, several lines join into one with their
 space collapsed, and only the first line loses its marker. So this:
 

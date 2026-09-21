@@ -40,6 +40,14 @@ return {
     assert(location.parse("Isaiah 40:31") == nil, "a bible verse parsed as a location")
   end,
 
+  ["a body carrying a note above the location still parses back to it"] = function()
+    local where = { repo = "damnit.nvim", path = "lua/damnit/list.lua", line = 42 }
+    local body = "ask about this first\n\n" .. location.describe(where)
+    local parsed = location.parse(body)
+
+    assert(parsed and vim.deep_equal(parsed, where), vim.inspect(parsed))
+  end,
+
   ["what a location is written as is what parses back"] = function()
     local written = location.describe({ repo = "damnit.nvim", path = "lua/damnit/list.lua", line = 42 })
     local parsed = location.parse(written)
