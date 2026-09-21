@@ -102,6 +102,27 @@ return {
     assert(err.message == "no credential for todoist", err.message)
   end,
 
+  ["refuses a rule and an oid list that are not the shapes dam sends"] = function()
+    local document = vim.json.encode({
+      error = { kind = "refused", rule = 7, message = "98d8780 cannot be completed:", oids = "a9db854" },
+    })
+    local _, err = dam.interpret({ code = 4, stdout = "", stderr = document }, "done 98d8780")
+
+    assert(err.kind == "refused", err.kind)
+    assert(err.rule == nil, vim.inspect(err.rule))
+    assert(err.oids == nil, vim.inspect(err.oids))
+  end,
+
+  ["drops an oid list holding something that is not an oid"] = function()
+    local document = vim.json.encode({
+      error = { kind = "refused", rule = "blocked", message = "98d8780 cannot be completed:", oids = { "a9db854", 7 } },
+    })
+    local _, err = dam.interpret({ code = 4, stdout = "", stderr = document }, "done 98d8780")
+
+    assert(err.rule == "blocked", vim.inspect(err.rule))
+    assert(err.oids == nil, "half an oid list names the wrong blockers")
+  end,
+
   ["carries standard error that is not a document as the message it is"] = function()
     local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
     local _, err = call({ exit = 2, stderr = usage }, { "dpne", "--json" })

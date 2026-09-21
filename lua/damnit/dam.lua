@@ -93,6 +93,23 @@ local function document_of(stderr)
   return decoded.error
 end
 
+--- The document's oid list, or nil when it is not a list of oids.
+---@param value any
+---@return string[]?
+local function oids_of(value)
+  if not vim.islist(value) then
+    return nil
+  end
+
+  for _, oid in ipairs(value) do
+    if type(oid) ~= "string" then
+      return nil
+    end
+  end
+
+  return value
+end
+
 ---@param text string
 ---@return integer[]? parts
 local function parts_of(text)
@@ -179,8 +196,8 @@ function M.interpret(out, label)
       {
         kind = type(document.kind) == "string" and document.kind or (KINDS[out.code] or "error"),
         code = out.code,
-        rule = document.rule,
-        oids = document.oids,
+        rule = type(document.rule) == "string" and document.rule or nil,
+        oids = oids_of(document.oids),
         message = tostring(document.message or ""),
       }
   end
