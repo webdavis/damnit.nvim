@@ -65,6 +65,20 @@ M.MAPS = {
       "show this help",
     },
   },
+  damlist = {
+    { "n", "<CR>", call("damnit.list", "open_under_cursor"), "open this object" },
+    { "n", "R", call("damnit.list", "refresh"), "re-read this view" },
+    { "n", "za", call("damnit.list", "toggle_fold"), "fold or unfold what is nested here" },
+    { "n", "gd", call("damnit.list", "jump_to_location_under_cursor"), "jump to the code this came from" },
+    {
+      "n",
+      "g?",
+      function()
+        require("damnit.actions").help("damlist")
+      end,
+      "show this help",
+    },
+  },
 }
 
 --- Put one filetype's mappings on a buffer.

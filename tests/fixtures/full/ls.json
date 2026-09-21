@@ -1,0 +1,64 @@
+{
+  "objects": [
+    {
+      "oid": "ed990d451d6471dfd80f8cf8165afac7050967a2",
+      "kind": "task",
+      "subject": "parent",
+      "body": "",
+      "path": "work/parent/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "8fbff8b04f0bdbd5eb5d9a1ee81c82ace01e65b1",
+      "kind": "task",
+      "subject": "child",
+      "body": "",
+      "path": "work/parent/child/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "c30414962aa4332b6e5dfc2e0360e2b328735efe",
+      "kind": "task",
+      "subject": "buy oat milk",
+      "body": "The kind in the grey carton.",
+      "path": "inbox/",
+      "labels": [
+        "errand",
+        "home"
+      ],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 1,
+        "due": "2026-09-25"
+      }
+    },
+    {
+      "oid": "cd7539d6412b3b32173bab2bc30f870af36121ae",
+      "kind": "task",
+      "subject": "hold the sidebar width",
+      "body": "damnit.nvim lua/damnit/list.lua:112",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    }
+  ]
+}

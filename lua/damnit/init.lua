@@ -60,4 +60,16 @@ function M.open_status()
   return require("damnit.window").open()
 end
 
+--- Open one view in the current window, by the name `setup` or dam's own config
+--- declares. No name means every open object.
+---@param name string?
+---@return integer? buf
+function M.open(name)
+  local spec = require("damnit.views").resolve(name)
+
+  if spec then
+    return require("damnit.list").open(spec)
+  end
+end
+
 return M
