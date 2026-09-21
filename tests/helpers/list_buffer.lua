@@ -53,6 +53,12 @@ function M.with(run, opts)
 
   local ok, err = pcall(run, buf, fake, notifications)
 
+  -- A call still in flight answers after the teardown and lands its message in
+  -- the next case, so the lane is drained before the fake is taken away.
+  pcall(fake_dam.settle, function()
+    return queue.running() == nil
+  end, 2000)
+
   vim.notify = real
   damnit.options.views = {}
   vim.cmd("silent! %bwipeout!")
