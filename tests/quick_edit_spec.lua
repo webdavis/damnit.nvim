@@ -98,6 +98,14 @@ return {
     assert(new[1] == ("mv %s work/parent/ --json"):format(MILK), vim.inspect(new))
   end,
 
+  ["m offers a container path that no object in the view sits at"] = function()
+    -- The fixture holds work/parent/ and work/parent/child/ and nothing at
+    -- work/, which `>` can still reach, so the picker has to offer it too.
+    local new = sent("m", "work/")
+
+    assert(new[1] == ("mv %s work/ --json"):format(MILK), vim.inspect(new))
+  end,
+
   ["a creates one at the path the cursor is in"] = function()
     local new = sent("a", "buy stamps")
 

@@ -193,17 +193,31 @@ function M.labels()
   })
 end
 
---- Every path the view on screen holds, plus the top level, each once.
+--- Every path the view on screen reaches, each once: the path of each object
+--- and every container above it, plus the top level.
+---
+--- A container nothing sits at is still a destination, because `>` on a row
+--- whose parent the view does not draw moves into exactly such a path.
 ---@return string[]
 function M.paths_in_view()
-  local paths, seen = { ROOT }, { [ROOT] = true }
+  local paths, seen = {}, {}
+
+  ---@param path string
+  local function offer(path)
+    if not seen[path] then
+      seen[path] = true
+      paths[#paths + 1] = path
+    end
+  end
+
+  offer(ROOT)
 
   for _, object in ipairs(require("damnit.list").objects_in_view()) do
     local path = text(object.path)
 
-    if not seen[path] then
-      seen[path] = true
-      paths[#paths + 1] = path
+    while path ~= ROOT do
+      offer(path)
+      path = tree.parent_path(path)
     end
   end
 
