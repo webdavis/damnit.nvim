@@ -61,7 +61,7 @@ jobs:
           fi
       - name: No em-dash
         run: |
-          if grep -rn '\xe2\x80\x94' lua tests docs README.md; then
+          if grep -rn $'\xe2\x80\x94' lua tests docs README.md; then
             echo "an em-dash belongs nowhere here: use a comma, a period or parentheses" >&2
             exit 1
           fi

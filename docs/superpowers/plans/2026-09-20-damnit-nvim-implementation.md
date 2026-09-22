@@ -8261,9 +8261,13 @@ diff against, so `git diff main..HEAD` errors rather than checking anything. The
 keeps `LICENSE`, whose copyright line is deliberate, out of the host-data pattern. / The two gates
 fail for the wrong reason on every pull request.
 
-Ruling: the commit-message half of the em-dash gate stays a local gate. / The same fetch-depth
-reason: there is no range to read commit messages over. / An em-dash reaches a commit message with
-nothing to catch it.
+Ruling: the commit-message half of the em-dash gate stays a local gate, run as
+`git log main..HEAD --format='%B' | grep $'\xe2\x80\x94'`. / The same fetch-depth reason: there is
+no range to read commit messages over. The `$'...'` quoting is load-bearing in both halves: bash
+expands it to the three UTF-8 bytes before grep is started, whereas `'\xe2\x80\x94'` reaches grep
+as a pattern POSIX has no escape for, which GNU grep reads as the literal text `xe2x80x94` and BSD
+grep matches not at all. / An em-dash reaches a commit message with nothing to catch it, and a gate
+written the other way reports green on the violation it exists to catch.
 
 Ruling: the generated status carries the flat dam 0.2.0 change row with `fields`, not the plan's
 `before` and `after` pair. / That is the shape `dam status --json` writes, measured; `change_entry`
