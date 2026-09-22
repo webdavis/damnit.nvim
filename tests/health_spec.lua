@@ -65,8 +65,14 @@ return {
     -- out which is on PATH first.
     assert(said(lines, "ok", fake.dir .. "/dam"), vim.inspect(lines))
     assert(said(lines, "ok", "4 objects"), "the object count comes off the same ls")
-    assert(said(lines, "ok", "fake"), "one line per configured remote")
-    assert(said(lines, "ok", "flaky"), "one line per configured remote")
+    assert(said(lines, "ok", "the remote fake speaks through the fake helper at fake::"), vim.inspect(lines))
+
+    -- A remote with stale set makes a read pull before it answers, which is
+    -- the one configuration the poller's --no-pull is there for, so the report
+    -- says which remotes carry it.
+    assert(said(lines, "ok", "the remote flaky speaks through the flaky helper at flaky::"), vim.inspect(lines))
+    assert(said(lines, "ok", "narrowed to work/"), vim.inspect(lines))
+    assert(said(lines, "ok", "stale after 1s, so a read may pull it first"), vim.inspect(lines))
     assert(said(lines, "ok", "today"), "dam's own saved filters are named")
 
     for _, line in ipairs(lines) do

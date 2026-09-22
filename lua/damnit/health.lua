@@ -135,7 +135,25 @@ local function report_remotes()
   end
 
   for _, remote in ipairs(remotes) do
-    vim.health.ok(("the remote %s speaks through the %s helper"):format(tostring(remote.name), tostring(remote.helper)))
+    local parts = {
+      ("the remote %s speaks through the %s helper at %s"):format(
+        tostring(remote.name),
+        tostring(remote.helper),
+        tostring(remote.url)
+      ),
+    }
+
+    if type(remote.path) == "string" then
+      parts[#parts + 1] = ("narrowed to %s"):format(remote.path)
+    end
+
+    -- A remote with `stale` set is pulled by dam before a read answers, which
+    -- is why the poller passes --no-pull.
+    if tonumber(remote.stale_seconds) then
+      parts[#parts + 1] = ("stale after %ds, so a read may pull it first"):format(remote.stale_seconds)
+    end
+
+    vim.health.ok(table.concat(parts, ", "))
   end
 end
 
