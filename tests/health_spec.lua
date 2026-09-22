@@ -95,6 +95,45 @@ return {
     assert(#lines == 2, "nothing is asked of a dam that is not there")
   end,
 
+  ["names DAM_STORE and DAM_CONFIG when no option sets either"] = function()
+    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
+    vim.env.DAM_STORE = "/from/the/environment.db"
+    vim.env.DAM_CONFIG = "/from/the/environment.toml"
+
+    local lines = report(health.check)
+
+    vim.env.DAM_STORE = saved.store
+    vim.env.DAM_CONFIG = saved.config
+    fake_dam.remove(fake)
+
+    assert(said(lines, "ok", "the store is /from/the/environment.db, from DAM_STORE"), vim.inspect(lines))
+    assert(said(lines, "ok", "the config is /from/the/environment.toml, from DAM_CONFIG"), vim.inspect(lines))
+  end,
+
+  ["prefers the setup option over the environment, the way dam itself does"] = function()
+    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
+    vim.env.DAM_STORE = "/from/the/environment.db"
+    vim.env.DAM_CONFIG = "/from/the/environment.toml"
+    require("damnit").setup({ store = "/from/setup.db", config = "/from/setup.toml" })
+
+    local lines = report(health.check)
+
+    require("damnit").options.store = nil
+    require("damnit").options.config = nil
+    vim.env.DAM_STORE = saved.store
+    vim.env.DAM_CONFIG = saved.config
+    fake_dam.remove(fake)
+
+    -- `dam.argv` passes --store and --config when the options name them, and
+    -- clap's flag beats its own env fallback, so the report has to agree.
+    assert(said(lines, "ok", "the store is /from/setup.db, from setup"), vim.inspect(lines))
+    assert(said(lines, "ok", "the config is /from/setup.toml, from setup"), vim.inspect(lines))
+    assert(not said(lines, "ok", "from DAM_STORE"), vim.inspect(lines))
+    assert(not said(lines, "ok", "from DAM_CONFIG"), vim.inspect(lines))
+  end,
+
   ["refuses a dam outside the supported range and says which one it found"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full", version = "0.1.0" })
     local lines = report(health.check)
