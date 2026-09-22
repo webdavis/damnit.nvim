@@ -76,7 +76,7 @@ Created under `lua/damnit/`:
 | `answer.lua` | One finished process into a result or an error: exit code, signal, document. Pure. |
 | `queue.lua` | The per-store queue, the elapsed timer, cancellation. |
 | `status_model.lua` | One status document into the window's model. Pure. |
-| `render.lua` | A model into lines and extmark specs. `render.lines` is pure. |
+| `render.lua` | A model into lines and extmark specs, apart from the display width it measures. |
 | `window.lua` | Creating, finding and focusing the status window and its buffer. |
 | `keys.lua` | Every mapping in every buffer this plugin owns, one table per filetype. |
 | `actions.lua` | What each key does: read the cursor, queue the call, handle the result. |
@@ -2611,9 +2611,10 @@ SKIP_AI_COMMIT=1 git commit -m "feat: model a dam status document for the stagin
 
 ### Task 8: The renderer
 
-A model into lines and extmark specs. `render.lines` is a pure function of a model and a small state
-table, which is what a golden test compares. Highlight groups link to standard groups, so a colourscheme
-styles the window with no integration on its side.
+A model into lines and extmark specs. `render.lines` is a function of a model and a small state
+table, which is what a golden test compares, apart from the display width it measures through
+`vim.fn.strdisplaywidth`, so it is outside the six-module pure set the CI gate holds. Highlight
+groups link to standard groups, so a colourscheme styles the window with no integration on its side.
 
 **Files:**
 
