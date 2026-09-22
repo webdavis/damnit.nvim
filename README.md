@@ -268,9 +268,10 @@ vim.o.statusline = "%{%v:lua.require('damnit').status()%}"
 ```
 
 It draws nothing until the first read lands and nothing again whenever nothing is due, which is the
-right answer for no news. Otherwise it is `2 due, 1 overdue`. While a `dam` call is running it is
-that instead, with its elapsed time: `dam: push todoist 3.2s`. A read that failed reads `dam !`,
-because a count left standing after the store stopped answering is worse than no count.
+right answer for no news. Otherwise it is `2 due, 1 overdue`. While a foreground `dam` call is running
+it is that instead, with its elapsed time: `dam: push todoist 3.2s`. A background read leaves the count
+in place. A read that failed reads `dam !`, because a count left standing after the store stopped
+answering is worse than no count.
 
 Asking for the string is what starts the reader. It runs `dam ls '!done & (due:today | overdue)'
 --no-pull` every `refresh_interval` seconds, skips a turn while another call holds the store, and

@@ -1344,8 +1344,9 @@ never stops.
 - Produces:
   - `queue.key() -> string`, the store key: `opts.store`, else `DAM_STORE`, else `"default"`.
   - `queue.submit(entry) -> boolean`, with
-    `entry = { args, label, verb?, network?, on_done? }`.
-  - `queue.running(key?) -> { label, elapsed, pending }?`
+    `entry = { args, label, verb?, network?, background?, on_done? }`.
+  - `queue.running(key?) -> { label, elapsed, pending, background? }?`
+  - `queue.foreground(key?) -> { label, elapsed, pending, background? }?`, hiding background work.
   - `queue.cancel(key?) -> boolean`
   - `queue.on_tick(fn)`, called with the store key every `queue.TICK_MS` while anything runs.
   - `queue.reset()`, for specs only.
@@ -3130,7 +3131,7 @@ lands the key table every later key hangs off, the folds, `R`, `q`, `g?`, the fi
 
 **Interfaces:**
 
-- Consumes: `queue.submit`, `queue.running`, `queue.cancel`, `queue.on_tick`, `render.lines`,
+- Consumes: `queue.submit`, `queue.foreground`, `queue.cancel`, `queue.on_tick`, `render.lines`,
   `render.draw`, `status_model.build`.
 - Produces:
   - `window.open() -> integer buf`, `window.refresh(key?)`, `window.tick(key)`,
@@ -7939,12 +7940,12 @@ buys nothing the assertion needs.
 
 Ruling: `poll.refresh` skips its turn while another call holds the lane. / A poll queued behind a
 push answers about a store that push is still changing and arrives after the count it reports has
-gone stale, and the running operation already owns the statusline slot. / Every minute of a long
+gone stale, and the foreground operation already owns the statusline slot. / Every minute of a long
 push queues another `ls` behind it.
 
 
-One poller behind both, fed by `dam ls`. Two additions: a running operation takes the statusline slot,
-and `dam !` replaces a stale count on failure.
+One poller behind both, fed by `dam ls`. Two additions: a foreground operation takes the statusline
+slot, and `dam !` replaces a stale count on failure.
 
 **Files:**
 
