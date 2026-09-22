@@ -224,6 +224,41 @@ return {
     assert(#said == 0, vim.inspect(said))
   end,
 
+  ["announces a task again when its time moves, because the key carries the stamp"] = function()
+    require("damnit").options.reminders = true
+    poll.stop()
+
+    local said = {}
+    local real = vim.notify
+    vim.notify = function(text)
+      table.insert(said, text)
+    end
+
+    local at_nine = object("cccc3333", "2000-01-01T09:00:00")
+    at_nine.subject = "stand up"
+    local at_eleven = object("cccc3333", "2000-01-01T11:00:00")
+    at_eleven.subject = "stand up"
+
+    poll.apply({ at_nine }, nil)
+    local after_seed = #said
+
+    poll.apply({ at_eleven }, nil)
+    local after_move = #said
+
+    poll.apply({ at_eleven }, nil)
+
+    vim.notify = real
+    require("damnit").options.reminders = false
+    poll.stop()
+
+    -- Keyed by the instant and not by the object, which is what makes a
+    -- recurring task's next occurrence and a task moved to a new time both
+    -- worth announcing again.
+    assert(after_seed == 0, vim.inspect(said))
+    assert(after_move == 1, vim.inspect(said))
+    assert(#said == 1, "the same instant is announced once")
+  end,
+
   ["announces a whole-day task never, because it has no moment to come due at"] = function()
     require("damnit").options.reminders = true
     poll.stop()
