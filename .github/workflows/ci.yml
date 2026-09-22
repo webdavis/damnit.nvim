@@ -67,7 +67,7 @@ jobs:
           fi
       - name: No host data
         run: |
-          if grep -rnE '/Users/|/home/[a-z]|dresden|stephen|webdavis\.io' lua tests docs README.md; then
+          if grep -rniE '/users/|/home/[a-z]|dresden|stephen|webdavis\.io' lua tests docs README.md; then
             echo "a public repository carries no home path, machine name or personal address" >&2
             exit 1
           fi
