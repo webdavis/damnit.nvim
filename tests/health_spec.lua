@@ -59,6 +59,11 @@ return {
 
     assert(said(lines, "ok", "dam 0.2.0"), vim.inspect(lines))
     assert(said(lines, "ok", ">=0.2.0 <0.3.0"), vim.inspect(lines))
+
+    -- Which dam answered, not just that one did: a machine can carry a
+    -- cargo-installed dam and a Homebrew one, and the report is where you find
+    -- out which is on PATH first.
+    assert(said(lines, "ok", fake.dir .. "/dam"), vim.inspect(lines))
     assert(said(lines, "ok", "4 objects"), "the object count comes off the same ls")
     assert(said(lines, "ok", "fake"), "one line per configured remote")
     assert(said(lines, "ok", "flaky"), "one line per configured remote")

@@ -8089,11 +8089,15 @@ nothing about them through any `--json` surface, so the check has no data to rea
 field the plan invents does not exist. / A reader is not warned that a remote's credential needs a
 terminal, which is a thing dam documents from its own side.
 
-Ruling: the `PATH` check is the handshake's own answer, not a second `vim.fn.executable` probe. /
-`dam.spawn` wraps `vim.system` in `pcall`, so a missing binary throws at once and arrives as an
-ordinary answer with `missing` set, carrying `answer.MISSING`, which is the same install line the
-probe would print. Proved by mutation: deleting the probe left all eight cases green. / Nothing,
-the sentence is identical either way.
+Ruling: the `PATH` check is the handshake's own answer, not a second `vim.fn.executable` probe, and
+the version line carries the resolved path. / `dam.spawn` wraps its spawn in `pcall`, so a missing
+binary throws at once and arrives as an ordinary answer with `missing` set, carrying
+`answer.MISSING`, which is the same install line the probe would print; proved by mutation, deleting
+the probe left all eight cases green. That covers the absence half only, so the spec's success half,
+naming which `dam` answered, is reported by `vim.fn.exepath` on the version line instead. / On the
+absence path nothing, the sentence is identical either way; without the path on the success line, a
+machine carrying a cargo-installed dam and a Homebrew one cannot be told which one every call
+reaches.
 
 Ruling: the version assertions read `dam 0.2.0` and `>=0.2.0 <0.3.0`. / The plan's `dam 0.1.0` and
 `>=0.1.0 <0.2.0` contradict the Global Constraint that the supported range is `>=0.2.0 <0.3.0`, and

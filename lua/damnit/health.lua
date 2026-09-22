@@ -83,7 +83,9 @@ local function report_version_and_store()
   local range = ("the supported range is >=%s <%s"):format(dam.MIN_VERSION, dam.MAX_VERSION)
 
   if dam.version then
-    vim.health.ok(("dam %s, and %s"):format(dam.version, range))
+    -- Which dam answered. `dam.argv` always spells the binary `dam`, so the
+    -- first one on PATH is the one every call reaches.
+    vim.health.ok(("dam %s at %s, and %s"):format(dam.version, vim.fn.exepath("dam"), range))
   else
     vim.health.warn(("dam --version printed something that is not a version, and %s"):format(range))
   end
