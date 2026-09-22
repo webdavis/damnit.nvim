@@ -315,7 +315,7 @@ Pass these to `setup`, or as `opts` in a lazy.nvim spec.
 | `sidebar.side` | `"left"` | The edge the sidebar sits on, `left` or `right`. |
 | `sidebar.width` | `40` | Columns the sidebar is held at. |
 | `sidebar.view` | `"today"` | The view the sidebar opens. |
-| `refresh_interval` | `60` | Seconds between the background reads behind `status()`. |
+| `refresh_interval` | `60` | Seconds between the background reads behind `status()`. Floor of five. |
 | `reminders` | `false` | Whether a task with a time raises a notification when it comes due. |
 | `store` | `nil` | Passed as `--store`. `nil` leaves dam its own resolution. |
 | `config` | `nil` | Passed as `--config`. `nil` leaves dam its own resolution. |

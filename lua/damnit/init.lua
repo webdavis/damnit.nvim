@@ -10,7 +10,7 @@ local M = {}
 ---@field views table<string, string> a view name to the dam query it runs
 ---@field picker "auto"|"fzf-lua"|"select" which front end the task search uses
 ---@field sidebar damnit.SidebarOptions how `toggle` puts a view beside your work
----@field refresh_interval integer seconds between the background reads behind `status()`
+---@field refresh_interval integer seconds between the background reads behind `status()`, floored at 5
 ---@field reminders boolean whether a task with a time raises a notification when it comes due
 ---@field store string? the store to pass as `--store`, or nil for dam's own resolution
 ---@field config string? the config to pass as `--config`, or nil for dam's own resolution
