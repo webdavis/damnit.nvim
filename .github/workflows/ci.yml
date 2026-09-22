@@ -33,6 +33,44 @@ jobs:
         run: stylua --check .
       - name: luacheck
         run: luacheck .
+      - name: Only the dam boundary spawns a process
+        run: |
+          if grep -rn 'vim\.system' lua --include='*.lua' | grep -v '^lua/damnit/dam\.lua:'; then
+            echo "vim.system belongs in lua/damnit/dam.lua and nowhere else" >&2
+            exit 1
+          fi
+      - name: Nothing waits on a dam call
+        run: |
+          if grep -rn ':wait(' lua --include='*.lua' | grep -v '^lua/damnit/health\.lua:'; then
+            echo ":wait( belongs in lua/damnit/health.lua and in tests, and nowhere else" >&2
+            exit 1
+          fi
+      - name: The pure modules call no Neovim API
+        run: |
+          pure=(
+            lua/damnit/status_model.lua
+            lua/damnit/task_format.lua
+            lua/damnit/list_format.lua
+            lua/damnit/tree.lua
+            lua/damnit/location.lua
+            lua/damnit/answer.lua
+          )
+          if grep -nHE 'vim\.(api|fn|system|notify|schedule)' "${pure[@]}"; then
+            echo "these six are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
+            exit 1
+          fi
+      - name: No em-dash
+        run: |
+          if grep -rn $'\xe2\x80\x94' lua tests docs README.md; then
+            echo "an em-dash belongs nowhere here: use a comma, a period or parentheses" >&2
+            exit 1
+          fi
+      - name: No host data
+        run: |
+          if grep -rniE '/users/|/home/[a-z]|dresden|stephen|webdavis\.io' lua tests docs README.md; then
+            echo "a public repository carries no home path, machine name or personal address" >&2
+            exit 1
+          fi
   test:
     runs-on: ubuntu-latest
     steps:

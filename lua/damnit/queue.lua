@@ -20,6 +20,7 @@ M.GRACE_MS = 2000
 ---@field label string what the header calls it, such as `push todoist`
 ---@field verb string? the word a refusal uses, such as `push`
 ---@field network boolean? whether this one reaches a remote
+---@field background boolean? whether the plugin started it on its own behalf
 ---@field on_done fun(data: table?, err: damnit.Error?)?
 ---@field started_at integer? vim.uv.hrtime when it began
 ---@field handle table?
@@ -191,7 +192,7 @@ end
 
 --- What is running in one store's lane, and how long it has been.
 ---@param key string?
----@return { label: string, elapsed: number, pending: integer }?
+---@return { label: string, elapsed: number, pending: integer, background: boolean? }?
 function M.running(key)
   local lane = lanes[key or M.key()]
   if not lane or not lane.running then
@@ -202,7 +203,26 @@ function M.running(key)
     label = lane.running.label,
     elapsed = (vim.uv.hrtime() - lane.running.started_at) / 1e9,
     pending = #lane.pending,
+    background = lane.running.background,
   }
+end
+
+--- What is running that somebody asked for, which is what a header and a
+--- statusline draw.
+---
+--- A read the plugin started on its own behalf holds the lane like any other
+--- entry, and `running` reports it, because that is what the lane is doing. It
+--- is not what a person is waiting on, so it is not what they are shown.
+---@param key string?
+---@return { label: string, elapsed: number, pending: integer, background: boolean? }?
+function M.foreground(key)
+  local running = M.running(key)
+
+  if running and running.background then
+    return nil
+  end
+
+  return running
 end
 
 ---@param entry damnit.Entry

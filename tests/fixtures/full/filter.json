@@ -1,0 +1,12 @@
+{
+  "filters": [
+    {
+      "name": "inbox",
+      "query": "path:inbox"
+    },
+    {
+      "name": "today",
+      "query": "due:today | overdue"
+    }
+  ]
+}

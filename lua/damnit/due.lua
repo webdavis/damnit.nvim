@@ -1,13 +1,9 @@
 -- When a task is due, read against a clock that is handed in.
 --
--- Todoist's `due` object has three shapes and this is the one place that knows
--- them. Its fields are `date`, `timezone`, `string`, `lang` and `is_recurring`,
--- and the shapes are a full-day date (`date` is `YYYY-MM-DD`, `timezone` null),
--- a floating datetime (`date` is `YYYY-MM-DDTHH:MM:SS`, already in the user's
--- own timezone, `timezone` null) and a datetime with a fixed zone (`date` is
--- `YYYY-MM-DDTHH:MM:SSZ` stored in UTC, `timezone` naming the zone it was set
--- in). `date` is the field read here: `string` is prose for a human and
--- `timezone` only repeats what the trailing `Z` already says.
+-- dam writes `due` as text and this is the one place that knows its two shapes:
+-- a whole day (`YYYY-MM-DD`) and an instant (`YYYY-MM-DDTHH:MM:SS` followed by
+-- its own UTC offset and, for a zoned one, the zone in brackets). The offset is
+-- the field read here; the zone name only repeats what the offset already says.
 --
 -- Everything is compared as local wall-clock text, so the clock is two values:
 -- the stamp local time reads now, and how far local time is ahead of UTC. A
@@ -106,40 +102,58 @@ local function shifted(year, month, day, hour, minute, second, seconds)
   )
 end
 
---- The local wall-clock stamp a due object names, and whether it carries a time
---- of day.
+--- How far ahead of UTC a due's own offset is, or nil when it carries none.
 ---
---- A JSON null decodes to `vim.NIL`, which is truthy, so a task with no due date
---- has to be recognised by the type of its `due` rather than by falling back
---- with `or`. That is the common case: most tasks have no due date at all.
----@param task table
+--- A due with no offset is a wall-clock time that already reads in the user's
+--- own timezone, so it is never shifted.
+---@param suffix string whatever followed the seconds
+---@return integer? seconds
+local function offset_of(suffix)
+  -- Fractional seconds sit between the seconds and the offset.
+  suffix = suffix:gsub("^%.%d+", "")
+
+  if suffix:match("^[Zz]") then
+    return 0
+  end
+
+  local sign, hours, minutes = suffix:match("^([%+%-])(%d%d):(%d%d)")
+  if not sign then
+    return nil
+  end
+
+  local seconds = tonumber(hours) * 3600 + tonumber(minutes) * 60
+
+  return sign == "-" and -seconds or seconds
+end
+
+--- The local wall-clock stamp a due names, and whether it carries a time of
+--- day.
+---
+--- A JSON null decodes to `vim.NIL`, which is truthy, so a task with no due
+--- date has to be recognised by the type of its `due` rather than by falling
+--- back with `or`. That is the common case: most tasks have no due date at all.
+---@param task table one object's `task` sub-table
 ---@param clock { stamp: string, utc_offset: integer }
----@return string? stamp `YYYY-MM-DD` for a full-day date, `YYYY-MM-DDTHH:MM:SS` for a time
+---@return string? stamp `YYYY-MM-DD` for a whole day, `YYYY-MM-DDTHH:MM:SS` for a time
 ---@return boolean timed
 function M.stamp_of(task, clock)
-  local due = task.due
-  if type(due) ~= "table" then
+  local value = task.due
+  if type(value) ~= "string" then
     return nil, false
   end
 
-  local date = due.date
-  if type(date) ~= "string" then
-    return nil, false
-  end
-
-  local day = date:match("^(%d%d%d%d%-%d%d%-%d%d)$")
+  local day = value:match("^(%d%d%d%d%-%d%d%-%d%d)$")
   if day then
     return day, false
   end
 
-  local year, month, monthday, hour, minute, second = date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)")
+  local year, month, monthday, hour, minute, second, suffix =
+    value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)(.*)$")
   if not year then
     return nil, false
   end
 
-  -- A trailing Z is the fixed-zone shape, stored in UTC; anything else is
-  -- floating and already reads in the user's own timezone.
-  local offset = date:match("Z$") and clock.utc_offset or 0
+  local offset = offset_of(suffix)
 
   return shifted(
     tonumber(year),
@@ -148,7 +162,7 @@ function M.stamp_of(task, clock)
     tonumber(hour),
     tonumber(minute),
     tonumber(second),
-    offset
+    offset and clock.utc_offset - offset or 0
   ),
     true
 end
@@ -158,7 +172,7 @@ end
 --- `overdue` is the moment its time has passed, which for a task due today at
 --- 09:00 is any time from 09:00 on. A full-day task carries no time, so it is
 --- `due` for the whole of its day and `overdue` only once the day is over.
----@param task table
+---@param task table one object's `task` sub-table
 ---@param clock { stamp: string, utc_offset: integer }
 ---@return "none"|"overdue"|"due"|"later" state
 ---@return boolean timed
