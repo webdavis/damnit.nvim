@@ -5,29 +5,29 @@
 -- against a shared runner reddens main on code nobody touched, so a phase over
 -- its budget says so and leaves the verdict to whoever reads the run.
 --
--- Every budget below is set from a median of eleven measured on a machine at a
--- load average of 96, with enough headroom that load alone cannot cross it.
--- The document is sized so the whole case stays under a second, which is what
--- every test in this suite is held to.
+-- Every budget below is set from a median measured on a machine at a load
+-- average of 96, with enough headroom that load alone cannot cross it. The
+-- sample count and the document are both sized so the whole case stays well
+-- under a second, which is what every test in this suite is held to.
 
 local status_model = require("damnit.status_model")
 local render = require("damnit.render")
 
---- Time `run` eleven times and warn when the median is over `target_ms`.
+--- Time `run` five times and warn when the median is over `target_ms`.
 ---@param name string
 ---@param target_ms number
 ---@param run fun()
 local function phase(name, target_ms, run)
   local samples = {}
 
-  for _ = 1, 11 do
+  for _ = 1, 5 do
     local began = vim.uv.hrtime()
     run()
     samples[#samples + 1] = (vim.uv.hrtime() - began) / 1e6
   end
 
   table.sort(samples)
-  local median = samples[6]
+  local median = samples[3]
 
   if median > target_ms then
     io.write(("WARN %s took %.1fms, over its %.0fms target\n"):format(name, median, target_ms))

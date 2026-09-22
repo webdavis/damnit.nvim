@@ -8278,15 +8278,18 @@ Ruling: the generated status carries the flat dam 0.2.0 change row with `fields`
 reads the flat fields first and falls back to the pair, so the plan's shape would have measured the
 fallback. / The measurement covers a path dam no longer writes.
 
-Ruling: 300 objects and budgets of 1, 60, 70 and 0.05 ms, not 2,000 objects and 20, 30, 100 and
-0.05. / Measured on a machine at a load average of 96: modelling 0.054 to 0.072 ms, rendering 27.3
-to 34.7 ms, a re-render 29.6 to 36.3 ms, `status()` 0.001 ms, and ten runs each finishing in 0.64 to
-0.96 s with zero warnings. At 2,000 objects the same case costs 4.3 s, which the Global Constraint
-that every test passes in under a second forbids, and rendering alone measures 197 to 210 ms rather
-than the plan's 30: `render.lines` takes each segment's display width through `vim.fn`, one bridge
-call per segment and about fourteen thousand for a 2,000-object document. At 300 the plan's own 30
-and 100 ms figures are the right scale. / Either a 4.3 s case in a suite held to one second, or
-budgets that warn on every run and train a reader to ignore them.
+Ruling: 300 objects, five samples with `samples[3]` as the median, and budgets of 1, 60, 70 and 0.05 ms,
+not 2,000 objects at eleven samples and 20, 30, 100 and 0.05. / Measured on a machine at a load average
+of 96: modelling 0.054 to 0.072 ms, rendering 27.3 to 34.7 ms, a re-render 29.6 to 36.3 ms, `status()`
+0.001 ms. Eleven samples put the case at 0.64 to 0.96 s, which is 12 percent from the one-second
+constraint on a machine whose load moves by a factor of three; five samples of the same distribution land
+the median in the same place and the case at 0.28 to 0.31 s over ten loaded runs, still with zero
+warnings. At 2,000 objects the same case costs 4.3 s, which the Global Constraint that every test passes
+in under a second forbids, and rendering alone measures 197 to 210 ms rather than the plan's 30:
+`render.lines` takes each segment's display width through `vim.fn`, one bridge call per segment and about
+fourteen thousand for a 2,000-object document. At 300 the plan's own 30 and 100 ms figures are the right
+scale. / Either a 4.3 s case in a suite held to one second, or budgets that warn on every run and train a
+reader to ignore them.
 
 Ruling: the `settle` doc comment in `health.lua` says "the spawn's own callback" rather than naming
 `vim.system`. / The one-spawner gate is a plain text grep over `lua/`, so a doc comment naming the
