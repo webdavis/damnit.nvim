@@ -27,13 +27,11 @@ M.QUERY = "!done & (due:today | overdue)"
 ---@type table[]
 local objects = {}
 
---- What the last fetch did. `cold` is "no fetch has finished yet", which is the
---- state a statusline draws before the first answer and the reason the empty
---- string is what it gets.
----@type "cold"|"ok"|"failed"
-local state = "cold"
-
 --- The string `status()` hands back, rebuilt whenever an answer arrives.
+---
+--- Empty until the first fetch has finished, and empty again whenever nothing
+--- is due. One answer covers both, because a statusline component that returns
+--- an empty string draws nothing, which is what no news looks like.
 local line = ""
 
 --- The due instants already announced, as `<oid>@<stamp>`. Keyed by the instant
@@ -133,14 +131,12 @@ end
 function M.apply(fetched, err)
   if err then
     objects = {}
-    state = "failed"
     line = "dam !"
 
     return
   end
 
   objects = fetched or {}
-  state = "ok"
   line = render(M.counts())
 
   announce(due.clock())
@@ -209,7 +205,6 @@ function M.stop()
   end
 
   objects = {}
-  state = "cold"
   line = ""
   announced = {}
   seeded = false
@@ -224,11 +219,8 @@ end
 --- The statusline string, which is why nothing here fetches, waits or counts: a
 --- component is evaluated on every redraw.
 ---
---- Empty until the first fetch has finished, and empty again whenever nothing is
---- due: a statusline component that returns an empty string draws nothing,
---- which is the right answer for "no news". A failed fetch reads `dam !`,
---- because a count left standing after the store stopped answering is worse
---- than no count at all.
+--- A failed fetch reads `dam !`, because a count left standing after the store
+--- stopped answering is worse than no count at all.
 ---@return string
 function M.status()
   M.start()
@@ -236,10 +228,6 @@ function M.status()
   local running = require("damnit.queue").foreground()
   if running then
     return ("dam: %s %.1fs"):format(running.label, running.elapsed)
-  end
-
-  if state == "cold" then
-    return ""
   end
 
   return line
