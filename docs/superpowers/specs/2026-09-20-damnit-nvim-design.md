@@ -122,7 +122,7 @@ The reason for each, in the same order.
 - **The statusline component.** Same contract, fed by a `dam ls` poll.
 - **Due reminders.** Same contract, same single poller, fed by the same `dam ls` poll.
 - **The health check.** Now reports `dam`, its version, the store, the remotes and their credential
-  sources.
+  sources. The credential half is superseded; see section 3.
 - **The test harness.** Unchanged: `nvim --headless --clean -l tests/run.lua`.
 - **The stubbed-client pattern.** A fake `dam` executable on `PATH` replaces a fake `vim.system`,
   which exercises the real spawn, argv, exit code and stderr. See section 9.
@@ -504,6 +504,11 @@ or point the credential at a non-interactive source.
 `:checkhealth damnit` warns when any configured remote resolves a credential through `_command`,
 because that is the configuration in which push from the editor will fail, and the warning is worth
 more before the first push than after it.
+
+**Superseded by dam 0.2.0 (task 26 ruling):** `dam remote list --json` reports `name`, `helper`,
+`url`, `path`, `stale_seconds`, `last_pull` and `last_push` and nothing about a credential, so the
+plugin has no data to warn from and the check is not built. The same supersession applies to the
+summary bullet in section 1 and to the Credential sources row of the health table below.
 
 ### Where dam's store and config live
 
@@ -1394,9 +1399,11 @@ remembered about it.
 and returns the string the last background fetch built. `3 due, 1 overdue`, or one half of that, or
 an empty string, or `dam !` when the last fetch failed.
 
-The fetch is `dam ls "due:today | overdue" --json`, on a `vim.uv` timer every
-`opts.refresh_interval` seconds, default 60, started by the first call to `status()` or by turning
-reminders on. One poller, and both features read the tasks it stored, unchanged.
+The fetch is `dam ls "!done & (due:today | overdue)" --no-pull --json` (task 25 ruling, which
+supersedes the `dam ls "due:today | overdue" --json` this line first named: `due:today` matches a
+completed task as readily as an open one), on a `vim.uv` timer every `opts.refresh_interval`
+seconds, default 60, started by the first call to `status()` or by turning reminders on. One poller,
+and both features read the objects it stored, unchanged.
 
 Two additions:
 
@@ -1423,9 +1430,9 @@ opening the editor in the evening does not replay the morning. The timer stops o
 
 **No network call is made by the plugin.** The poll is `dam ls`, a local SQLite query. The one
 qualification, stated in section 3, is that a remote with `stale` set in dam's config makes `dam ls`
-pull that remote first (dam spec 372). That is dam's decision from the user's own configuration, and
-the plugin neither triggers nor suppresses it. See **Needed from dam** for the `--no-pull` flag that
-would let the poll ask for a guaranteed-local read.
+pull that remote first (dam spec 372). **Superseded for this poll by dam 0.2.0 (task 25 ruling):**
+`--no-pull` shipped as a global flag and the poll passes it, so the poll is guaranteed local and the
+qualification survives only for the reads that do not pass it.
 
 ### `:checkhealth damnit`
 
@@ -1436,7 +1443,7 @@ would let the poll ask for a guaranteed-local read.
 | The store | ok with the resolved path and the object count from `dam ls --json`, or an error |
 | The config | ok with the resolved path, or a warning that dam is using its default |
 | Remotes | one line per remote: name, url, path narrowing, stale setting |
-| Credential sources | a warning per remote using a `_command`, which may need a terminal |
+| Credential sources | superseded, see section 3: dam reports no credential to warn from |
 | Conflicts | a warning with the count when `dam status --json` reports any |
 | Views | ok with the declared names, from both sources, and an error naming any that `dam ls` refuses |
 
