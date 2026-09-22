@@ -280,7 +280,7 @@ function M.redraw_current(key)
     return
   end
 
-  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.running(key) }))
+  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.foreground(key) }))
 end
 
 ---@param key string
@@ -293,7 +293,7 @@ function M.redraw(key, status)
 
   models[key] = status_model.build(status, remotes[key])
 
-  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.running(key) }))
+  draw(key, render.lines(models[key], { store = M.store_display(key), running = queue.foreground(key) }))
 end
 
 --- Ask dam for the status and redraw from the answer.
@@ -348,7 +348,7 @@ function M.tick(key)
     return
   end
 
-  local lines = render.lines(models[key], { store = M.store_display(key), running = queue.running(key) })
+  local lines = render.lines(models[key], { store = M.store_display(key), running = queue.foreground(key) })
 
   local headers = 0
   for _, line in ipairs(lines) do

@@ -29,6 +29,28 @@ return {
     end)
   end,
 
+  ["leaves the poller's own read out of the header"] = function()
+    with_window(function(fake)
+      local buf = window.buffer()
+      local before = #fake_dam.argv_log(fake)
+
+      queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
+
+      window.tick(queue.key())
+      window.tick(queue.key())
+
+      -- An open window would otherwise flash the poller's label every minute.
+      local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
+      for _, line in ipairs(header) do
+        assert(not line:find("Running:", 1, true), vim.inspect(header))
+      end
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      end)
+    end)
+  end,
+
   ["writes the running operation into the header on a tick"] = function()
     with_window(function(fake)
       local buf = window.buffer()

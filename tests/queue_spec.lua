@@ -46,6 +46,32 @@ return {
     end, { sleep = "0.3" })
   end,
 
+  ["hides a background entry from the display and still reports it as running"] = function()
+    with_fake(function()
+      queue.submit(entry({ "ls", "--json" }, { label = "ls", background = true }))
+
+      local running = queue.running()
+      local foreground = queue.foreground()
+
+      -- A read the plugin started on its own behalf holds the lane, so the
+      -- queue reports it, and says nothing about it where a person is reading.
+      assert(running ~= nil and running.background == true, vim.inspect(running))
+      assert(foreground == nil, vim.inspect(foreground))
+    end, { sleep = "0.3" })
+  end,
+
+  ["reports a call somebody asked for as the one worth showing"] = function()
+    with_fake(function()
+      queue.submit(entry({ "push", "--json" }, { label = "push fake" }))
+
+      local foreground = queue.foreground()
+
+      assert(foreground ~= nil, "a foreground entry is what the header and the statusline draw")
+      assert(foreground.label == "push fake", foreground.label)
+      assert(foreground.background == nil, vim.inspect(foreground))
+    end, { sleep = "0.3" })
+  end,
+
   ["refuses a second push and names the one already running"] = function()
     with_fake(function(fake, notifications)
       assert(queue.submit(entry({ "push", "--json" }, { label = "push todoist", verb = "push", network = true })))

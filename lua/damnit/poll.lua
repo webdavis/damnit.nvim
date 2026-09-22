@@ -163,6 +163,7 @@ function M.refresh()
   queue.submit({
     args = { "ls", M.QUERY, "--no-pull", "--json" },
     label = "ls",
+    background = true,
     on_done = function(data, err)
       M.apply(data and data.objects, err)
     end,
@@ -232,7 +233,7 @@ end
 function M.status()
   M.start()
 
-  local running = require("damnit.queue").running()
+  local running = require("damnit.queue").foreground()
   if running then
     return ("dam: %s %.1fs"):format(running.label, running.elapsed)
   end

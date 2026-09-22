@@ -111,6 +111,26 @@ return {
     assert(poll.running() == false)
   end,
 
+  ["shows the count rather than its own fetch while the poller is reading"] = function()
+    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    queue.reset()
+    poll.apply({ object("aaaa1111", TODAY) }, nil)
+
+    poll.refresh()
+    local shown = poll.status()
+
+    fake_dam.settle(function()
+      return queue.running() == nil
+    end)
+    queue.reset()
+    poll.stop()
+    fake_dam.remove(fake)
+
+    -- The component whose whole job is the count would otherwise replace the
+    -- count with its own fetch label, once every refresh_interval.
+    assert(shown == "1 due", shown)
+  end,
+
   ["shows the running operation instead of the count"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
     queue.reset()
