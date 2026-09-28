@@ -137,6 +137,8 @@ tasks depends on it beyond the module names Task 1 writes.
 
 ### Task 1: Rename the tree in place
 
+**Done by PR #17.**
+
 Mechanical only. Every identifier, file path and command name changes; no behaviour does. The suite is
 green before and after with the same case count, which is the whole point of doing this first.
 
@@ -152,19 +154,19 @@ green before and after with the same case count, which is the whole point of doi
 - Produces: `require("damnit")`, `require("damnit.<name>")`, the `:Dam` user command, the
   `vim.g.loaded_damnit` guard, and `:checkhealth damnit`. Every later task names modules this way.
 
-- [ ] **Step 1: Record the green baseline**
+- [x] **Step 1: Record the green baseline**
 
 Run: `nvim --headless --clean -l tests/run.lua | tail -1`
 Expected: `259 passed, 0 failed in 2.10s`, give or take the seconds.
 
-- [ ] **Step 2: Move the files**
+- [x] **Step 2: Move the files**
 
 ```bash
 git mv lua/todoist lua/damnit
 git mv plugin/todoist.lua plugin/damnit.lua
 ```
 
-- [ ] **Step 3: Rewrite every reference**
+- [x] **Step 3: Rewrite every reference**
 
 `perl -pi` rather than `sed -i`, because BSD and GNU `sed` disagree about `-i` and this repository is
 developed on macOS and tested on Linux. The Todoist API host and `TODOIST_SPEC_TOKEN` are deliberately
@@ -184,7 +186,7 @@ perl -pi -e '
 ' $(git ls-files 'lua/*.lua' 'plugin/*.lua' 'tests/*.lua' README.md)
 ```
 
-- [ ] **Step 4: Read what is left and decide each one**
+- [x] **Step 4: Read what is left and decide each one**
 
 Run: `grep -rniE 'todoist' lua plugin tests README.md`
 Expected: only three kinds of hit, all of which stay for now: `api.todoist.com` in
@@ -192,17 +194,17 @@ Expected: only three kinds of hit, all of which stay for now: `api.todoist.com` 
 prose naming the Todoist service in files Task 2 deletes. A hit anywhere else is a missed expression;
 fix it by hand.
 
-- [ ] **Step 5: Run the suite**
+- [x] **Step 5: Run the suite**
 
 Run: `nvim --headless --clean -l tests/run.lua | tail -1`
 Expected: `259 passed, 0 failed`, the same count as Step 1.
 
-- [ ] **Step 6: Lint**
+- [x] **Step 6: Lint**
 
 Run: `stylua --check . && luacheck .`
 Expected: both silent, exit 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -212,6 +214,8 @@ git commit -m "refactor: rename the plugin to damnit.nvim in place"
 ---
 
 ### Task 2: Strip the network half
+
+**Done by PR #17.**
 
 Everything that exists to reach Todoist goes, and everything that cannot work without it goes with it,
 so the repository is green rather than half-ported. What survives is the pure layer, the harness and the
@@ -240,7 +244,7 @@ restores its file from this commit's parent with `git show` rather than retyping
   still exists and still carries `views`, `picker`, `sidebar`, `refresh_interval` and `reminders`;
   Task 3 reshapes it.
 
-- [ ] **Step 1: Delete the files**
+- [x] **Step 1: Delete the files**
 
 ```bash
 git rm lua/damnit/client.lua lua/damnit/token.lua lua/damnit/completed.lua \
@@ -254,7 +258,7 @@ git rm tests/client_spec.lua tests/token_spec.lua tests/completed_history_spec.l
   tests/status_spec.lua tests/subtask_tree_spec.lua tests/task_buffer_spec.lua
 ```
 
-- [ ] **Step 2: Cut `init.lua` down to what still exists**
+- [x] **Step 2: Cut `init.lua` down to what still exists**
 
 Replace the whole of `lua/damnit/init.lua` with this. `view`, `open`, `pick`, `completed`, `status` and
 `toggle` all called modules that are gone, so they go too and come back in the tasks that rebuild them.
@@ -301,7 +305,7 @@ end
 return M
 ```
 
-- [ ] **Step 3: Correct the runner's header comment**
+- [x] **Step 3: Correct the runner's header comment**
 
 In `tests/run.lua`, replace the third paragraph, which describes a fake `vim.system` and a loopback HTTP
 server that no longer exist:
@@ -311,18 +315,18 @@ server that no longer exist:
 -- fake `dam` at the front of PATH; until then every spec here is a pure one.
 ```
 
-- [ ] **Step 4: Run the suite**
+- [x] **Step 4: Run the suite**
 
 Run: `nvim --headless --clean -l tests/run.lua | tail -1`
 Expected: five specs run and pass. The count drops from 259 to the cases in `tree_spec`,
 `task_format_spec`, `list_format_spec`, `location_spec` and `due_spec`. Nothing fails.
 
-- [ ] **Step 5: Prove the credential is gone**
+- [x] **Step 5: Prove the credential is gone**
 
 Run: `grep -rniE 'token|credential|api\.todoist' lua plugin tests`
 Expected: no output at all.
 
-- [ ] **Step 6: Lint and commit**
+- [x] **Step 6: Lint and commit**
 
 ```bash
 stylua --check . && luacheck .
@@ -333,6 +337,8 @@ git commit -m "refactor: delete the Todoist client, the token and the features b
 ---
 
 ### Task 3: The message prefix and the dam-shaped options
+
+**Done by PR #17.**
 
 Two small pieces every later task uses: the one place that writes the `damnit.nvim: ` prefix, and the
 options `dam` needs.
@@ -350,7 +356,7 @@ options `dam` needs.
   `err` is the `damnit.Error` of Task 4; and `options.store`, `options.config`, `options.timeout`,
   `options.window.float`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/message_spec.lua`:
 
@@ -408,12 +414,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua message_spec`
 Expected: three FAIL lines, each `module 'damnit.message' not found`.
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `lua/damnit/message.lua`:
 
@@ -470,12 +476,12 @@ end
 return M
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `nvim --headless --clean -l tests/run.lua message_spec`
 Expected: three `ok message_spec:` lines, `3 passed, 0 failed`.
 
-- [ ] **Step 5: Add the dam options**
+- [x] **Step 5: Add the dam options**
 
 In `lua/damnit/init.lua`, add four fields to the class block and to `M.options`. `store` and `config`
 are unset by default so that dam's own resolution and the `DAM_STORE` and `DAM_CONFIG` environment
@@ -505,7 +511,7 @@ And the class for the new table, below `damnit.SidebarOptions`:
 ---@field float boolean open a centred float instead of a horizontal split
 ```
 
-- [ ] **Step 6: Run the whole suite, lint and commit**
+- [x] **Step 6: Run the whole suite, lint and commit**
 
 Run: `nvim --headless --clean -l tests/run.lua | tail -1`
 Expected: the Task 2 count plus 3, `0 failed`.
@@ -519,6 +525,8 @@ git commit -m "feat: add the message prefix rule and the dam store options"
 ---
 
 ### Task 4: The dam boundary, the handshake, and the fake dam
+
+**Done by PR #18.**
 
 The only module in the plugin that spawns a process, and the test harness every later task uses. A fake
 `dam` shell script at the front of `PATH` replaces the old fake `vim.system`, which means the real
@@ -549,7 +557,7 @@ spawn, the real argv, the real exit code and the real standard error are all exe
   - The fake: `fake.install(opts) -> handle`, `fake.argv_log(handle) -> string[]`,
     `fake.settle(done, ms)`, `fake.remove(handle)`.
 
-- [ ] **Step 1: Write the fake dam harness**
+- [x] **Step 1: Write the fake dam harness**
 
 Create `tests/helpers/fake_dam.lua`. This is test scaffolding rather than a behaviour, so it lands
 before its first failing test.
@@ -685,7 +693,7 @@ end
 return M
 ```
 
-- [ ] **Step 2: Write the smallest fixture**
+- [x] **Step 2: Write the smallest fixture**
 
 Create `tests/fixtures/default/status.json`, a status with nothing in any section. Every field is
 present because `dam status --json` always emits all five.
@@ -694,7 +702,7 @@ present because `dam status --json` always emits all five.
 {"staged": [], "unstaged": [], "conflicts": [], "notices": [], "unpushed": []}
 ```
 
-- [ ] **Step 3: Write the failing tests**
+- [x] **Step 3: Write the failing tests**
 
 Create `tests/dam_spec.lua`:
 
@@ -959,12 +967,12 @@ return {
 }
 ```
 
-- [ ] **Step 4: Run them and watch them fail**
+- [x] **Step 4: Run them and watch them fail**
 
 Run: `nvim --headless --clean -l tests/run.lua dam_spec`
 Expected: every case FAILs with `module 'damnit.dam' not found`.
 
-- [ ] **Step 5: Write the module**
+- [x] **Step 5: Write the module**
 
 Create `lua/damnit/dam.lua`:
 
@@ -1279,7 +1287,7 @@ end
 return M
 ```
 
-- [ ] **Step 6: Make `setup` forget the handshake**
+- [x] **Step 6: Make `setup` forget the handshake**
 
 In `lua/damnit/init.lua`, at the end of `M.setup`:
 
@@ -1288,12 +1296,12 @@ In `lua/damnit/init.lua`, at the end of `M.setup`:
   require("damnit.dam").forget()
 ```
 
-- [ ] **Step 7: Run both specs and watch them pass**
+- [x] **Step 7: Run both specs and watch them pass**
 
 Run: `nvim --headless --clean -l tests/run.lua dam_spec && nvim --headless --clean -l tests/run.lua handshake_spec`
 Expected: `8 passed, 0 failed` then `5 passed, 0 failed`, each in well under a second.
 
-- [ ] **Step 8: Run the whole suite, lint and commit**
+- [x] **Step 8: Run the whole suite, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua | tail -1
@@ -1327,6 +1335,8 @@ found by a measurement rather than by reading:
 
 ### Task 5: The per-store queue, non-blocking, and cancellation
 
+**Done by PR #18.**
+
 One `dam` per store at a time. Local calls queue; a second network call is refused. The queue owns the
 elapsed timer and the cancellation ladder, and this task also lands the test that proves the editor
 never stops.
@@ -1351,7 +1361,7 @@ never stops.
   - `queue.reset()`, for specs only.
   - `queue.TICK_MS = 250`, `queue.GRACE_MS = 2000`, both constants a spec lowers.
 
-- [ ] **Step 1: Add the push fixture**
+- [x] **Step 1: Add the push fixture**
 
 Create `tests/fixtures/default/push.json`:
 
@@ -1359,7 +1369,7 @@ Create `tests/fixtures/default/push.json`:
 {"remotes": [{"remote": "todoist", "sent": 3, "succeeded": 3, "skipped": 0, "failed": []}]}
 ```
 
-- [ ] **Step 2: Write the failing queue test**
+- [x] **Step 2: Write the failing queue test**
 
 Create `tests/queue_spec.lua`:
 
@@ -1482,7 +1492,7 @@ return {
 }
 ```
 
-- [ ] **Step 3: Write the failing non-blocking test**
+- [x] **Step 3: Write the failing non-blocking test**
 
 Create `tests/nonblocking_spec.lua`:
 
@@ -1615,12 +1625,12 @@ return {
 }
 ```
 
-- [ ] **Step 4: Run them and watch them fail**
+- [x] **Step 4: Run them and watch them fail**
 
 Run: `nvim --headless --clean -l tests/run.lua queue_spec`
 Expected: every case FAILs with `module 'damnit.queue' not found`.
 
-- [ ] **Step 5: Write the module**
+- [x] **Step 5: Write the module**
 
 Create `lua/damnit/queue.lua`:
 
@@ -1893,13 +1903,13 @@ end
 return M
 ```
 
-- [ ] **Step 6: Run both specs and watch them pass**
+- [x] **Step 6: Run both specs and watch them pass**
 
 Run: `nvim --headless --clean -l tests/run.lua queue_spec && nvim --headless --clean -l tests/run.lua nonblocking_spec`
 Expected: `6 passed, 0 failed` then `3 passed, 0 failed`. Check the reported seconds: both specs must
 finish in well under a second each.
 
-- [ ] **Step 7: Run the whole suite, lint and commit**
+- [x] **Step 7: Run the whole suite, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua | tail -1
@@ -1917,6 +1927,8 @@ the pending entries, reported success, and let the call spawn and reach the remo
 ---
 
 ### Task 6: Views
+
+**Done by PR #18.**
 
 A view is a name and a dam query. `opts.views` wins a collision with one of dam's own saved filters,
 and a name in neither is refused with the declared names listed.
@@ -1940,7 +1952,7 @@ Task 36 replaces the probe with a listing once dam has one.
   - `views.forget_filter(name)`, called when dam refuses a probed name.
   - `views.declared() -> string[]`, sorted.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/views_spec.lua`:
 
@@ -2020,12 +2032,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua views_spec`
 Expected: five FAILs, `module 'damnit.views' not found`.
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `lua/damnit/views.lua`:
 
@@ -2110,12 +2122,12 @@ end
 return M
 ```
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `nvim --headless --clean -l tests/run.lua views_spec`
 Expected: `5 passed, 0 failed`.
 
-- [ ] **Step 5: Lint and commit**
+- [x] **Step 5: Lint and commit**
 
 ```bash
 stylua --check . && luacheck .
@@ -2126,6 +2138,8 @@ git commit -m "feat: resolve a view name against the options and dam's saved fil
 ---
 
 ### Task 7: The status model
+
+**Done by PR #19.**
 
 One `dam status --json` document into the window's model. Pure: no Neovim API beyond the data
 functions, which is what lets the window be tested without a window.
@@ -2150,7 +2164,7 @@ functions, which is what lets the window be tested without a window.
   - `status_model.changed_fields(before, after) -> string[]`
   - `status_model.FIELDS`, `.TASK_FIELDS`, `.EVENT_FIELDS`, `.VERBS`
 
-- [ ] **Step 1: Capture the fixtures**
+- [x] **Step 1: Capture the fixtures**
 
 `tests/fixtures/full/status.json` is a status with every section populated. Write it by hand from the
 shapes in section 3 of the spec, then check it against the real binary once `dam` is installed:
@@ -2261,7 +2275,7 @@ shapes in section 3 of the spec, then check it against the real binary once `dam
 {"remotes": [{"remote": "todoist", "helper": "dam-remote-todoist", "url": "todoist::", "stale_seconds": 300}]}
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/status_model_spec.lua`:
 
@@ -2371,12 +2385,12 @@ return {
 }
 ```
 
-- [ ] **Step 3: Run it and watch it fail**
+- [x] **Step 3: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua status_model_spec`
 Expected: eight FAILs, `module 'damnit.status_model' not found`.
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
 
 Create `lua/damnit/status_model.lua`:
 
@@ -2589,17 +2603,17 @@ end
 return M
 ```
 
-- [ ] **Step 5: Run it and watch it pass**
+- [x] **Step 5: Run it and watch it pass**
 
 Run: `nvim --headless --clean -l tests/run.lua status_model_spec`
 Expected: `8 passed, 0 failed`.
 
-- [ ] **Step 6: Prove the module is pure**
+- [x] **Step 6: Prove the module is pure**
 
 Run: `grep -nE 'vim\.(api|fn|system|notify|schedule)' lua/damnit/status_model.lua`
 Expected: no output.
 
-- [ ] **Step 7: Lint and commit**
+- [x] **Step 7: Lint and commit**
 
 ```bash
 stylua --check . && luacheck .
@@ -2610,6 +2624,8 @@ git commit -m "feat: model a dam status document for the staging window"
 ---
 
 ### Task 8: The renderer
+
+**Done by PR #19.**
 
 A model into lines and extmark specs. `render.lines` is a function of a model and a small state
 table, which is what a golden test compares, apart from the display width it measures through
@@ -2631,7 +2647,7 @@ groups link to standard groups, so a colourscheme styles the window with no inte
     each line's kind in `vim.b[buf].damnit_kinds` for the fold expression.
   - `render.define()`, `render.NAMESPACE`, `render.HIGHLIGHTS`, `render.COLUMNS`, `render.icon(kind)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/render_spec.lua`:
 
@@ -2775,12 +2791,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua render_spec`
 Expected: every case FAILs with `module 'damnit.render' not found`.
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `lua/damnit/render.lua`:
 
@@ -3087,7 +3103,7 @@ end
 return M
 ```
 
-- [ ] **Step 4: Generate the goldens and read them**
+- [x] **Step 4: Generate the goldens and read them**
 
 ```bash
 DAMNIT_GOLDEN_UPDATE=1 nvim --headless --clean -l tests/run.lua render_spec
@@ -3100,12 +3116,12 @@ header lines, `Conflicts` first, then `Working`, `Staged`, `Unpushed`, `Notices`
 reading `- changed  78b8950  buy oat milk  (subject, labels, due)  inbox/` with the columns aligned. Fix
 the renderer rather than the golden when they disagree.
 
-- [ ] **Step 5: Run it again without the update flag**
+- [x] **Step 5: Run it again without the update flag**
 
 Run: `nvim --headless --clean -l tests/run.lua render_spec`
 Expected: `6 passed, 0 failed`.
 
-- [ ] **Step 6: Lint and commit**
+- [x] **Step 6: Lint and commit**
 
 ```bash
 stylua --check . && luacheck .
@@ -3116,6 +3132,8 @@ git commit -m "feat: render the staging window's model as lines and extmarks"
 ---
 
 ### Task 9: The status window, the command, and the navigation keys
+
+**Done by PR #19.**
 
 `:Dam` opens one buffer per store, re-read in full from a fresh `dam status --json`. This task also
 lands the key table every later key hangs off, the folds, `R`, `q`, `g?`, the five section jumps and
@@ -3141,7 +3159,7 @@ lands the key table every later key hangs off, the folds, `R`, `q`, `g?`, the fi
   - `actions.jump_to_section(kind, name, count)`, `actions.help(filetype)`, `actions.close()`.
   - `SUBCOMMANDS` in `plugin/damnit.lua`, one row per `:Dam` subcommand, which later tasks add to.
 
-- [ ] **Step 1: Tag each rendered line with its section**
+- [x] **Step 1: Tag each rendered line with its section**
 
 In `lua/damnit/render.lua`, inside `M.lines`, set the section kind on every line a section owns:
 
@@ -3178,7 +3196,7 @@ And in `M.draw`, record them beside the kinds:
   vim.b[buf].damnit_sections = sections
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/window_spec.lua`:
 
@@ -3321,12 +3339,12 @@ return {
 }
 ```
 
-- [ ] **Step 3: Run it and watch it fail**
+- [x] **Step 3: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua window_spec`
 Expected: every case FAILs with `module 'damnit.window' not found`.
 
-- [ ] **Step 4: Write the key table**
+- [x] **Step 4: Write the key table**
 
 Create `lua/damnit/keys.lua`:
 
@@ -3390,7 +3408,7 @@ end
 return M
 ```
 
-- [ ] **Step 5: Write the actions this task needs**
+- [x] **Step 5: Write the actions this task needs**
 
 Create `lua/damnit/actions.lua`:
 
@@ -3470,7 +3488,7 @@ end
 return M
 ```
 
-- [ ] **Step 6: Write the window**
+- [x] **Step 6: Write the window**
 
 Create `lua/damnit/window.lua`:
 
@@ -3890,7 +3908,7 @@ vim.api.nvim_create_autocmd("BufReadCmd", {
 return M
 ```
 
-- [ ] **Step 7: Write the user command**
+- [x] **Step 7: Write the user command**
 
 Create `plugin/damnit.lua`:
 
@@ -3961,7 +3979,7 @@ end, {
 })
 ```
 
-- [ ] **Step 8: Add the keymap entry point**
+- [x] **Step 8: Add the keymap entry point**
 
 In `lua/damnit/init.lua`:
 
@@ -3976,12 +3994,12 @@ function M.open_status()
 end
 ```
 
-- [ ] **Step 9: Run it and watch it pass**
+- [x] **Step 9: Run it and watch it pass**
 
 Run: `nvim --headless --clean -l tests/run.lua window_spec`
 Expected: `8 passed, 0 failed`.
 
-- [ ] **Step 10: Run the whole suite, lint and commit**
+- [x] **Step 10: Run the whole suite, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua | tail -1
@@ -3993,6 +4011,8 @@ git commit -m "feat: open the staging window and move around it"
 ---
 
 ### Task 10: Staging
+
+**Done by PR #20.**
 
 `-`, `s`, `u` and `U`. A heading stages its whole section in one call, a visual range stages what it
 covers, and the window always re-renders from a fresh status, even after a refusal.
@@ -4009,7 +4029,7 @@ covers, and the window always re-renders from a fresh status, even after a refus
   `actions.write(args, label)`, the shared "queue it, report a failure, re-read the status" path every
   later write key uses.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/keys_spec.lua`. It reuses `with_window` from `window_spec`, so lift that helper into
 `tests/helpers/status_window.lua` first and have both specs `dofile` it.
@@ -4112,12 +4132,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua keys_spec`
 Expected: six FAILs, the first on the missing `tests/helpers/status_window.lua`.
 
-- [ ] **Step 3: Write the staging actions**
+- [x] **Step 3: Write the staging actions**
 
 Add to `lua/damnit/actions.lua`:
 
@@ -4263,7 +4283,7 @@ function M.unstage_all()
 end
 ```
 
-- [ ] **Step 4: Bind the keys**
+- [x] **Step 4: Bind the keys**
 
 In `lua/damnit/keys.lua`, add to the `damstatus` table, in both normal and visual mode where the spec
 gives a range meaning:
@@ -4277,7 +4297,7 @@ gives a range meaning:
 
 `vim.keymap.set` takes a list of modes, so `M.attach` needs no change.
 
-- [ ] **Step 5: Run it, lint and commit**
+- [x] **Step 5: Run it, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua keys_spec
@@ -4291,6 +4311,8 @@ Expected: `6 passed, 0 failed`.
 ---
 
 ### Task 11: Discarding a working change, and the inline field diff
+
+**Done by PR #20.**
 
 `X` ships for a `create` only, because `dam rm` is that op's exact inverse and dam has no verb that
 restores a committed object. `=` draws the changed fields as virtual lines, so the buffer stays
@@ -4311,7 +4333,7 @@ unmodifiable and every other line keeps its number.
   - `window.open_diffs(key) -> table<string, boolean>`, remembered by oid for the session and
     re-applied on every redraw.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/diff_spec.lua`:
 
@@ -4408,12 +4430,12 @@ return {
 `status_window.answer_input(answer, run)` stubs `vim.ui.input` to call back with `answer`; add it to
 `tests/helpers/status_window.lua` beside `with`.
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua diff_spec`
 Expected: five FAILs, `module 'damnit.render.diff' not found`.
 
-- [ ] **Step 3: Write the diff renderer**
+- [x] **Step 3: Write the diff renderer**
 
 Create `lua/damnit/render/diff.lua`:
 
@@ -4512,7 +4534,7 @@ end
 return M
 ```
 
-- [ ] **Step 4: Apply and remember the open diffs**
+- [x] **Step 4: Apply and remember the open diffs**
 
 In `lua/damnit/window.lua`, add the per-store set and apply it at the end of `draw`:
 
@@ -4563,7 +4585,7 @@ end
 Call `apply_diffs(key)` from `draw`, right after `render.draw(buf, lines)`. An oid that is no longer
 present simply draws nothing, which is how a diff is forgotten.
 
-- [ ] **Step 5: Write the two actions**
+- [x] **Step 5: Write the two actions**
 
 Add to `lua/damnit/actions.lua`:
 
@@ -4630,7 +4652,7 @@ function M.redraw_current(key)
 end
 ```
 
-- [ ] **Step 6: Bind the keys, run, lint and commit**
+- [x] **Step 6: Bind the keys, run, lint and commit**
 
 In `lua/damnit/keys.lua`, in the `damstatus` table:
 
@@ -4652,6 +4674,8 @@ Expected: `5 passed, 0 failed`.
 
 ### Task 12: Opening what the cursor is on
 
+**Done by PR #20.**
+
 `<CR>` opens a change as a task buffer, a conflict as two read-only buffers side by side, and an
 unpushed commit as a read-only list of its changes.
 
@@ -4671,7 +4695,7 @@ unpushed commit as a read-only list of its changes.
 Ordering note: this task lands before the task buffer because the conflict and commit halves are
 window work, and the task-buffer half is one line to change in Task 16.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/open_spec.lua`:
 
@@ -4738,12 +4762,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua open_spec`
 Expected: three FAILs, `attempt to call field 'open_under_cursor'`.
 
-- [ ] **Step 3: Write the actions**
+- [x] **Step 3: Write the actions**
 
 Add to `lua/damnit/actions.lua`:
 
@@ -4851,7 +4875,7 @@ end
 Task 16 creates `damnit.task_buffer`. Until then `<CR>` on a change raises a module error, so this
 task's third case avoids that line and Task 16's own spec covers it.
 
-- [ ] **Step 4: Bind the key, run, lint and commit**
+- [x] **Step 4: Bind the key, run, lint and commit**
 
 ```lua
     { "n", "<CR>", act("open_under_cursor"), "open what the cursor is on" },
@@ -4870,6 +4894,8 @@ Expected: `3 passed, 0 failed`.
 
 ### Task 13: The commit message buffer
 
+**Done by PR #20.**
+
 `cc` opens a scratch buffer, `:w` commits. Write to commit rather than quit to commit, because
 `dam commit -m` takes the message as an argument and there is no file for dam to read.
 
@@ -4884,7 +4910,7 @@ Expected: `3 passed, 0 failed`.
 - Produces: `commit_buffer.open(key) -> integer?`, `commit_buffer.message(lines) -> string`,
   `commit_buffer.write(buf)`, `actions.commit()`.
 
-- [ ] **Step 1: Write the fixture and the failing test**
+- [x] **Step 1: Write the fixture and the failing test**
 
 `tests/fixtures/full/commit.json`:
 
@@ -4965,12 +4991,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua commit_spec`
 Expected: five FAILs, `module 'damnit.commit_buffer' not found`.
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Create `lua/damnit/commit_buffer.lua`:
 
@@ -5077,7 +5103,7 @@ end
 return M
 ```
 
-- [ ] **Step 4: Bind `cc`, run, lint and commit**
+- [x] **Step 4: Bind `cc`, run, lint and commit**
 
 In `lua/damnit/actions.lua`:
 
@@ -5106,6 +5132,8 @@ Expected: `5 passed, 0 failed`.
 
 ### Task 14: Push, pull and conflict resolution
 
+**Done by PR #20.**
+
 The three network keys. Each is refused while another is running, each reports dam's own counts, and
 each is followed by a fresh status.
 
@@ -5120,7 +5148,7 @@ each is followed by a fresh status.
 - Produces: `actions.push()`, `actions.pull()`, `actions.resolve(side)`,
   `actions.remote_under_cursor() -> string?`, `actions.sync(verb, remote)`.
 
-- [ ] **Step 1: Write the fixtures and the failing test**
+- [x] **Step 1: Write the fixtures and the failing test**
 
 `tests/fixtures/full/pull.json`:
 
@@ -5231,12 +5259,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua sync_spec`
 Expected: six FAILs, `attempt to call field 'push'`.
 
-- [ ] **Step 3: Write the actions**
+- [x] **Step 3: Write the actions**
 
 Add to `lua/damnit/actions.lua`:
 
@@ -5367,7 +5395,7 @@ function M.resolve(side)
 end
 ```
 
-- [ ] **Step 4: Bind the keys, run, lint and commit**
+- [x] **Step 4: Bind the keys, run, lint and commit**
 
 In `lua/damnit/keys.lua`:
 
@@ -5406,6 +5434,8 @@ Expected: `6 passed, 0 failed`, then the whole suite green.
 
 ### Task 15: The task frontmatter, retargeted at dam's fields
 
+**Done by PR #21.**
+
 The header keeps `todoist.nvim`'s shape and changes its field set. `path` becomes editable, `priority`
 reverses, and `depends`, `deadline` and `recurrence` arrive. Pure: no buffer, no call.
 
@@ -5425,7 +5455,7 @@ fence parsing and the label splitting.
   - `task_format.changes(object, header, body) -> { edit: string[], move: string? }?, { message: string, line: integer }?`
   - `task_format.TASK_KEYS`, `task_format.EVENT_KEYS`, `task_format.FENCE`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Rewrite `tests/task_format_spec.lua`:
 
@@ -5541,12 +5571,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua task_format_spec`
 Expected: eight FAILs on the old field set.
 
-- [ ] **Step 3: Rewrite the module**
+- [x] **Step 3: Rewrite the module**
 
 Replace `lua/damnit/task_format.lua`. The fence handling and the label splitting come across
 unchanged; the field set, the comment lines and the flag map are new.
@@ -5842,7 +5872,7 @@ end
 return M
 ```
 
-- [ ] **Step 4: Run it, prove it is pure, lint and commit**
+- [x] **Step 4: Run it, prove it is pure, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua task_format_spec
@@ -5858,6 +5888,8 @@ Expected: `8 passed, 0 failed`, and the grep finds nothing.
 
 ### Task 16: The task buffer
 
+**Done by PR #21.**
+
 `:Dam task <oid>` and `<CR>` on a change. One object as a buffer, written back as one `dam edit` plus a
 `dam mv` when the path changed, with both kinds of refusal shown as diagnostics on the line at fault.
 
@@ -5872,12 +5904,12 @@ Expected: `8 passed, 0 failed`, and the grep finds nothing.
 - Produces: `task_buffer.open(oid) -> integer buf`, `task_buffer.show(object) -> integer buf`,
   `task_buffer.write(buf)`, `task_buffer.NAMESPACE`.
 
-- [ ] **Step 1: Write the three fixtures**
+- [x] **Step 1: Write the three fixtures**
 
 Each is one wire object. `show.json` and `edit.json` hold the object from `full/status.json`'s
 `unstaged[1].after`; `mv.json` holds the same object with `"path": "home/errands/"`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/task_buffer_spec.lua` with these cases:
 
@@ -6031,12 +6063,12 @@ return {
 The last case installs the fake with `exit = 4` and an error document whose `rule` is `cycle` and
 whose `message` is `78b8950 depends on a9db854, which would make a cycle`.
 
-- [ ] **Step 3: Run it and watch it fail**
+- [x] **Step 3: Run it and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua task_buffer_spec`
 Expected: six FAILs, `module 'damnit.task_buffer' not found`.
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
 
 Create `lua/damnit/task_buffer.lua`:
 
@@ -6188,7 +6220,7 @@ end
 return M
 ```
 
-- [ ] **Step 5: Wire the command and the keymap function**
+- [x] **Step 5: Wire the command and the keymap function**
 
 In `plugin/damnit.lua`, add to `SUBCOMMANDS`:
 
@@ -6202,7 +6234,7 @@ In `plugin/damnit.lua`, add to `SUBCOMMANDS`:
   end,
 ```
 
-- [ ] **Step 6: Run it, lint and commit**
+- [x] **Step 6: Run it, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua task_buffer_spec
@@ -6217,6 +6249,8 @@ Expected: `6 passed, 0 failed`, and `open_spec` still green.
 ---
 
 ### Task 17: The tree and the list's lines, on `path`
+
+**Done by PR #21.**
 
 `dam` models the tree as `path`, so the tree is string work rather than a `parent_id` lookup. Both
 modules stay pure.
@@ -6254,7 +6288,7 @@ If the child's path is not the parent's path plus one segment, stop and re-read
   - `list_format.render(spec, objects, collapsed) -> string[], table[]`, the lines and one entry per line
   - `list_format.object_line(object, indent, folded) -> string`, `list_format.title(spec)`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Rewrite `tests/tree_spec.lua` around the path rule:
 
@@ -6308,12 +6342,12 @@ Rewrite `tests/list_format_spec.lua` around dam's own fields: the subject, the d
 badge (1 is most urgent), the labels, the path, and the fold marker with a descendant count. Keep the
 existing cases' shape and change what they read, which is the smallest honest port.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `nvim --headless --clean -l tests/run.lua tree_spec`
 Expected: five FAILs on the old `parent_id` functions.
 
-- [ ] **Step 3: Rewrite `tree.lua`**
+- [x] **Step 3: Rewrite `tree.lua`**
 
 ```lua
 -- Subtasks as a tree, which in dam is a tree of paths.
@@ -6466,7 +6500,7 @@ end
 return M
 ```
 
-- [ ] **Step 4: Rewrite `list_format.lua`**
+- [x] **Step 4: Rewrite `list_format.lua`**
 
 Start from `git show HEAD:lua/damnit/list_format.lua`. Three changes, and nothing else:
 
@@ -6479,7 +6513,7 @@ Start from `git show HEAD:lua/damnit/list_format.lua`. Three changes, and nothin
    back a parallel list of the object drawn on each line, which is what the list buffer reads at the
    cursor.
 
-- [ ] **Step 5: Run, prove both are pure, lint and commit**
+- [x] **Step 5: Run, prove both are pure, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua tree_spec
@@ -6495,6 +6529,8 @@ Expected: both green, and the grep finds nothing.
 ---
 
 ### Task 18: The list buffer
+
+**Done by PR #21.**
 
 `:Dam list [<view>]`, fed by `dam ls <query> --json`. The buffer, its folds, `<CR>`, `R` and `gd`
 carry over; the quick edits arrive in Task 19.
@@ -6515,13 +6551,13 @@ the cursor reading and the refresh-after-write rule.
   `list.write(args, label)`, which is `actions.write` for the list: queue it, report a failure, and
   re-read the view on screen either way. Task 19's quick edits all go through it.
 
-- [ ] **Step 1: Write the fixture**
+- [x] **Step 1: Write the fixture**
 
 `tests/fixtures/full/ls.json` is a JSON array of four wire objects: a parent at `work/parent/`, its
 child at `work/parent/child/`, a task at `inbox/` with a due date and two labels, and one with a body
 holding a location line (`damnit.nvim lua/damnit/status.lua:112`), which Task 22 reads back.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/list_spec.lua`:
 
@@ -6667,7 +6703,7 @@ return {
 }
 ```
 
-- [ ] **Step 3: Write the module**
+- [x] **Step 3: Write the module**
 
 Bring `list.lua` across with these changes:
 
@@ -6702,7 +6738,7 @@ Everything else in the module keeps its shape: `open` resolves the spec through 
 through `list_format.render`, keeps the per-view fold table keyed by path rather than by task id, and
 re-reads the view on screen after every write.
 
-- [ ] **Step 4: Wire the command and the keymap function**
+- [x] **Step 4: Wire the command and the keymap function**
 
 In `plugin/damnit.lua`:
 
@@ -6744,7 +6780,7 @@ end
 In `lua/damnit/init.lua`, restore `M.open(name)` from the pre-strip commit, resolving through
 `damnit.views` rather than through the deleted `M.view`.
 
-- [ ] **Step 5: Run, lint and commit**
+- [x] **Step 5: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua list_spec
@@ -6756,6 +6792,8 @@ git commit -m "feat: list a dam view in a buffer"
 ---
 
 ### Task 19: The quick edits, and completing a parent
+
+**Done by PR #21.**
 
 The list's seven surviving quick edits, plus the one place dam and Todoist differ most: dam refuses to
 complete a parent rather than cascading, so the confirm becomes an explanation and a choice.
@@ -6776,7 +6814,7 @@ and delete its `reopen`, `undo` and `forget` functions with their state.
   `quick_edit.indent()`, `quick_edit.promote()`, `quick_edit.reopen()` (the refusal),
   `quick_edit.blockers(err) -> string[]`, `quick_edit.attach(buf)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/done_spec.lua` is the one that carries the design:
 
@@ -6972,12 +7010,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `nvim --headless --clean -l tests/run.lua done_spec`
 Expected: four FAILs, `module 'damnit.quick_edit' not found`.
 
-- [ ] **Step 3: Write the completion path**
+- [x] **Step 3: Write the completion path**
 
 ```lua
 --- The objects blocking a completion, as dam named them: every oid after the
@@ -7080,7 +7118,7 @@ end
 The rolled-forward field name is the one thing here read off dam's report rather than its prose.
 Confirm it with `dam done <oid of a recurring task> --json | jq .` and correct the key if it differs.
 
-- [ ] **Step 4: Write the other six, bind them, run, lint and commit**
+- [x] **Step 4: Write the other six, bind them, run, lint and commit**
 
 Each is the existing function with its API call replaced by `require("damnit.list").write(args)`, which
 is `actions.write` for the list: queue it, report a failure, re-read the view on screen.
@@ -7096,6 +7134,8 @@ git commit -m "feat: quick edits on the list, including dam's blocked completion
 ---
 
 ### Task 20: The picker
+
+**Done by PR #22.**
 
 `:Dam pick [<view>]`, fzf-lua when it loads and `vim.ui.select` otherwise. Unchanged in shape; the
 entries carry dam's fields.
@@ -7126,7 +7166,7 @@ output and the case waits on it. The stub records what it was offered, which is 
 waits on, because the argv log grows when the call is spawned and the entries exist only once the
 answer has been read. / Cost if wrong: the case would hang rather than fail.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/picker_spec.lua` with three cases:
 
@@ -7194,12 +7234,12 @@ return {
 }
 ```
 
-- [ ] **Step 2: Run, write the module, run again**
+- [x] **Step 2: Run, write the module, run again**
 
 The module is the old one with `content` becoming `subject`, the project and section names becoming
 `path`, the priority badge reversing, and the fetch going through `list.fetch`.
 
-- [ ] **Step 3: Wire the command and commit**
+- [x] **Step 3: Wire the command and commit**
 
 ```lua
   pick = function(args)
@@ -7217,6 +7257,8 @@ git commit -m "feat: search the dam objects with fzf-lua or vim.ui.select"
 ---
 
 ### Task 21: The completed history
+
+**Done by PR #22.**
 
 `:Dam done` is one local query rendered flat, newest first. The whole paging apparatus is already gone
 with `completed_history.lua`; this task makes sure nothing brings it back.
@@ -7255,7 +7297,7 @@ completed in the order rent, bins, report, so the drawn order is report, bins, r
 the document's own. That is what makes the sort pinned rather than passing by accident. / Cost if
 wrong: none; the step's `paid the rent` sentence assumed an order dam does not answer in.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/history_spec.lua`:
 
@@ -7357,7 +7399,7 @@ The fixture `tests/fixtures/done/ls.json` is dam's own answer to `ls done --json
 completed objects, so the second case reads real subjects in an order the document does not itself
 carry.
 
-- [ ] **Step 2: Add the flat spec and the command**
+- [x] **Step 2: Add the flat spec and the command**
 
 ```lua
   done = function()
@@ -7374,7 +7416,7 @@ function M.completed()
 end
 ```
 
-- [ ] **Step 3: Run, lint and commit**
+- [x] **Step 3: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua history_spec
@@ -7386,6 +7428,8 @@ git commit -m "feat: read the completed history in one query"
 ---
 
 ### Task 22: Capture from code, and jumping back to it
+
+**Done by PR #22.**
 
 `:Dam capture` writes the location into `body`, and `gd` reads it back out of `body`.
 
@@ -7414,7 +7458,7 @@ field that no longer exists, in the same sentences this task rewrites the module
 Leaving them for Task 28 would ship a document naming a field of the Todoist API. / Cost if wrong:
 Task 28 finds six fewer lines to change.
 
-- [ ] **Step 1: Move the editor half of a location into its own module**
+- [x] **Step 1: Move the editor half of a location into its own module**
 
 Create `lua/damnit/location_edit.lua` with the three functions that reach the editor, lifted from
 `location.lua` unchanged apart from the module header:
@@ -7543,7 +7587,7 @@ at all. Its header changes in the same edit, since it no longer opens anything a
 `M.parse`'s own `---@param description string?` becomes `---@param body string?` and its summary
 line becomes "The location a body holds, or nil when no line of it is one."
 
-- [ ] **Step 2: Split the spec along the same line**
+- [x] **Step 2: Split the spec along the same line**
 
 Move the five jump cases and the two helpers they use into a new `tests/location_edit_spec.lua`,
 which starts:
@@ -7585,7 +7629,7 @@ the case name:
 `tests/location_spec.lua` keeps its five parse and describe cases and loses both helpers, which no
 case left in it calls. Its own header loses the sentence about `jump`.
 
-- [ ] **Step 3: Point the list's `gd` at the new module**
+- [x] **Step 3: Point the list's `gd` at the new module**
 
 `lua/damnit/list.lua` is the only caller of `jump` in the tree. In
 `M.jump_to_location_under_cursor`:
@@ -7594,7 +7638,7 @@ case left in it calls. Its own header loses the sentence about `jump`.
   require("damnit.location_edit").jump(locations[line])
 ```
 
-- [ ] **Step 4: Run the split, prove the purity, and commit**
+- [x] **Step 4: Run the split, prove the purity, and commit**
 
 Run: `nvim --headless --clean -l tests/run.lua location_spec`
 Expected: the five parse and describe cases pass.
@@ -7613,7 +7657,7 @@ git add -A
 git commit -m "refactor: keep the editor calls of a location out of the pure half"
 ```
 
-- [ ] **Step 5: Write the failing test**
+- [x] **Step 5: Write the failing test**
 
 Create `tests/capture_spec.lua`:
 
@@ -7653,7 +7697,7 @@ return {
 Add one case to `tests/location_spec.lua` proving `location.parse` reads the same text back out of a
 body holding a note above it.
 
-- [ ] **Step 6: Write `capture.args` and bring the rest across**
+- [x] **Step 6: Write `capture.args` and bring the rest across**
 
 ```lua
 --- The `dam new` argv one capture becomes.
@@ -7676,7 +7720,7 @@ function M.args(content, location)
 end
 ```
 
-- [ ] **Step 7: Wire the command, run, lint and commit**
+- [x] **Step 7: Wire the command, run, lint and commit**
 
 ```lua
   capture = function(_, cmd)
@@ -7697,6 +7741,8 @@ git commit -m "feat: capture a task from the code and jump back to it"
 ---
 
 ### Task 23: Sending an object to the agent
+
+**Done by PR #22.**
 
 `S` in the list. The delivery path is unchanged; the brief's fields are dam's, and the hand-off record
 is dropped because dam has no comments.
@@ -7733,7 +7779,7 @@ the notification case doubles three fields instead of one.
 second binding site would let the help and the bindings drift. This is Task 18's standing ruling
 applied again. / Cost if wrong: nothing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Rewrite `tests/send_spec.lua`'s brief cases:
 
@@ -7790,7 +7836,7 @@ return {
 }
 ```
 
-- [ ] **Step 2: Write the brief, keep the delivery, run, lint and commit**
+- [x] **Step 2: Write the brief, keep the delivery, run, lint and commit**
 
 The `store:` line is the store as the window's header shows it, so it reuses the same helper rather
 than a second one. The brief carries no URL, because a dam object is local.
@@ -7805,6 +7851,8 @@ git commit -m "feat: hand a dam object to the agent pane"
 ---
 
 ### Task 24: The sidebar
+
+**Done by PR #22.**
 
 Unchanged behaviour on a new source. Restore the file and change the two lines that name a view.
 
@@ -7846,19 +7894,19 @@ behaviour. / Cost if wrong: a typo costs one split and one `dam ls`.
 opening the object beside it. Two of the rewritten spec's cases pin it. / Cost if wrong: one lazy
 require in `task_buffer.lua`.
 
-- [ ] **Step 1: Rewrite the spec on the fake dam and watch it fail**
+- [x] **Step 1: Rewrite the spec on the fake dam and watch it fail**
 
 Run: `nvim --headless --clean -l tests/run.lua sidebar_spec`
 Expected: `module 'damnit.sidebar' not found`.
 
-- [ ] **Step 2: Change the two lines**
+- [x] **Step 2: Change the two lines**
 
 `sidebar.open` resolves `opts.sidebar.view` through `require("damnit.views").resolve`, and refuses
 before the split is made when the name is in neither source. `winfixwidth`, `winfixheight`,
 `winfixbuf`, the `WinNew` and `WinResized` autocommands and the per-tabpage window-local flag are
 untouched.
 
-- [ ] **Step 3: Give the jump its way out of a fixed window again**
+- [x] **Step 3: Give the jump its way out of a fixed window again**
 
 `leave_fixed_window` is the sidebar's, but its callers are not: they sit in `location_edit.jump` and
 in `task_buffer.open`, both of which Task 2 stripped of the call when it deleted `sidebar.lua`. The
@@ -7893,7 +7941,7 @@ Run: `nvim --headless --clean -l tests/run.lua location_edit_spec`
 Expected: the five jump cases still pass. Each opens a tabpage with no sidebar in it, so
 `leave_fixed_window` returns at its first line.
 
-- [ ] **Step 4: Wire the command, run, lint and commit**
+- [x] **Step 4: Wire the command, run, lint and commit**
 
 ```lua
   toggle = function()
@@ -7911,6 +7959,8 @@ git commit -m "feat: keep a dam view beside your work in the sidebar"
 ---
 
 ### Task 25: The statusline and the due reminders
+
+**Done by PR #23.**
 
 **Rulings taken while implementing this task.**
 
@@ -7960,7 +8010,7 @@ string carries a time.
 - Produces: `poll.status() -> string`, `poll.counts()`, `poll.apply(objects, err)`, `poll.refresh()`,
   `poll.start()`, `poll.stop()`, `poll.running() -> boolean`, `damnit.status()`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/poll_spec.lua` with five cases, driving `poll.apply` directly so no timer is involved:
 
@@ -8041,7 +8091,7 @@ return {
 }
 ```
 
-- [ ] **Step 2: Write the module**
+- [x] **Step 2: Write the module**
 
 The fetch is `queue.submit({ args = { "ls", "due:today | overdue", "--json" }, label = "ls" })`, quiet
 on failure, on a `vim.uv` timer every `opts.refresh_interval` seconds. One poller, started by the first
@@ -8066,7 +8116,7 @@ function M.status()
 end
 ```
 
-- [ ] **Step 3: Run, lint and commit**
+- [x] **Step 3: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua poll_spec
@@ -8079,6 +8129,8 @@ git commit -m "feat: poll dam for the statusline count and the due reminders"
 ---
 
 ### Task 26: `:checkhealth damnit`
+
+**Done by PR #23.**
 
 **Rulings taken while implementing this task.**
 
@@ -8129,7 +8181,7 @@ place in this plugin where waiting is correct.
 
 - Produces: `health.check()`, `health.settle(start) -> boolean, any?, any?`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/health_spec.lua` with three cases, each capturing `vim.health.ok`, `.warn` and `.error`
 into a list:
@@ -8229,7 +8281,7 @@ declared as a command:
 Confirm the credential field's real name against `dam remote list --json` before writing the check; it is
 the one field in this fixture that the design does not quote from dam's own output.
 
-- [ ] **Step 2: Write the module**
+- [x] **Step 2: Write the module**
 
 The eight checks are: `dam` on `PATH`; `dam --version` against the supported range; the store and its
 object count from `dam ls --json`; the config path; one line per remote; a warning per remote using a
@@ -8239,7 +8291,7 @@ names with an error naming any that `dam ls` refuses.
 Each call runs inside `health.settle`, which is `vim.wait` keeping the loop turning so the
 `vim.system` callbacks can run.
 
-- [ ] **Step 3: Run, lint and commit**
+- [x] **Step 3: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua health_spec
@@ -8252,6 +8304,8 @@ git commit -m "feat: report dam, the store and the remotes in checkhealth"
 ---
 
 ### Task 27: The three CI greps and the performance spec
+
+**Done by PR #23.**
 
 **Rulings taken while implementing this task.**
 
@@ -8305,7 +8359,7 @@ The architecture rules become a gate, and the performance targets become a warni
 - Modify: `.github/workflows/ci.yml`
 - Create: `tests/performance_spec.lua`
 
-- [ ] **Step 1: Add the greps to the lint job**
+- [x] **Step 1: Add the greps to the lint job**
 
 After the `luacheck` step in `.github/workflows/ci.yml`:
 
@@ -8332,7 +8386,7 @@ After the `luacheck` step in `.github/workflows/ci.yml`:
           fi
 ```
 
-- [ ] **Step 2: Prove each gate catches its own violation**
+- [x] **Step 2: Prove each gate catches its own violation**
 
 ```bash
 printf 'vim.system({ "dam" })\n' >> lua/damnit/render.lua
@@ -8343,7 +8397,7 @@ git checkout lua/damnit/render.lua
 Expected: the grep prints the planted line, which is the gate firing. Repeat for the other two, and put
 each file back.
 
-- [ ] **Step 3: Write the performance spec**
+- [x] **Step 3: Write the performance spec**
 
 Create `tests/performance_spec.lua`. It generates 2,000 objects, times each phase with `vim.uv.hrtime`
 around it, takes the median of eleven runs, and **warns** rather than failing: a timing assertion
@@ -8424,7 +8478,7 @@ return {
 The case always passes: the warning is the output, and a human acting on it is the point. A timing
 assertion against a real spawn on a shared runner reddens main on code nobody touched.
 
-- [ ] **Step 4: Run, lint and commit**
+- [x] **Step 4: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua performance_spec
@@ -8437,6 +8491,8 @@ git commit -m "ci: gate the architecture rules and warn on a slow phase"
 
 ### Task 28: The README
 
+**Done by PR #23.**
+
 The document the repository presents. It is rewritten whole rather than edited, because every section
 about the Todoist API, the token and the filter language describes something that no longer exists.
 
@@ -8444,7 +8500,7 @@ about the Todoist API, the token and the filter language describes something tha
 
 - Rewrite: `README.md`
 
-- [ ] **Step 1: Write it**
+- [x] **Step 1: Write it**
 
 The section list, in order: what it is and what `dam` is; requirements (Neovim 0.12.5, `dam` in the
 supported range, no token); install, with the lazy.nvim spec from section 2 of the design; the staging
@@ -8463,7 +8519,7 @@ Three things the README must say plainly, because they are regressions or revers
 And one it must say because it is the point: this plugin holds no credential, and there is no option
 that names one.
 
-- [ ] **Step 2: Check every command and option it names**
+- [x] **Step 2: Check every command and option it names**
 
 ```bash
 grep -oE ':Dam [a-z]*' README.md | sort -u
@@ -8473,7 +8529,7 @@ grep -oE 'opts\.[a-z_.]+' README.md | sort -u
 Expected: every command appears in `SUBCOMMANDS` in `plugin/damnit.lua`, and every option appears in
 `M.options` in `lua/damnit/init.lua`. A name in the README and nowhere else is a lie; fix the README.
 
-- [ ] **Step 3: Run the whole suite, lint and commit**
+- [x] **Step 3: Run the whole suite, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua | tail -1
@@ -8495,6 +8551,8 @@ before writing code. Version one of the plugin ships without them and says so, w
 28 deliver.
 
 ### Task 29: Reopening a completed task
+
+**Done by PR #23; the reopen itself landed in d147a7e, PR #21.**
 
 **Ruling taken while closing this task.**
 
@@ -8523,7 +8581,7 @@ do not work, at the lines Step 3 names. Close this task on that alone; do not re
 **Files:** `lua/damnit/quick_edit.lua`, `lua/damnit/task_format.lua`, `tests/quick_edit_spec.lua`,
 `tests/task_format_spec.lua`, `README.md`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```lua
   ["X reopens a completed task"] = function()
@@ -8535,7 +8593,7 @@ do not work, at the lines Step 3 names. Close this task on that alone; do not re
 Write it out against the fake the way `keys_spec` does, and add a `task_format_spec` case asserting
 that `done: false` in the header sends `--undone` and `done: true` sends `--done`.
 
-- [ ] **Step 2: Replace the refusal with the call**
+- [x] **Step 2: Replace the refusal with the call**
 
 In `lua/damnit/quick_edit.lua`, `M.reopen` becomes the write, and the sentence it used to print goes:
 
@@ -8555,7 +8613,7 @@ In `lua/damnit/task_format.lua`, add `done` to `M.TASK_KEYS` and to `FLAGS` as
 `done = { "--done", "--undone" }`, which is the one field whose clear flag is a real flag rather than a
 negation of the set flag. Its value is read as `true` or `false` rather than as text.
 
-- [ ] **Step 3: Bind it, correct the README, run, lint and commit**
+- [x] **Step 3: Bind it, correct the README, run, lint and commit**
 
 Bind `X` in the list and `u` in the history, and delete the two README paragraphs saying they do not
 work.
@@ -8666,6 +8724,8 @@ git commit -m "feat: choose what happens to the children when completing a paren
 
 ### Task 32: The machine-readable error
 
+**Done by PR #20: `sync.lua` keys the credential sentence off `err.kind` (385af9a).**
+
 **dam PR B landed as dam 0.2.0 on 2026-09-20.** Confirm with
 `dam done <a blocked oid> --json 2>&1 >/dev/null | jq .error.rule`, which answers `"blocked"`.
 
@@ -8676,7 +8736,7 @@ the one caller that still keys off a word in a sentence.
 
 **Files:** `lua/damnit/actions.lua`, `tests/actions_spec.lua`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```lua
   ["names the remote whose credential is missing, off dam's kind"] = function()
@@ -8687,12 +8747,12 @@ the one caller that still keys off a word in a sentence.
   end,
 ```
 
-- [ ] **Step 2: Key the credential sentence off the kind**
+- [x] **Step 2: Key the credential sentence off the kind**
 
 `actions.sync` tests `err.kind == "credential"` rather than searching the message for the word.
 Every other caller already reads a field.
 
-- [ ] **Step 3: Grep for the last of the prose matching**
+- [x] **Step 3: Grep for the last of the prose matching**
 
 ```bash
 grep -rn "find(\"" lua --include='*.lua'
@@ -8701,7 +8761,7 @@ grep -rn "find(\"" lua --include='*.lua'
 Every hit must be a search of something this plugin wrote or of a buffer line, never of an
 `err.message`.
 
-- [ ] **Step 4: Run, lint and commit**
+- [x] **Step 4: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua actions_spec
@@ -8714,6 +8774,8 @@ git commit -m "refactor: act on dam's error kind rather than on its wording"
 
 ### Task 33: The field summary from dam
 
+**Done by PR #19: `status_model.lua` reads `change.fields` first (ea0d0b2).**
+
 **dam PR B landed as dam 0.2.0 on 2026-09-20: `"fields": [...]` in a change document.** Confirm with
 `dam status --json | jq '.unstaged[0].fields'`.
 
@@ -8721,7 +8783,7 @@ The window's field summary is a copy of dam's own logic today. This makes it a r
 
 **Files:** `lua/damnit/status_model.lua`, `tests/status_model_spec.lua`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```lua
   ["prefers the fields dam named over its own comparison"] = function()
@@ -8737,7 +8799,7 @@ The window's field summary is a copy of dam's own logic today. This makes it a r
   end,
 ```
 
-- [ ] **Step 2: Read it, and keep the comparison as the fallback**
+- [x] **Step 2: Read it, and keep the comparison as the fallback**
 
 ```lua
   local fields = change.fields
@@ -8749,7 +8811,7 @@ The window's field summary is a copy of dam's own logic today. This makes it a r
 `M.changed_fields` and its golden case per field stay, because they are what keeps the fallback honest
 against a dam that has not been updated.
 
-- [ ] **Step 3: Run, lint and commit**
+- [x] **Step 3: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua status_model_spec
@@ -8762,6 +8824,8 @@ git commit -m "refactor: read a change's field list from dam"
 ---
 
 ### Task 34: Conflicts without their embedded objects
+
+**No longer needed: dam embeds both conflict sides unconditionally (`conflict_json` in `crates/dam-cli/src/commands/status/rows.rs:96`).**
 
 **This task's premise is false and the task is not to be done as written.** Measured against a real
 dam 0.2.0 on 2026-09-20: `conflict_json` embeds `ours` and `theirs` on every conflict
@@ -8781,14 +8845,14 @@ This one would be a removal rather than an addition, so it breaks `<CR>` on a co
 **Files:** `lua/damnit/status_model.lua`, `lua/damnit/actions.lua`, `tests/open_spec.lua`,
 `tests/fixtures/full/status.json`
 
-- [ ] **Step 1: Trim the fixture and watch the tests fail**
+- [x] **Step 1: Trim the fixture and watch the tests fail**
 
 Remove `ours` and `theirs` from the conflict in `tests/fixtures/full/status.json`.
 
 Run: `nvim --headless --clean -l tests/run.lua open_spec`
 Expected: the conflict case FAILs, because both sides render empty.
 
-- [ ] **Step 2: Fetch the two sides**
+- [x] **Step 2: Fetch the two sides**
 
 `actions.open_conflict` queues two `dam show` calls, one per side, with whatever flag dam's change
 gives for reading a conflict side. The two buffers open when both answer, so one half is never drawn
@@ -8798,7 +8862,7 @@ beside a blank.
 against a dam that has not been updated. The conflict line's subject falls back to the oid when no
 object came with the status.
 
-- [ ] **Step 3: Run, lint and commit**
+- [x] **Step 3: Run, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua open_spec
