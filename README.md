@@ -243,6 +243,11 @@ and pulled from a remote carries no completion time, so it is listed after every
 every open object. The prompt carries the view's name and its query, so a search that is looking
 inside a filter says so.
 
+`<CR>` opens the object you picked. In fzf-lua `ctrl-x` completes it instead, the same way `x` does
+in a list. With `picker = "fzf-lua"` and fzf-lua not installed, the search warns and opens in
+`vim.ui.select` rather than refusing; fzf-lua is looked up each time, so installing it needs no
+restart. A `picker` value that is none of the three warns and is read as `auto`.
+
 ## Capture from code
 
 `:Dam capture` makes a task out of what is in front of you. In visual mode the selection becomes the
@@ -303,7 +308,8 @@ answering is worse than no count.
 
 Asking for the string is what starts the reader. It runs `dam ls '!done & (due:today | overdue)'
 --no-pull` every `refresh_interval` seconds, skips a turn while another call holds the store, and
-stops on exit. `--no-pull` is what lets it promise to reach no remote.
+stops on exit. `--no-pull` is what lets it promise to reach no remote, and `!done` is what drops a
+task from the count the moment you complete it, because `due:today` matches a completed task too.
 
 ## Due reminders
 
