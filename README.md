@@ -167,7 +167,8 @@ recurrence: every month
 The landlord takes a bank transfer only.
 ```
 
-Write the buffer and only what you changed is sent. Lines starting with `#` inside the header are
+Write the buffer and only what you changed is sent, so an unchanged `due` is never sent back for dam
+to parse again and move a recurrence. Lines starting with `#` inside the header are
 read only. The buffer stays modified until dam answers, so an edit that has not landed still reads
 as unwritten and a refused one leaves your text where you can fix it.
 
@@ -176,7 +177,7 @@ own read-only line.
 
 Two fields behave unlike the rest. `path` moves the object with `dam mv`, which puts it inside the
 path you name and keeps the object's own last segment, so changing that last segment is a rename and
-is refused with an explanation. `done` takes `false` and sends `dam edit --undone`; complete an
+is refused with an explanation. An object with no path yet takes the path you type whole. `done` takes `false` and sends `dam edit --undone`; complete an
 object with `x` in a list, not by typing `true` here, because completing a recurring object rolls it
 forward instead of setting a flag.
 
