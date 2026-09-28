@@ -79,8 +79,10 @@ editor holding nothing else.
 ## The staging window
 
 `:Dam` opens it. It draws a header, then one section per thing that has something in it: Conflicts,
-Working, Staged, Unpushed, Notices. Each section is a fold. It re-reads `dam status --json` in full
-after every action rather than patching its own model, so what you see is what dam last said.
+Working, Staged, Unpushed, Notices. Conflicts come first because a conflict is what blocks a pull.
+Unpushed lists only the remotes that are behind; the header names every remote. Each section is a
+fold. It re-reads `dam status --json` in full after every action rather than patching its own model,
+so what you see is what dam last said.
 
 | Key | What it does |
 | --- | --- |
@@ -281,6 +283,15 @@ Nothing else is set, so a capture lands in `inbox/`, which is where it belongs u
 [herdr](https://github.com/webdavis/herdr) it goes into the agent pane's input as one bracketed
 paste and is never submitted, so you read it, add to it and press return yourself. Outside herdr, or
 whenever herdr will not take it, the same brief goes to the clipboard and the notification says so.
+
+`S` first asks for a note, and escaping that prompt sends nothing. The brief is the subject, the
+short oid, the store, then whichever of the path, the due date, the priority (left off at the
+default, 4) and the labels the object has, then its body and your note. A field with nothing in it is
+left out rather than written empty. The agent pane is one in the same herdr workspace that herdr
+names an agent for, other than the pane you are in; with several, the first one herdr lists wins and
+the notification names it. Once the text is delivered, focusing that pane is a convenience, so a
+refused focus is not reported as a failed hand-off. Without a clipboard provider the brief lands in
+the unnamed register only, and the notification says that too.
 
 `dam` has no comments, so a hand-off leaves no record in the store. Every notification says that.
 

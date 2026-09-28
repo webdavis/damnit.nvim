@@ -1,38 +1,17 @@
--- `S`: hand the object under the cursor to the agent, the way the herdr pane
--- does.
---
--- The brief is plain text because an agent pane is a shell, not a structure. In
--- herdr it goes into the agent pane's input as one bracketed paste and is never
--- submitted, so the operator reads it, adds to it and presses return
--- themselves. Outside herdr, and whenever herdr cannot take it, the same brief
--- goes to the clipboard and the notification says so.
---
--- dam has no comments, so a hand-off leaves no record in the store. Every
--- notification ends by saying that, on the path that delivered as well as on
--- the ones that fell back.
-
 local M = {}
 
 local format = require("damnit.list_format")
 local message = require("damnit.message")
 
---- The frame `herdr pane send-text` writes the brief inside. A paste is
---- inserted verbatim by any input, where the raw bytes of a multi-line brief
---- would each be read as a key and a newline would submit it.
-local PASTE_START = "\27[200~"
-local PASTE_END = "\27[201~"
+local BRACKETED_PASTE_START = "\27[200~"
+local BRACKETED_PASTE_END = "\27[201~"
 
---- The short form of an oid, which is what an agent would type at `dam show`.
-local SHORT = 7
+local SHORT_OID_LENGTH = 7
 
---- dam's least urgent priority, and its default, which is left off the brief.
-local LEAST_URGENT = 4
+local DEFAULT_LEAST_URGENT_PRIORITY = 4
 
---- What every hand-off ends with, because dam has no comments to write one on.
 local NO_RECORD = "no hand-off record written"
 
----@param value any
----@return string
 local function text(value)
   if value == nil or value == vim.NIL then
     return ""
@@ -41,21 +20,11 @@ local function text(value)
   return tostring(value)
 end
 
---- The object as the agent reads it: what it is, the oid to look it up by, the
---- store it is in, then whichever of the path, the due date, the priority and
---- the labels it has, then its body, then the note.
----
---- A field the object has nothing for is left out rather than written empty, so
---- the brief carries no line an agent has to discount. There is no URL: a dam
---- object is local.
----@param object table
----@param note string?
----@return string
 function M.brief(object, note)
   local window = require("damnit.window")
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
-    "oid: " .. text(object.oid):sub(1, SHORT),
+    "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
     "store: " .. window.store_display(require("damnit.queue").key()),
   }
 
@@ -69,10 +38,8 @@ function M.brief(object, note)
     lines[#lines + 1] = "due: " .. due
   end
 
-  -- dam's scale runs 1 to 4 with 1 the most urgent. Its default says nothing,
-  -- so it goes out only when somebody set it.
   local priority = tonumber(type(object.task) == "table" and object.task.priority or nil)
-  if priority and priority < LEAST_URGENT then
+  if priority and priority < DEFAULT_LEAST_URGENT_PRIORITY then
     lines[#lines + 1] = ("priority: p%d"):format(priority)
   end
 
@@ -96,31 +63,24 @@ function M.brief(object, note)
   return table.concat(lines, "\n")
 end
 
---- The brief as one bracketed paste. A terminator inside the brief would end
---- the frame early, so every one is taken out, and taking one out cannot splice
---- another together because the removal repeats until none is left.
----@param brief string
----@return string
-function M.pasted(brief)
+local function without_paste_terminators(brief)
   local body, removed = brief, 1
 
   while removed > 0 do
-    body, removed = body:gsub(vim.pesc(PASTE_END), "")
+    body, removed = body:gsub(vim.pesc(BRACKETED_PASTE_END), "")
   end
 
-  return PASTE_START .. body .. PASTE_END
+  return body
 end
 
---- What the hand-off calls the agent. `agent` is what is running in the pane;
---- `display_agent` is the auth profile it signed in with, which two panes
---- running different agents can share, so it is asked only once `agent` has
---- nothing.
----@param listed table
----@return string
+function M.pasted(brief)
+  return BRACKETED_PASTE_START .. without_paste_terminators(brief) .. BRACKETED_PASTE_END
+end
+
+local AGENT_NAME_FIELDS_RUNNING_BEFORE_SIGNED_IN = { "agent", "display_agent" }
+
 local function named(listed)
-  -- Read one at a time: a table literal of these two stops at the first
-  -- absent one.
-  for _, field in ipairs({ "agent", "display_agent" }) do
+  for _, field in ipairs(AGENT_NAME_FIELDS_RUNNING_BEFORE_SIGNED_IN) do
     if text(listed[field]) ~= "" then
       return text(listed[field])
     end
@@ -129,13 +89,6 @@ local function named(listed)
   return "the agent"
 end
 
---- The agent pane of this workspace, out of `herdr agent list`: a pane herdr
---- names an agent for, in this workspace, other than this one. With several,
---- the first herdr names wins and the notification says which.
----@param listing string
----@param workspace string?
----@param me string?
----@return { pane: string, name: string }?, string?
 function M.agent_in(listing, workspace, me)
   local ok, answer = pcall(vim.json.decode, listing)
   if not ok or type(answer) ~= "table" then
@@ -143,8 +96,10 @@ function M.agent_in(listing, workspace, me)
   end
 
   for _, listed in ipairs(vim.tbl_get(answer, "result", "agents") or {}) do
-    local elsewhere = text(listed.workspace_id) ~= text(workspace)
-    if text(listed.agent) ~= "" and text(listed.pane_id) ~= text(me) and not elsewhere then
+    local names_an_agent = text(listed.agent) ~= ""
+    local is_this_pane = text(listed.pane_id) == text(me)
+    local in_another_workspace = text(listed.workspace_id) ~= text(workspace)
+    if names_an_agent and not is_this_pane and not in_another_workspace then
       return { pane = text(listed.pane_id), name = named(listed) }
     end
   end
@@ -152,19 +107,10 @@ function M.agent_in(listing, workspace, me)
   return nil, "no agent pane in this workspace"
 end
 
---- Put the brief in the registers and say where it went.
----
---- Both the unnamed register and the system one, so it can be pasted with `p`
---- inside Neovim and with the system paste anywhere else. A build with no
---- clipboard provider has no system register to write, which is said out loud:
---- a silent half-copy there would look exactly like a whole one.
----@param host table
----@param brief string
----@param because string? why the agent pane did not get it
 local function copy(host, brief, because)
-  local reached = host.copy(brief)
+  local reached_system_clipboard = host.copy(brief)
   local reason = because and (because .. "; ") or ""
-  local where = reached and "the clipboard" or "the unnamed register, no clipboard provider"
+  local where = reached_system_clipboard and "the clipboard" or "the unnamed register, no clipboard provider"
   local said = ("%scopied the brief to %s, %s"):format(reason, where, NO_RECORD)
 
   if because then
@@ -174,11 +120,10 @@ local function copy(host, brief, because)
   message.say(said)
 end
 
---- Send the brief to the agent pane, or to the clipboard when herdr cannot take
---- it.
----@param object table
----@param note string?
----@param host table
+local function focus_as_a_convenience(host, pane)
+  host.run({ "agent", "focus", pane }, function() end)
+end
+
 function M.hand_off(object, note, host)
   local brief = M.brief(object, note)
 
@@ -201,19 +146,13 @@ function M.hand_off(object, note, host)
         return copy(host, brief, ("herdr refused the send to %s"):format(agent.pane))
       end
 
-      -- Focus is a convenience once the text is delivered: a refused focus
-      -- leaves the brief in the agent's input, so failing here would report a
-      -- hand-off that did happen as one that did not.
-      host.run({ "agent", "focus", agent.pane }, function() end)
+      focus_as_a_convenience(host, agent.pane)
 
       message.say(("sent to %s, %s"):format(agent.name, NO_RECORD))
     end)
   end)
 end
 
---- The live host: the `herdr` CLI, the pane facts herdr puts in the
---- environment, and the registers.
----@return table
 function M.host()
   return {
     in_herdr = text(vim.env.HERDR_ENV) ~= "",
@@ -250,8 +189,6 @@ function M.host()
   }
 end
 
---- `S` on the list: the note box, then the hand-off. Nothing here happens on
---- its own, and an escaped box sends nothing at all.
 function M.send()
   local object = require("damnit.list").object_under_cursor()
   if not object then
@@ -259,7 +196,8 @@ function M.send()
   end
 
   vim.ui.input({ prompt = "Note: " }, function(note)
-    if note == nil then
+    local escaped = note == nil
+    if escaped then
       return
     end
 
