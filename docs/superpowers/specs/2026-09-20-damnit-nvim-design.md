@@ -1736,59 +1736,33 @@ ______________________________________________________________________
 Seven changes to `dam`, each one something the window needs and none of which the plugin should
 implement on its own. They are ordered by what they block.
 
-### 1. Non-interactive completion dispositions
+### 1. Non-interactive completion dispositions: arrived in dam 0.2.0
 
-**Blocks:** completing any parent that has open children, from any client, whenever
+**Was blocking:** completing any parent that has open children, from any client, whenever
 `done.interactive = true`.
 
-`dam done <oid> --force --interactive` asks the operator what happens to the open children and the
-open dependencies, through a terminal prompt (`crates/dam-cli/src/commands/done.rs`, `ask`). Under
-`--json` the prompt is replaced by one that refuses (`crates/dam-cli/src/context.rs:53`), so the
-call fails. Worse, `done.interactive = true` in config turns a plain `--force` into the same
-question, so a client cannot force a completion at all on such a machine. Measured:
+**Delivered** by `webdavis/damnit` PR #2 (c2565c1), as proposed:
+`dam done <oid> --force --children up|keep|into:<name> --depends drop|keep` answers the prompt's two
+questions on the command line, each flag defaulting to `keep` when only the other is given. Either
+flag skips the prompt whatever `done.interactive` says; both need `--force` and refuse
+`--interactive`. `--force` with neither flag behaves as before.
 
-```
-$ dam done 98d8780 --force --json          # with done.interactive = true
-dam: a question needs an answer; drop --json/--toon to answer interactively
-[exit 1]
-```
+### 2. A verb that restores a committed object: arrived in dam 0.2.0
 
-**Proposed change:** two flags on `done` that express what the prompt asks, so a client can answer it
-without a terminal.
+**Was blocking:** `X` in the status window for a change whose op is `update` or `delete`, and any
+undo of an accidental `x` or `dd`.
 
-```
-dam done <oid> --force --children up|keep|into:<name> --depends drop|keep
-```
+**Delivered** by `webdavis/damnit` PR #2 (c2565c1): `dam restore <oid>...` sets the named objects'
+working layer back to the last commit and out of the stage, and refuses an object with no commit
+behind it, suggesting `dam rm`. It takes one or more oids; the proposed `-A` did not ship.
 
-Each corresponds exactly to a variant of `ChildDisposition` and `DependencyDisposition`
-(`crates/dam-domain/src/completion.rs`). When either flag is given, the prompt is not asked, whatever
-`done.interactive` says. When `--force` is given with neither flag and `done.interactive` is set, the
-current behaviour is unchanged.
+### 3. A verb that reopens a completed task: arrived in dam 0.2.0
 
-### 2. A verb that restores a committed object
+**Was blocking:** `X` in the list buffer, `u` in the completed history, and editing `done` in the
+task buffer.
 
-**Blocks:** `X` in the status window for a change whose op is `update` or `delete`, and any undo of
-an accidental `x` or `dd`.
-
-There is no `restore`, no `checkout` and no `reset --hard` anywhere in the workspace. A working
-change can be staged, unstaged and committed, but it cannot be thrown away.
-
-**Proposed change:** `dam restore <oid>...` and `dam restore -A`, which set the working layer of the
-named objects back to the last commit, refusing on an object that has no committed state and
-suggesting `dam rm` for it. The name follows git's own modern spelling and the tool's stated rule of
-using git's word where git has one (dam spec 32).
-
-### 3. A verb that reopens a completed task
-
-**Blocks:** `X` in the list buffer, `u` in the completed history, and editing `done` in the task
-buffer.
-
-`dam done` sets `done` to true. `dam edit` has no `--done` or `--undone` flag
-(`crates/dam-cli/src/args.rs:96` to `140`), and no other verb sets it back. A task completed by
-mistake stays completed.
-
-**Proposed change:** `--done` and `--undone` as a mutually exclusive pair on `dam edit`, which is
-where every other field already lives.
+**Delivered** by `webdavis/damnit` PR #2 (c2565c1): `dam edit <oid> --undone` reopens a completed
+task. Only `--undone` shipped; completing stays with `dam done`.
 
 ### 4. A machine-readable error: arrived in dam 0.2.0
 
