@@ -1,12 +1,12 @@
 local location_edit = require("damnit.location_edit")
 
--- A jump changes the tabpage's directory, and the runner's `package.path` is
--- relative to where the run started, so everything a jump reaches is loaded
--- before any case moves.
-require("damnit.sidebar")
+local function load_what_a_jump_reaches_while_the_relative_package_path_still_resolves()
+  require("damnit.sidebar")
+end
 
---- A repository holding one file of `lines` lines.
-local function repository(lines)
+load_what_a_jump_reaches_while_the_relative_package_path_still_resolves()
+
+local function repository_holding_one_file_of(lines)
   local root = vim.fs.normalize(vim.fn.tempname())
   vim.fn.mkdir(root .. "/lua", "p")
 
@@ -23,8 +23,11 @@ local function repository(lines)
   return root, "lua/thing.lua"
 end
 
---- Jump from inside `root`, in a tabpage of its own, and report what was said.
-local function jump_from(root, parsed)
+local function same_file_through_the_macos_temporary_directory_symlink(opened, path)
+  return vim.endswith(opened, "/" .. path)
+end
+
+local function jump_from_a_tabpage_of_its_own_in(root, parsed)
   local real_notify, cwd = vim.notify, vim.uv.cwd()
   local said = {}
   vim.notify = function(message)
@@ -50,36 +53,37 @@ end
 
 return {
   ["jumps to the file and the line"] = function()
-    local root, path = repository(20)
-    local jumped, said, opened, line = jump_from(root, { repo = vim.fs.basename(root), path = path, line = 12 })
+    local root, path = repository_holding_one_file_of(20)
+    local jumped, said, opened, line =
+      jump_from_a_tabpage_of_its_own_in(root, { repo = vim.fs.basename(root), path = path, line = 12 })
 
     assert(jumped, vim.inspect(said))
-    -- Compared by suffix: the temporary directory is reached through a symlink
-    -- on macOS, and the buffer holds the resolved name.
-    assert(vim.endswith(opened, "/" .. path), opened)
+    assert(same_file_through_the_macos_temporary_directory_symlink(opened, path), opened)
     assert(line == 12, tostring(line))
     assert(#said == 0, vim.inspect(said))
   end,
 
   ["refuses a task whose body holds no location"] = function()
-    local root = repository(3)
-    local jumped, said = jump_from(root, nil)
+    local root = repository_holding_one_file_of(3)
+    local jumped, said = jump_from_a_tabpage_of_its_own_in(root, nil)
 
     assert(jumped == false, "a task with no location was jumped to")
     assert(#said == 1 and said[1]:find("no location in its body", 1, true), vim.inspect(said))
   end,
 
   ["refuses a location whose file is gone"] = function()
-    local root = repository(3)
-    local jumped, said = jump_from(root, { repo = vim.fs.basename(root), path = "lua/moved.lua", line = 1 })
+    local root = repository_holding_one_file_of(3)
+    local jumped, said =
+      jump_from_a_tabpage_of_its_own_in(root, { repo = vim.fs.basename(root), path = "lua/moved.lua", line = 1 })
 
     assert(jumped == false, "a missing file was jumped to")
     assert(#said == 1 and said[1]:find("there is no file at lua/moved.lua", 1, true), vim.inspect(said))
   end,
 
   ["refuses a location captured in another repository, and names both"] = function()
-    local root = repository(3)
-    local jumped, said = jump_from(root, { repo = "some-other-repo", path = "lua/thing.lua", line = 1 })
+    local root = repository_holding_one_file_of(3)
+    local jumped, said =
+      jump_from_a_tabpage_of_its_own_in(root, { repo = "some-other-repo", path = "lua/thing.lua", line = 1 })
 
     assert(jumped == false, "a location from another repository was jumped to")
     assert(said[1]:find("some-other-repo", 1, true), vim.inspect(said))
@@ -87,13 +91,12 @@ return {
   end,
 
   ["says so when the line is past the end, and lands on the last one"] = function()
-    local root, path = repository(4)
-    local jumped, said, opened, line = jump_from(root, { repo = vim.fs.basename(root), path = path, line = 99 })
+    local root, path = repository_holding_one_file_of(4)
+    local jumped, said, opened, line =
+      jump_from_a_tabpage_of_its_own_in(root, { repo = vim.fs.basename(root), path = path, line = 99 })
 
     assert(jumped, vim.inspect(said))
-    -- Compared by suffix: the temporary directory is reached through a symlink
-    -- on macOS, and the buffer holds the resolved name.
-    assert(vim.endswith(opened, "/" .. path), opened)
+    assert(same_file_through_the_macos_temporary_directory_symlink(opened, path), opened)
     assert(line == 4, tostring(line))
     assert(#said == 1 and said[1]:find("has 4 lines", 1, true), vim.inspect(said))
   end,
