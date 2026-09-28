@@ -1,26 +1,7 @@
--- When a task is due, read against a clock that is handed in.
---
--- dam writes `due` as text and this is the one place that knows its two shapes:
--- a whole day (`YYYY-MM-DD`) and an instant (`YYYY-MM-DDTHH:MM:SS` followed by
--- its own UTC offset and, for a zoned one, the zone in brackets). The offset is
--- the field read here; the zone name only repeats what the offset already says.
---
--- Everything is compared as local wall-clock text, so the clock is two values:
--- the stamp local time reads now, and how far local time is ahead of UTC. A
--- spec hands both in, which is what keeps its answer from depending on when or
--- where the spec runs.
-
 local M = {}
 
 local SECONDS_PER_DAY = 86400
 
---- Days between 1970-01-01 and a civil date, and the reverse. Plain arithmetic
---- rather than `os.time`, because that reads the machine's own timezone and the
---- only offset that may enter this module is the one the clock carried in.
----@param year integer
----@param month integer
----@param day integer
----@return integer
 local function days_from_civil(year, month, day)
   local y = month <= 2 and year - 1 or year
   local era = math.floor(y / 400)
@@ -31,10 +12,6 @@ local function days_from_civil(year, month, day)
   return era * 146097 + day_of_era - 719468
 end
 
----@param days integer
----@return integer year
----@return integer month
----@return integer day
 local function civil_from_days(days)
   local z = days + 719468
   local era = math.floor(z / 146097)
@@ -52,40 +29,23 @@ local function civil_from_days(days)
   return (month <= 2 and year + 1 or year), month, day
 end
 
---- The local wall clock now, and how far it is ahead of UTC in seconds.
----
---- Replaced wholesale in a spec, which is the only injection point: nothing
---- else here asks the machine what time it is.
----@return { stamp: string, utc_offset: integer }
-function M.clock()
-  local now = os.time()
-  local here = os.date("*t", now)
-  local utc = os.date("!*t", now)
-
-  -- os.time(utc) re-interprets a UTC broken-down time as local, which is
-  -- wrong across a daylight-saving boundary; diffing the two civil stamps
-  -- directly avoids that round trip.
-  local here_seconds = days_from_civil(here.year, here.month, here.day) * SECONDS_PER_DAY
-    + here.hour * 3600
-    + here.min * 60
-    + here.sec
-  local utc_seconds = days_from_civil(utc.year, utc.month, utc.day) * SECONDS_PER_DAY
-    + utc.hour * 3600
-    + utc.min * 60
-    + utc.sec
-
-  return { stamp = os.date("%Y-%m-%dT%H:%M:%S", now), utc_offset = here_seconds - utc_seconds }
+local function civil_seconds(stamp)
+  return days_from_civil(stamp.year, stamp.month, stamp.day) * SECONDS_PER_DAY
+    + stamp.hour * 3600
+    + stamp.min * 60
+    + stamp.sec
 end
 
---- A stamp moved by a number of seconds, in wall-clock terms.
----@param year integer
----@param month integer
----@param day integer
----@param hour integer
----@param minute integer
----@param second integer
----@param seconds integer
----@return string
+local function utc_offset_by_diffing_civil_stamps(now)
+  return civil_seconds(os.date("*t", now)) - civil_seconds(os.date("!*t", now))
+end
+
+function M.clock()
+  local now = os.time()
+
+  return { stamp = os.date("%Y-%m-%dT%H:%M:%S", now), utc_offset = utc_offset_by_diffing_civil_stamps(now) }
+end
+
 local function shifted(year, month, day, hour, minute, second, seconds)
   local total = days_from_civil(year, month, day) * SECONDS_PER_DAY + hour * 3600 + minute * 60 + second + seconds
   local days = math.floor(total / SECONDS_PER_DAY)
@@ -102,21 +62,14 @@ local function shifted(year, month, day, hour, minute, second, seconds)
   )
 end
 
---- How far ahead of UTC a due's own offset is, or nil when it carries none.
----
---- A due with no offset is a wall-clock time that already reads in the user's
---- own timezone, so it is never shifted.
----@param suffix string whatever followed the seconds
----@return integer? seconds
 local function offset_of(suffix)
-  -- Fractional seconds sit between the seconds and the offset.
-  suffix = suffix:gsub("^%.%d+", "")
+  local without_fraction = suffix:gsub("^%.%d+", "")
 
-  if suffix:match("^[Zz]") then
+  if without_fraction:match("^[Zz]") then
     return 0
   end
 
-  local sign, hours, minutes = suffix:match("^([%+%-])(%d%d):(%d%d)")
+  local sign, hours, minutes = without_fraction:match("^([%+%-])(%d%d):(%d%d)")
   if not sign then
     return nil
   end
@@ -126,16 +79,15 @@ local function offset_of(suffix)
   return sign == "-" and -seconds or seconds
 end
 
---- The local wall-clock stamp a due names, and whether it carries a time of
---- day.
----
---- A JSON null decodes to `vim.NIL`, which is truthy, so a task with no due
---- date has to be recognised by the type of its `due` rather than by falling
---- back with `or`. That is the common case: most tasks have no due date at all.
----@param task table one object's `task` sub-table
----@param clock { stamp: string, utc_offset: integer }
----@return string? stamp `YYYY-MM-DD` for a whole day, `YYYY-MM-DDTHH:MM:SS` for a time
----@return boolean timed
+local function seconds_to_local_time(offset, clock)
+  local already_local_wall_clock = offset == nil
+  if already_local_wall_clock then
+    return 0
+  end
+
+  return clock.utc_offset - offset
+end
+
 function M.stamp_of(task, clock)
   local value = task.due
   if type(value) ~= "string" then
@@ -162,21 +114,11 @@ function M.stamp_of(task, clock)
     tonumber(hour),
     tonumber(minute),
     tonumber(second),
-    offset and clock.utc_offset - offset or 0
+    seconds_to_local_time(offset, clock)
   ),
     true
 end
 
---- Where a task stands against the clock.
----
---- `overdue` is the moment its time has passed, which for a task due today at
---- 09:00 is any time from 09:00 on. A full-day task carries no time, so it is
---- `due` for the whole of its day and `overdue` only once the day is over.
----@param task table one object's `task` sub-table
----@param clock { stamp: string, utc_offset: integer }
----@return "none"|"overdue"|"due"|"later" state
----@return boolean timed
----@return string? stamp
 function M.classify(task, clock)
   local stamp, timed = M.stamp_of(task, clock)
   if not stamp then
@@ -192,8 +134,8 @@ function M.classify(task, clock)
     return "later", timed, stamp
   end
 
-  -- Both ISO 8601, so the text sorts the way the instants do.
-  if timed and stamp <= clock.stamp then
+  local time_has_passed = timed and stamp <= clock.stamp
+  if time_has_passed then
     return "overdue", timed, stamp
   end
 
