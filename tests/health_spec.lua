@@ -63,7 +63,7 @@ return {
     -- Which dam answered, not just that one did: a machine can carry a
     -- cargo-installed dam and a Homebrew one, and the report is where you find
     -- out which is on PATH first.
-    assert(said(lines, "ok", fake.dir .. "/dam"), vim.inspect(lines))
+    assert(said(lines, "ok", fake.script_dir .. "/dam"), vim.inspect(lines))
     assert(said(lines, "ok", "4 objects"), "the object count comes off the same ls")
     assert(said(lines, "ok", "the remote fake speaks through the fake helper at fake::"), vim.inspect(lines))
 

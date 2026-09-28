@@ -132,9 +132,9 @@ return {
 
   ["calls an undecodable answer on a clean exit malformed rather than raising"] = function()
     local fake = fake_dam.install()
-    vim.env.DAMNIT_TEST_FIXTURES = fake.dir
+    vim.env.DAMNIT_TEST_FIXTURES = fake.script_dir
 
-    local file = assert(io.open(fake.dir .. "/status.json", "w"))
+    local file = assert(io.open(fake.script_dir .. "/status.json", "w"))
     file:write("not json at all\n")
     file:close()
 

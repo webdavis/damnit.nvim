@@ -1,71 +1,81 @@
--- A fake `dam` at the front of PATH.
---
--- Five environment variables drive every case: which fixture directory to read,
--- which version to answer the handshake with, how long to sleep, what to write
--- on standard error, and what to exit with. The argv log is what every
--- assertion about "what the plugin sent" reads.
-
 local M = {}
 
 local SCRIPT = [==[#!/bin/sh
-# dam exits 3 on an interrupt. The traps are installed before the first write,
-# because a caller that waits for that write and then signals can beat a trap
-# installed after it.
-trap 'kill $sleeper 2>/dev/null; exit 3' INT
-trap 'kill $sleeper 2>/dev/null; exit 3' TERM
+answer_an_interrupt_with_exit_3_like_dam() {
+  kill $sleeper 2>/dev/null
+  exit 3
+}
 
-# Records its argv, then replays the fixture named for its subcommand.
-printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
+trap_interrupts_before_the_first_write_a_caller_may_wait_on() {
+  trap answer_an_interrupt_with_exit_3_like_dam INT
+  trap answer_an_interrupt_with_exit_3_like_dam TERM
+}
 
-# Anywhere in argv, not just first: real dam takes --version after --store and
-# --config, and the handshake is made with whichever global flags the options
-# name in front of it.
-case " $* " in
-  *" --version "*) echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"; exit 0 ;;
-esac
+record_argv() {
+  printf '%s\n' "$*" >> "$DAMNIT_TEST_LOG"
+}
 
-# The subcommand is the first argument that is not a flag and is not the value
-# of one, so `--store /tmp/x status --json` still finds `status`.
-subcommand=""
-skip=0
-for arg in "$@"; do
-  if [ "$skip" = 1 ]; then skip=0; continue; fi
-  case "$arg" in
-    --store|--config) skip=1 ;;
-    -*) ;;
-    *) subcommand="$arg"; break ;;
+asks_for_the_version_anywhere_among_the_global_flags() {
+  case " $* " in
+    *" --version "*) return 0 ;;
   esac
-done
+  return 1
+}
 
-# The sleep runs in the background and the script waits on it, so the trap runs
-# the moment the signal arrives. It owns neither of this script's pipes, so a
-# caller reading them sees the exit as soon as the trap does.
-if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 & sleeper=$!; wait $sleeper; fi
+find_the_subcommand_past_global_flags_and_their_values() {
+  subcommand=""
+  skip=0
+  for arg in "$@"; do
+    if [ "$skip" = 1 ]; then skip=0; continue; fi
+    case "$arg" in
+      --store|--config) skip=1 ;;
+      -*) ;;
+      *) subcommand="$arg"; break ;;
+    esac
+  done
+}
+
+sleep_in_the_background_so_a_trap_answers_at_once_and_no_pipe_is_held() {
+  sleep "$DAMNIT_TEST_SLEEP" >/dev/null 2>&1 &
+  sleeper=$!
+  wait $sleeper
+}
+
+find_the_fixture_preferring_the_full_shape_when_asked_for() {
+  fixture="$DAMNIT_TEST_FIXTURES/$subcommand.json"
+  case " $* " in
+    *" --full "*)
+      if [ -f "$DAMNIT_TEST_FIXTURES/$subcommand-full.json" ]; then
+        fixture="$DAMNIT_TEST_FIXTURES/$subcommand-full.json"
+      fi
+      ;;
+  esac
+}
+
+trap_interrupts_before_the_first_write_a_caller_may_wait_on
+record_argv "$@"
+
+if asks_for_the_version_anywhere_among_the_global_flags "$@"; then
+  echo "dam ${DAMNIT_TEST_VERSION:-0.2.0}"
+  exit 0
+fi
+
+find_the_subcommand_past_global_flags_and_their_values "$@"
+
+if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep_in_the_background_so_a_trap_answers_at_once_and_no_pipe_is_held; fi
 
 if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
 if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
 
-# `--full` is a second document shape for the same subcommand, so a fixture
-# directory holding one is what answers it.
-fixture="$DAMNIT_TEST_FIXTURES/$subcommand.json"
-case " $* " in
-  *" --full "*)
-    if [ -f "$DAMNIT_TEST_FIXTURES/$subcommand-full.json" ]; then
-      fixture="$DAMNIT_TEST_FIXTURES/$subcommand-full.json"
-    fi
-    ;;
-esac
-
+find_the_fixture_preferring_the_full_shape_when_asked_for "$@"
 cat "$fixture"
 ]==]
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
---- The environment a spec borrows for the length of one case, so a call that
---- escapes the fake reads and writes inside the fake's own directory.
-local SANDBOXED = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME" }
+local HOME_VARIABLES_SANDBOXED_TO_THE_SCRIPT_DIR = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME" }
 
-local VARIABLES = {
+local VARIABLES_THAT_DRIVE_THE_SCRIPT = {
   "DAMNIT_TEST_LOG",
   "DAMNIT_TEST_FIXTURES",
   "DAMNIT_TEST_VERSION",
@@ -74,36 +84,32 @@ local VARIABLES = {
   "DAMNIT_TEST_EXIT",
 }
 
----@class damnit.FakeDam
----@field dir string the temporary directory the script lives in
----@field log string the path the argv log is appended to
----@field path string the PATH this fake replaced
----@field saved table<string, string?> the sandboxed variables as they were
-
---- Put a fake `dam` at the front of PATH.
----@param opts { fixtures: string?, version: string?, sleep: string?, stderr: string?, exit: integer? }?
----@return damnit.FakeDam
 function M.install(opts)
   opts = opts or {}
 
-  local dir = vim.fn.tempname()
-  vim.fn.mkdir(dir, "p")
+  local script_dir = vim.fn.tempname()
+  vim.fn.mkdir(script_dir, "p")
 
-  local script = dir .. "/dam"
+  local script = script_dir .. "/dam"
   local file = assert(io.open(script, "w"))
   file:write(SCRIPT)
   file:close()
   assert(vim.uv.fs_chmod(script, tonumber("755", 8)))
 
-  local fake = { dir = dir, log = dir .. "/argv.log", path = vim.env.PATH, saved = {} }
+  local fake = {
+    script_dir = script_dir,
+    argv_log_path = script_dir .. "/argv.log",
+    path_before_install = vim.env.PATH,
+    home_variables_before_install = {},
+  }
 
-  for _, name in ipairs(SANDBOXED) do
-    fake.saved[name] = vim.env[name]
-    vim.env[name] = dir
+  for _, name in ipairs(HOME_VARIABLES_SANDBOXED_TO_THE_SCRIPT_DIR) do
+    fake.home_variables_before_install[name] = vim.env[name]
+    vim.env[name] = script_dir
   end
 
-  vim.env.PATH = dir .. ":" .. vim.env.PATH
-  vim.env.DAMNIT_TEST_LOG = fake.log
+  vim.env.PATH = script_dir .. ":" .. vim.env.PATH
+  vim.env.DAMNIT_TEST_LOG = fake.argv_log_path
   vim.env.DAMNIT_TEST_FIXTURES = opts.fixtures or (TESTS_DIR .. "/fixtures/default")
   vim.env.DAMNIT_TEST_VERSION = opts.version or "0.2.0"
   vim.env.DAMNIT_TEST_SLEEP = opts.sleep or ""
@@ -115,13 +121,10 @@ function M.install(opts)
   return fake
 end
 
---- Every argv line the fake recorded, in order, with the leading `dam` removed.
----@param fake damnit.FakeDam
----@return string[]
 function M.argv_log(fake)
   local lines = {}
 
-  local file = io.open(fake.log, "r")
+  local file = io.open(fake.argv_log_path, "r")
   if not file then
     return lines
   end
@@ -134,26 +137,32 @@ function M.argv_log(fake)
   return lines
 end
 
---- Turn the loop until `done` answers true. `vim.wait` is allowed here: this is
---- a test, and the whole point is to let the scheduled callback run.
----@param done fun(): boolean
----@param ms integer?
 function M.settle(done, ms)
   assert(vim.wait(ms or 2000, done, 5), "the dam call never answered")
 end
 
---- Take the fake away and put PATH back.
----@param fake damnit.FakeDam
-function M.remove(fake)
-  vim.env.PATH = fake.path
+function M.wait_long_enough_to_catch_a_stray_call(fake, logged_before)
+  return vim.wait(200, function()
+    return #M.argv_log(fake) > logged_before
+  end, 5)
+end
 
-  for _, name in ipairs(SANDBOXED) do
-    vim.env[name] = fake.saved[name]
+function M.drain_the_lane_so_no_answer_lands_in_the_next_case()
+  pcall(M.settle, function()
+    return require("damnit.queue").running() == nil
+  end, 2000)
+end
+
+function M.remove(fake)
+  vim.env.PATH = fake.path_before_install
+
+  for _, name in ipairs(HOME_VARIABLES_SANDBOXED_TO_THE_SCRIPT_DIR) do
+    vim.env[name] = fake.home_variables_before_install[name]
   end
 
-  vim.fn.delete(fake.dir, "rf")
+  vim.fn.delete(fake.script_dir, "rf")
 
-  for _, name in ipairs(VARIABLES) do
+  for _, name in ipairs(VARIABLES_THAT_DRIVE_THE_SCRIPT) do
     vim.env[name] = nil
   end
 
