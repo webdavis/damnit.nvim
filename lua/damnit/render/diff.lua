@@ -1,26 +1,15 @@
--- The inline field diff, as extmark virtual lines.
---
--- Virtual lines rather than inserted text: the buffer stays unmodifiable, every
--- other entry keeps its line number so a remembered cursor survives, and a
--- change here is a set of field pairs rather than a hunk of text.
-
 local M = {}
 
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
 
---- The oids whose diff is open, per store, for the session.
----@type table<string, table<string, boolean>>
-local open = {}
+local open_diffs_by_store = {}
 
---- One field's value as text, with a dash for unset. A field lives either on the
---- object or inside its `task` or `event` table.
----@param object table?
----@param field string
----@return string
+local UNSET = "-"
+
 function M.value(object, field)
   if not object then
-    return "-"
+    return UNSET
   end
 
   local value = object[field]
@@ -34,25 +23,22 @@ function M.value(object, field)
   end
 
   if value == nil or value == vim.NIL or value == "" then
-    return "-"
+    return UNSET
   end
 
   if type(value) == "table" then
-    return #value > 0 and table.concat(value, ", ") or "-"
+    return #value > 0 and table.concat(value, ", ") or UNSET
   end
 
   return tostring(value)
 end
 
---- Every field one object has set, in dam's own order.
----@param object table?
----@return string[]
 function M.set_fields(object)
   local names = {}
 
   for _, group in ipairs({ status_model.FIELDS, status_model.TASK_FIELDS, status_model.EVENT_FIELDS }) do
     for _, field in ipairs(group) do
-      if M.value(object, field) ~= "-" then
+      if M.value(object, field) ~= UNSET then
         names[#names + 1] = field
       end
     end
@@ -61,9 +47,6 @@ function M.set_fields(object)
   return names
 end
 
---- The virtual lines one change becomes.
----@param entry table
----@return table[][]
 function M.virt_lines(entry)
   local fields = entry.fields or {}
 
@@ -94,18 +77,12 @@ function M.virt_lines(entry)
   return lines
 end
 
---- The oids whose diff is open in one store's window.
----@param key string
----@return table<string, boolean>
 function M.open_set(key)
-  open[key] = open[key] or {}
+  open_diffs_by_store[key] = open_diffs_by_store[key] or {}
 
-  return open[key]
+  return open_diffs_by_store[key]
 end
 
---- Every change in one model, by oid.
----@param model damnit.Model?
----@return table<string, table>
 local function changes_of(model)
   local found = {}
 
@@ -120,13 +97,6 @@ local function changes_of(model)
   return found
 end
 
---- Attach the open diffs to the lines a redraw just wrote.
----
---- An oid the status no longer carries draws nothing, which is how a diff is
---- forgotten.
----@param buf integer
----@param key string
----@param model damnit.Model?
 function M.apply(buf, key, model)
   local wanted = M.open_set(key)
   if next(wanted) == nil then

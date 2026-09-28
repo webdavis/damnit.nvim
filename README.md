@@ -108,6 +108,11 @@ newest commits, as many as it is behind by. `dam` counts a remote's unpushed com
 them, and a push can leave an earlier commit behind while marking a later one pushed, so these are
 the newest commits and not necessarily the unpushed ones. The buffer says so.
 
+`P` and `p` report dam's own counts per remote, and the window re-reads the status after either.
+The `dam` this plugin spawns has no terminal, so a credential source that is a command which prompts
+can never ask; when dam cannot resolve a remote's credential the warning says to run the push or pull
+in a terminal, or to fix the source in dam's config.
+
 `X` works on an uncommitted create only. On a change whose op is an update or a delete it says so
 and does nothing, because throwing one of those away means restoring the committed state and this
 key does not do that yet.
@@ -167,8 +172,10 @@ forward instead of setting a flag.
 
 ## Lists and named views
 
-`:Dam list` shows every open object as a tree built from each object's `path`. `:Dam list <view>`
-shows one view. A view name is looked up in your `views` option first and then handed to `dam`,
+`:Dam list` shows every open object as a tree built from each object's `path`. An object's parent is
+the one whose path is its own with the last segment removed, and a query can match a child without
+its parent, so a child whose parent the view does not hold is drawn at the top level. `:Dam list
+<view>` shows one view. A view name is looked up in your `views` option first and then handed to `dam`,
 which resolves its own saved filters, so a name declared in `dam`'s config works in the editor, in a
 terminal and in a herdr pane from one declaration.
 
