@@ -1,26 +1,12 @@
--- One object as a buffer.
---
--- The buffer stays modified until dam answers, so an edit that has not landed
--- still reads as unwritten and a refused one leaves the text where it can be
--- fixed.
-
 local M = {}
 
 local message = require("damnit.message")
 local task_format = require("damnit.task_format")
 
---- Its own namespace: `damnit.render` already clears the whole `damnit` one in
---- the buffer it draws.
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit.diagnostics")
 
---- The object each buffer was last drawn from, which is what a write diffs
---- against.
----@type table<integer, table>
-local objects = {}
+local last_drawn_object_by_buf = {}
 
----@param buf integer
----@param text string
----@param line integer
 local function diagnose(buf, text, line)
   vim.diagnostic.set(M.NAMESPACE, buf, {
     {
@@ -33,27 +19,18 @@ local function diagnose(buf, text, line)
   })
 end
 
---- Draw one object and remember it, so the next write knows what changed.
----@param object table
----@param buf integer?
----@return integer buf
 function M.show(object, buf)
   buf = buf or vim.api.nvim_get_current_buf()
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, task_format.render(object))
   vim.bo[buf].modified = false
 
-  objects[buf] = object
+  last_drawn_object_by_buf[buf] = object
   vim.diagnostic.reset(M.NAMESPACE, buf)
 
   return buf
 end
 
---- Queue one call that ends with the object dam answered with, or with dam's
---- refusal as a diagnostic on line one.
----@param buf integer
----@param args string[]
----@param label string
 local function send(buf, args, label)
   require("damnit.queue").submit({
     args = args,
@@ -72,10 +49,8 @@ local function send(buf, args, label)
   })
 end
 
---- Send what the buffer changed: one `dam edit`, and `dam mv` when the path did.
----@param buf integer
 function M.write(buf)
-  local object = objects[buf]
+  local object = last_drawn_object_by_buf[buf]
   if not object then
     return message.warn("this buffer has no object to write")
   end
@@ -111,9 +86,6 @@ function M.write(buf)
   end
 end
 
---- Open one object by oid in the current window.
----@param oid string
----@return integer buf
 function M.open(oid)
   local buf = vim.api.nvim_create_buf(false, true)
 
@@ -122,8 +94,6 @@ function M.open(oid)
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
 
-  -- The sidebar refuses a foreign buffer, so an object opened from it lands in
-  -- the work beside it rather than failing.
   require("damnit.sidebar").leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)
 

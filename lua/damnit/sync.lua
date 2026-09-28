@@ -1,15 +1,7 @@
--- The three keys that reach a remote: push, pull and settling a conflict.
---
--- Each reports dam's own counts rather than a sentence of this plugin's, and
--- each is followed by a fresh status, because a push changes what is unpushed
--- and a pull changes everything else.
-
 local M = {}
 
 local message = require("damnit.message")
 
---- The remote the cursor is on, when it is on one.
----@return string?
 function M.remote_under_cursor()
   local found = require("damnit.window").entry_under_cursor()
 
@@ -20,8 +12,6 @@ function M.remote_under_cursor()
   return nil
 end
 
----@param report table?
----@return string[]
 local function push_lines(report)
   local said = {}
 
@@ -38,8 +28,6 @@ local function push_lines(report)
   return said
 end
 
----@param report table?
----@return string[]
 local function pull_lines(report)
   local said = {}
 
@@ -55,23 +43,12 @@ local function pull_lines(report)
   return said
 end
 
---- What to do about a credential dam could not resolve.
----
---- A credential command cannot prompt from here: the process this plugin spawns
---- is given no terminal, so an interactive vault CLI never gets to ask. dam
---- names all three credential failures with the one kind and no rule, so the
---- advice covers the command and the source together.
----@param verb string
----@return string
 local function credential_advice(verb)
   return ("dam could not resolve this remote's credential; if its source is a command that prompts, run dam %s in a terminal, and otherwise fix the source in dam's config"):format(
     verb
   )
 end
 
---- One network call, refused while another is in flight.
----@param verb "push"|"pull"
----@param remote string?
 function M.sync(verb, remote)
   local args = { verb }
 
@@ -108,13 +85,13 @@ end
 
 function M.push()
   local model = require("damnit.window").model()
-  local behind = false
+  local any_remote_behind = false
 
   for _, remote in ipairs((model or {}).remotes or {}) do
-    behind = behind or remote.commits > 0
+    any_remote_behind = any_remote_behind or remote.commits > 0
   end
 
-  if not behind then
+  if not any_remote_behind then
     return message.warn("nothing to push")
   end
 
@@ -125,8 +102,6 @@ function M.pull()
   M.sync("pull", M.remote_under_cursor())
 end
 
---- Settle the conflict under the cursor with one side or the other.
----@param side "ours"|"theirs"
 function M.resolve(side)
   local found = require("damnit.window").entry_under_cursor()
 

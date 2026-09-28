@@ -1,10 +1,7 @@
--- What each key does: read the cursor, queue the call, handle the result.
-
 local M = {}
 
 local message = require("damnit.message")
 
---- Re-read the status. Queued like anything else, so it waits behind a push.
 function M.refresh()
   require("damnit.window").refresh()
 end
@@ -13,20 +10,18 @@ function M.cancel()
   require("damnit.queue").cancel()
 end
 
---- Closing the only window of the only tab page is what Vim refuses with E444,
---- so the refusal is this plugin's own sentence instead.
+local function is_the_only_window_left()
+  return #vim.api.nvim_list_tabpages() == 1 and #vim.api.nvim_tabpage_list_wins(0) == 1
+end
+
 function M.close()
-  if #vim.api.nvim_list_tabpages() == 1 and #vim.api.nvim_tabpage_list_wins(0) == 1 then
+  if is_the_only_window_left() then
     return message.warn("the status window is the only window open")
   end
 
   vim.api.nvim_win_close(0, false)
 end
 
---- Move to the count-th entry of a section, or say the section is not there.
----@param kind string
----@param heading string
----@param count integer
 function M.jump_to_section(kind, heading, count)
   local line = require("damnit.window").line_of(kind, count)
 
@@ -37,8 +32,6 @@ function M.jump_to_section(kind, heading, count)
   vim.api.nvim_win_set_cursor(0, { line, 0 })
 end
 
---- The key table for one filetype, in a float that closes on any key.
----@param filetype string
 function M.help(filetype)
   local rows = {}
   for _, map in ipairs(require("damnit.keys").MAPS[filetype] or {}) do
@@ -76,12 +69,6 @@ function M.help(filetype)
   })
 end
 
---- The objects the cursor or the visual range covers.
----
---- A section heading contributes every change in its section, which is what
---- makes `-` on a heading one call rather than one per line. A conflict or a
---- notice line contributes nothing.
----@return { oids: string[], section: string? }
 function M.targets()
   local buf = vim.api.nvim_get_current_buf()
   local kinds = vim.b[buf].damnit_kinds or {}
@@ -102,8 +89,7 @@ function M.targets()
 
   local picked, seen, section = {}, {}, nil
 
-  ---@param index integer
-  local function take(index)
+  local function take_if_change(index)
     local oid = oids[index]
 
     if oid and kinds[index] == "change" and not seen[oid] then
@@ -119,20 +105,17 @@ function M.targets()
 
       for index, owner in ipairs(sections) do
         if owner == sections[lnum] then
-          take(index)
+          take_if_change(index)
         end
       end
     else
-      take(lnum)
+      take_if_change(lnum)
     end
   end
 
   return { oids = picked, section = section }
 end
 
----@param verb string
----@param oids string[]
----@return string[]
 local function verb_args(verb, oids)
   local args = { verb }
   vim.list_extend(args, oids)
@@ -141,11 +124,6 @@ local function verb_args(verb, oids)
   return args
 end
 
---- Queue one write, report a failure, and re-read the status either way.
----
---- The window shows what dam holds, never what a refused write intended.
----@param args string[]
----@param label string
 function M.write(args, label)
   require("damnit.queue").submit({
     args = args,
@@ -188,7 +166,6 @@ function M.unstage()
   M.write(verb_args("reset", picked.oids), "reset")
 end
 
---- Stage what is not staged, unstage what is.
 function M.toggle_stage()
   local picked = M.targets()
 
@@ -200,27 +177,22 @@ function M.toggle_stage()
   M.write(verb_args(verb, picked.oids), verb)
 end
 
---- `dam reset` with no oids unstages everything.
 function M.unstage_all()
   local model = require("damnit.window").model()
-  local staged = false
+  local anything_staged = false
 
   for _, section in ipairs((model or {}).sections or {}) do
-    staged = staged or section.kind == "staged"
+    anything_staged = anything_staged or section.kind == "staged"
   end
 
-  if not staged then
+  if not anything_staged then
     return message.warn("nothing is staged")
   end
 
-  M.write({ "reset", "--json" }, "reset")
+  local reset_with_no_oids_unstages_everything = { "reset", "--json" }
+  M.write(reset_with_no_oids_unstages_everything, "reset")
 end
 
---- Throw away one working change.
----
---- Only a `create` has an exact inverse in dam: the object was never committed,
---- so removing it from the working layer leaves nothing behind. There is no
---- undo for it either, which is why the confirm has no way to be turned off.
 function M.discard()
   local found = require("damnit.window").entry_under_cursor()
 
@@ -245,7 +217,6 @@ function M.discard()
   end)
 end
 
---- Open or close the inline field diff of the change under the cursor.
 function M.toggle_diff()
   local window = require("damnit.window")
   local found = window.entry_under_cursor()
@@ -255,22 +226,17 @@ function M.toggle_diff()
   end
 
   local entry = found.entry
-  local open = window.open_diffs()
-  open[entry.oid] = not open[entry.oid] or nil
+  local open_diffs = window.open_diffs()
+  open_diffs[entry.oid] = not open_diffs[entry.oid] or nil
 
-  -- The status this window drew carries no objects to compare, so the first
-  -- open re-reads one that does.
-  if open[entry.oid] and not (entry.before or entry.after) then
+  local drawn_status_has_no_objects_to_compare = not (entry.before or entry.after)
+  if open_diffs[entry.oid] and drawn_status_has_no_objects_to_compare then
     return window.refresh()
   end
 
   window.redraw_current()
 end
 
---- Open whatever the cursor is on.
----
---- A change opens in the window `:Dam` was opened from, or in a split when the
---- status window is the only one.
 function M.open_under_cursor()
   local window = require("damnit.window")
   local found = window.entry_under_cursor()
@@ -294,10 +260,10 @@ function M.open_under_cursor()
     return
   end
 
-  local origin = window.origin()
+  local window_dam_was_opened_from = window.origin()
 
-  if origin then
-    vim.api.nvim_set_current_win(origin)
+  if window_dam_was_opened_from then
+    vim.api.nvim_set_current_win(window_dam_was_opened_from)
   else
     vim.cmd("split")
   end
@@ -305,7 +271,6 @@ function M.open_under_cursor()
   require("damnit.task_buffer").open(entry.oid)
 end
 
---- Commit what is staged, through a message buffer.
 function M.commit()
   require("damnit.commit_buffer").open()
 end

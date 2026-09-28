@@ -1,11 +1,3 @@
--- The text one object looks like in a buffer, and the reading of it back.
---
--- A header of `key: value` lines between two `---` fences and the body as
--- markdown below them. Comment lines inside the header start with `#` and are
--- read only: they carry what dam has no edit flag for.
---
--- Pure: no buffer, no call, no notification.
-
 local M = {}
 
 local tree = require("damnit.tree")
@@ -15,21 +7,19 @@ M.FENCE = "---"
 M.TASK_KEYS = { "subject", "path", "done", "priority", "due", "deadline", "labels", "depends", "recurrence" }
 M.EVENT_KEYS = { "subject", "path", "start", "end", "location", "labels", "depends" }
 
---- The flag that sets a field, and the flag that clears it. `false` means the
---- field cannot be cleared, so an empty value is refused.
+local CANNOT_BE_CLEARED = false
+
 local FLAGS = {
-  subject = { "--subject", false },
-  priority = { "-p", false },
-  due = { "--due", "--no-due" },
-  deadline = { "--deadline", "--no-deadline" },
-  recurrence = { "--recurrence", "--no-recurrence" },
-  start = { "--start", false },
-  ["end"] = { "--end", false },
-  location = { "--location", "--no-location" },
+  subject = { set = "--subject", clear = CANNOT_BE_CLEARED },
+  priority = { set = "-p", clear = CANNOT_BE_CLEARED },
+  due = { set = "--due", clear = "--no-due" },
+  deadline = { set = "--deadline", clear = "--no-deadline" },
+  recurrence = { set = "--recurrence", clear = "--no-recurrence" },
+  start = { set = "--start", clear = CANNOT_BE_CLEARED },
+  ["end"] = { set = "--end", clear = CANNOT_BE_CLEARED },
+  location = { set = "--location", clear = "--no-location" },
 }
 
----@param value any
----@return string
 local function text(value)
   if value == nil or value == vim.NIL then
     return ""
@@ -38,9 +28,6 @@ local function text(value)
   return tostring(value)
 end
 
----@param object table
----@param field string
----@return string
 local function field_value(object, field)
   local group = object.kind == "event" and object.event or object.task
 
@@ -55,12 +42,7 @@ local function field_value(object, field)
   return text((group or {})[field])
 end
 
---- One header line. An empty field is `key:` rather than `key: `, so no line
---- carries trailing whitespace an editor would strip back out.
----@param key string
----@param value string
----@return string
-local function line_of(key, value)
+local function header_line_without_trailing_space(key, value)
   if value == "" then
     return key .. ":"
   end
@@ -68,26 +50,18 @@ local function line_of(key, value)
   return ("%s: %s"):format(key, value)
 end
 
---- The keys one object's kind uses.
----@param object table
----@return string[]
 function M.keys(object)
   return object.kind == "event" and M.EVENT_KEYS or M.TASK_KEYS
 end
 
---- The lines one object becomes.
----@param object table
----@return string[]
 function M.render(object)
   local lines = { M.FENCE }
 
   for _, key in ipairs(M.keys(object)) do
-    lines[#lines + 1] = line_of(key, field_value(object, key))
+    lines[#lines + 1] = header_line_without_trailing_space(key, field_value(object, key))
   end
 
-  -- Read only: dam has no edit flag for reminders, and dam's priority scale is
-  -- the reverse of Todoist's.
-  lines[#lines + 1] = line_of("# reminders", table.concat(object.reminders or {}, ", "))
+  lines[#lines + 1] = header_line_without_trailing_space("# reminders", table.concat(object.reminders or {}, ", "))
 
   if object.kind ~= "event" then
     lines[#lines + 1] = "# priority: 1 is highest"
@@ -99,11 +73,6 @@ function M.render(object)
   return lines
 end
 
---- Read a buffer back into a header and a body.
----@param lines string[]
----@return table? header key to { value, line }
----@return string? body
----@return string? err
 function M.parse(lines)
   if lines[1] ~= M.FENCE then
     return nil, nil, ("the first line must be %s, the header fence"):format(M.FENCE)
@@ -141,8 +110,6 @@ function M.parse(lines)
   return header, table.concat(vim.list_slice(lines, closed + 1), "\n")
 end
 
----@param value string
----@return string[]
 local function split(value)
   local items = {}
 
@@ -157,10 +124,6 @@ local function split(value)
   return items
 end
 
----@param wanted string[]
----@param held string[]
----@return string[] added
----@return string[] removed
 local function set_diff(wanted, held)
   local have, want = {}, {}
 
@@ -187,39 +150,24 @@ local function set_diff(wanted, held)
   return added, removed
 end
 
---- One refusal, on the line the operator is looking at.
----@param message string
----@param entry { value: string, line: integer }
----@return { message: string, line: integer }
 local function refuse(message, entry)
   return { message = message, line = entry.line }
 end
 
---- What `dam mv` should be given for a path the buffer changed.
----
---- `dam mv <oid> <to>` puts the object inside `to` and keeps its own last
---- segment, except at the root, where it has none and becomes `to` itself
---- (`relocate`, dam-application). So the argument is the container of the path
---- that was typed, and a typed path that changes the object's own segment is a
---- rename, which dam has no verb for.
----@param entry { value: string, line: integer }
----@param held string
----@return string? destination
----@return { message: string, line: integer }? refusal
-local function move_to(entry, held)
+local function move_to(entry, held_path)
   if entry.value:find("//", 1, true) then
     return nil, refuse("`path` has an empty segment", entry)
   end
 
-  if held == "" then
+  if held_path == "" then
     return entry.value
   end
 
-  if tree.own_segment(entry.value) ~= tree.own_segment(held) then
+  if tree.own_segment(entry.value) ~= tree.own_segment(held_path) then
     return nil,
       refuse(
         ("`path` renames this object from %q to %q, and dam mv only moves one: keep the last segment and change what comes before it"):format(
-          tree.own_segment(held),
+          tree.own_segment(held_path),
           tree.own_segment(entry.value)
         ),
         entry
@@ -229,15 +177,7 @@ local function move_to(entry, held)
   return tree.parent_path(entry.value)
 end
 
----@param object table
----@param key string
----@param entry { value: string, line: integer }
----@param edit string[] appended to in place
----@return { message: string, line: integer }? refusal
 local function append_flags(object, key, entry, edit)
-  -- `done` is the one field with a clearing flag and no setting one: dam has
-  -- `--undone` and nothing for the other direction, because completing rolls a
-  -- recurring object forward instead of setting a flag, which is `dam done`.
   if key == "done" then
     if entry.value == "false" then
       edit[#edit + 1] = "--undone"
@@ -264,7 +204,7 @@ local function append_flags(object, key, entry, edit)
   end
 
   if entry.value == "" then
-    local clear = FLAGS[key][2]
+    local clear = FLAGS[key].clear
 
     if not clear then
       return refuse(("`%s` cannot be cleared"):format(key), entry)
@@ -275,15 +215,11 @@ local function append_flags(object, key, entry, edit)
     return nil
   end
 
-  vim.list_extend(edit, { FLAGS[key][1], entry.value })
+  vim.list_extend(edit, { FLAGS[key].set, entry.value })
 
   return nil
 end
 
---- Everything the plugin can refuse without asking dam.
----@param object table
----@param header table
----@return { message: string, line: integer }? refusal
 local function refusal_in(object, header)
   local allowed = M.keys(object)
 
@@ -322,16 +258,6 @@ local function refusal_in(object, header)
   return nil
 end
 
---- What a write should send, given the object dam last described and the buffer
---- as the operator left it.
----
---- Only what changed is sent, which matters most for `due`: dam parses a due
---- string, and a round trip through an unchanged one could move a recurrence.
----@param object table
----@param header table
----@param body string
----@return { edit: string[], move: string? }?
----@return { message: string, line: integer }?
 function M.changes(object, header, body)
   local refusal = refusal_in(object, header)
   if refusal then

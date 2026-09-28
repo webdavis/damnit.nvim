@@ -19,7 +19,9 @@ name, and nothing in this repository ever sees one. `dam` resolves its own.
 - Neovim 0.12.5. It is developed and tested there, and needs `vim.system`, `vim.uv`, extmarks and
   `vim.health`.
 - `dam` on your `PATH`, in the range `>=0.2.0 <0.3.0`. Older or newer and the plugin says so and
-  refuses rather than guessing at a document shape.
+  refuses rather than guessing at a document shape. A `dam --version` that exits cleanly but prints no
+  version is warned about and not refused. The version is read once per session, and again after each
+  `setup`.
 - No token. See above.
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua) is optional. Without it the search falls back to
   `vim.ui.select`.
@@ -55,7 +57,7 @@ return {
 ```
 
 `setup` is optional: every command works without it. Calling it is how you declare views and change
-the options below.
+the options below. A later call merges over the earlier one, and the next command reads the result.
 
 ## Commands
 
@@ -77,8 +79,10 @@ editor holding nothing else.
 ## The staging window
 
 `:Dam` opens it. It draws a header, then one section per thing that has something in it: Conflicts,
-Working, Staged, Unpushed, Notices. Each section is a fold. It re-reads `dam status --json` in full
-after every action rather than patching its own model, so what you see is what dam last said.
+Working, Staged, Unpushed, Notices. Conflicts come first because a conflict is what blocks a pull.
+Unpushed lists only the remotes that are behind; the header names every remote. Each section is a
+fold. It re-reads `dam status --json` in full after every action rather than patching its own model,
+so what you see is what dam last said.
 
 | Key | What it does |
 | --- | --- |
@@ -96,16 +100,36 @@ after every action rather than patching its own model, so what you see is what d
 | `co` | Settle this conflict with ours. |
 | `ct` | Settle this conflict with theirs. |
 | `<C-c>` | Cancel the running operation. |
-| `gu` `gs` `gp` `gn` `gc` | Jump to Working, Staged, Unpushed, Notices, Conflicts. |
+| `gu` `gs` `gp` `gn` `gc` | Jump to Working, Staged, Unpushed, Notices, Conflicts. A count picks the entry, and a count past the last lands on the last. |
 | `q` `gq` | Close the window. |
 | `g?` | Show this table for the buffer you are in. |
 
+`cc` opens a message buffer listing what is staged. Writing it makes the commit; its `#` lines are
+left out of the message, and an empty message makes no commit.
+
+`<CR>` on a conflict opens ours and theirs side by side. On an Unpushed line it shows that remote's
+newest commits, as many as it is behind by. `dam` counts a remote's unpushed commits without naming
+them, and a push can leave an earlier commit behind while marking a later one pushed, so these are
+the newest commits and not necessarily the unpushed ones. The buffer says so.
+
+`P` and `p` report dam's own counts per remote, and the window re-reads the status after either.
+The `dam` this plugin spawns has no terminal, so a credential source that is a command which prompts
+can never ask; when dam cannot resolve a remote's credential the warning says to run the push or pull
+in a terminal, or to fix the source in dam's config.
+
 `X` works on an uncommitted create only. On a change whose op is an update or a delete it says so
 and does nothing, because throwing one of those away means restoring the committed state and this
-key does not do that yet.
+key does not do that yet. It always asks first, because nothing undoes it.
+
+`-`, `s` and `u` on a section heading act on every change in that section, in one call. A conflict
+or a notice line has nothing to stage. `<CR>` on a change opens the object in the window you opened
+`:Dam` from, or in a split when that window is gone. The first `=` on a change re-reads the status
+when the one on screen carries no objects to compare.
 
 Every highlight group links to a standard group, so the window takes your colourscheme's colours and
-this plugin writes none of its own.
+this plugin writes none of its own. With [mini.icons](https://github.com/echasnovski/mini.icons)
+installed, each change, remote and conflict line starts with its glyph; without it, with one ASCII
+character.
 
 ## Non-blocking, and what that means here
 
@@ -144,7 +168,8 @@ recurrence: every month
 The landlord takes a bank transfer only.
 ```
 
-Write the buffer and only what you changed is sent. Lines starting with `#` inside the header are
+Write the buffer and only what you changed is sent, so an unchanged `due` is never sent back for dam
+to parse again and move a recurrence. Lines starting with `#` inside the header are
 read only. The buffer stays modified until dam answers, so an edit that has not landed still reads
 as unwritten and a refused one leaves your text where you can fix it.
 
@@ -153,14 +178,22 @@ own read-only line.
 
 Two fields behave unlike the rest. `path` moves the object with `dam mv`, which puts it inside the
 path you name and keeps the object's own last segment, so changing that last segment is a rename and
-is refused with an explanation. `done` takes `false` and sends `dam edit --undone`; complete an
+is refused with an explanation. An object with no path yet takes the path you type whole. `done` takes `false` and sends `dam edit --undone`; complete an
 object with `x` in a list, not by typing `true` here, because completing a recurring object rolls it
 forward instead of setting a flag.
 
 ## Lists and named views
 
-`:Dam list` shows every open object as a tree built from each object's `path`. `:Dam list <view>`
-shows one view. A view name is looked up in your `views` option first and then handed to `dam`,
+`:Dam list` shows every open object as a tree built from each object's `path`, in one read-only list
+buffer that every view reuses. An object's parent is
+the one whose path is its own with the last segment removed, and a query can match a child without
+its parent, so a child whose parent the view does not hold is drawn at the top level. `:Dam list
+<view>` shows one view, and a view that matches nothing says `No objects.`
+
+A line is the subject, then its badges: the due date in parentheses, the priority as `p1` to `p3`
+(the default, 4, is left off), each label as `@label`, a `⌖` when it was captured from code, and its
+path. The badges come after the subject so that a narrow sidebar cuts off a badge rather than the
+subject. A folded line ends with `(+n)`, the number of objects folded away under it. A view name is looked up in your `views` option first and then handed to `dam`,
 which resolves its own saved filters, so a name declared in `dam`'s config works in the editor, in a
 terminal and in a herdr pane from one declaration.
 
@@ -194,14 +227,21 @@ overdue)`.
 | `x` | Complete this object. |
 | `X` | Reopen this object. |
 | `dd` | Remove this object, after a confirm. |
-| `p` | Cycle its priority. |
-| `s` | Set its due date. |
+| `p` | Cycle its priority towards urgent, wrapping from `p1` back to 4. |
+| `s` | Set its due date, in any form dam's `--due` reads. |
 | `l` | Toggle a label on it. |
-| `m` | Move it into another path. |
+| `m` | Move it into another path the view reaches, or the top level. |
 | `a` | Add an object where the cursor is. |
 | `>` `<` | Move it under the object above, or out from under its parent. |
 | `S` | Hand it to the agent pane. |
 | `g?` | Show this table. |
+
+Every prompt here is `vim.ui.input` and every choice is `vim.ui.select`, so whatever you have made
+those into is what you get. A due date dam cannot read comes back in dam's own words. `l` offers the
+labels dam's config declares in categories, in dam's order, then any label the object carries that no
+category lists, so a stray one can still be taken off. `m` offers each object's path and every
+container above it, even one no object sits at. After every edit the view is read again, so what is
+drawn is what dam holds.
 
 Completing a parent whose children or dependencies are still open is refused by `dam`, which names
 the blockers. The plugin shows you that list and asks what to do with them rather than asking yes or
@@ -210,7 +250,8 @@ no.
 ## The completed history
 
 `:Dam done` lists what is completed, newest first, flat rather than as a tree. `dam` holds the whole
-history and answers it in one call, so there is nothing to page through.
+history and answers it in one call, so there is nothing to page through. A task completed elsewhere
+and pulled from a remote carries no completion time, so it is listed after every one that has one.
 
 `u` reopens the object under the cursor there. It is confined to this buffer on purpose: a plain
 `dam ls` view holds completed objects too, and reopening one from there is `X`.
@@ -222,18 +263,29 @@ history and answers it in one call, so there is nothing to page through.
 every open object. The prompt carries the view's name and its query, so a search that is looking
 inside a filter says so.
 
+`<CR>` opens the object you picked. In fzf-lua `ctrl-x` completes it instead, the same way `x` does
+in a list. With `picker = "fzf-lua"` and fzf-lua not installed, the search warns and opens in
+`vim.ui.select` rather than refusing; fzf-lua is looked up each time, so installing it needs no
+restart. A `picker` value that is none of the three warns and is read as `auto`.
+
 ## Capture from code
 
 `:Dam capture` makes a task out of what is in front of you. In visual mode the selection becomes the
-subject, taken by whole lines; in normal mode it asks. Either way the task's body gets one line
-naming where it came from:
+subject, taken by whole lines; in normal mode it asks, with the current line's words already typed
+in. Either way the task's body gets one line naming where it came from:
 
 ```
 -- TODO(me): hold the width
 ```
 
-captured from `lua/damnit/sidebar.lua` becomes a task whose body holds
-`damnit.nvim lua/damnit/sidebar.lua:88`, and `gd` on that task in a list takes you back to the line.
+captured from `lua/damnit/sidebar.lua` becomes a task whose subject is `hold the width` and whose
+body holds `damnit.nvim lua/damnit/sidebar.lua:88`, and `gd` on that task in a list takes you back to
+the line.
+
+The subject loses each line's comment punctuation and a block comment's closing tail, and the first
+line with words on it loses a leading `TODO` or `FIXME` with the `(author)` and colon after it. The
+marker stays when a letter follows it, so `TODOS are the problem` keeps its first word. Several lines
+join into one, with runs of space collapsed.
 
 The path is always relative to the repository root, and a file in no repository goes out as its own
 name alone. A body reaches every device that pulls the store, so an absolute path would carry the
@@ -247,6 +299,15 @@ Nothing else is set, so a capture lands in `inbox/`, which is where it belongs u
 [herdr](https://github.com/webdavis/herdr) it goes into the agent pane's input as one bracketed
 paste and is never submitted, so you read it, add to it and press return yourself. Outside herdr, or
 whenever herdr will not take it, the same brief goes to the clipboard and the notification says so.
+
+`S` first asks for a note, and escaping that prompt sends nothing. The brief is the subject, the
+short oid, the store, then whichever of the path, the due date, the priority (left off at the
+default, 4) and the labels the object has, then its body and your note. A field with nothing in it is
+left out rather than written empty. The agent pane is one in the same herdr workspace that herdr
+names an agent for, other than the pane you are in; with several, the first one herdr lists wins and
+the notification names it. Once the text is delivered, focusing that pane is a convenience, so a
+refused focus is not reported as a failed hand-off. Without a clipboard provider the brief lands in
+the unnamed register only, and the notification says that too.
 
 `dam` has no comments, so a hand-off leaves no record in the store. Every notification says that.
 
@@ -268,14 +329,16 @@ vim.o.statusline = "%{%v:lua.require('damnit').status()%}"
 ```
 
 It draws nothing until the first read lands and nothing again whenever nothing is due, which is the
-right answer for no news. Otherwise it is `2 due, 1 overdue`. While a foreground `dam` call is running
+right answer for no news. Otherwise it is `2 due, 1 overdue`. A task with a time of day is overdue
+from that time on; a whole-day task is due for all of its day and overdue once the day is over. While a foreground `dam` call is running
 it is that instead, with its elapsed time: `dam: push todoist 3.2s`. A background read leaves the count
 in place. A read that failed reads `dam !`, because a count left standing after the store stopped
 answering is worse than no count.
 
 Asking for the string is what starts the reader. It runs `dam ls '!done & (due:today | overdue)'
 --no-pull` every `refresh_interval` seconds, skips a turn while another call holds the store, and
-stops on exit. `--no-pull` is what lets it promise to reach no remote.
+stops on exit. `--no-pull` is what lets it promise to reach no remote, and `!done` is what keeps a
+completed task out of the count, because `due:today` matches a completed task too.
 
 ## Due reminders
 
@@ -347,6 +410,9 @@ nvim --headless --clean -l tests/run.lua            # everything
 nvim --headless --clean -l tests/run.lua poll_spec  # one spec
 stylua --check . && luacheck .
 ```
+
+`luacheck` reads the code as Lua 5.1 with a `vim` global, because Neovim runs LuaJIT, and leaves line
+length to `stylua`, which wraps at 120 columns.
 
 Every spec runs headless against a fake `dam` placed at the front of `PATH`, so no test reaches the
 network, a real store or a real account. `tests/performance_spec.lua` times a full re-render and

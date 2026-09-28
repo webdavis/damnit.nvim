@@ -1,44 +1,27 @@
--- Every mapping in every buffer this plugin owns, one table per filetype.
---
--- The description beside each key is what `g?` shows, so the help and the
--- mappings cannot drift apart.
-
 local M = {}
 
----@param name string
----@param heading string
----@return fun()
 local function jump(name, heading)
   return function()
     require("damnit.actions").jump_to_section(name, heading, vim.v.count1)
   end
 end
 
----@param module string
----@param fn string the name of a function on that module
----@param ... any the arguments it is called with
----@return fun()
-local function call(module, fn, ...)
+local function call(module, function_name, ...)
   local args = { ... }
 
   return function()
-    require(module)[fn](unpack(args))
+    require(module)[function_name](unpack(args))
   end
 end
 
----@param fn string the name of a function on damnit.actions
----@return fun()
-local function act(fn)
-  return call("damnit.actions", fn)
+local function act(function_name)
+  return call("damnit.actions", function_name)
 end
 
----@param fn string the name of a function on damnit.quick_edit
----@return fun()
-local function edit(fn)
-  return call("damnit.quick_edit", fn)
+local function edit(function_name)
+  return call("damnit.quick_edit", function_name)
 end
 
----@type table<string, { [1]: string|string[], [2]: string, [3]: fun(), [4]: string }[]>
 M.MAPS = {
   damstatus = {
     { "n", "R", act("refresh"), "re-read the status" },
@@ -99,9 +82,6 @@ M.MAPS = {
   },
 }
 
---- Put one filetype's mappings on a buffer.
----@param buf integer
----@param filetype string
 function M.attach(buf, filetype)
   for _, map in ipairs(M.MAPS[filetype] or {}) do
     vim.keymap.set(map[1], map[2], map[3], { buffer = buf, nowait = true, desc = "dam: " .. map[4] })

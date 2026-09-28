@@ -1,18 +1,9 @@
--- A model into lines and extmark specs.
---
--- This module knows nothing about dam. It takes a model and hands back lines,
--- each carrying the marks that colour it, so a golden test compares a rendering
--- without opening a window.
-
 local M = {}
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit")
 
---- The display column each field of a change line starts at.
 M.COLUMNS = { verb = 2, oid = 11, subject = 20, fields = 48, path = 72 }
 
---- Every group, and the standard group it links to. No colour is written here,
---- so a colourscheme styles the window with nothing on its side.
 M.HIGHLIGHTS = {
   DamHeader = "Title",
   DamSection = "Statement",
@@ -40,46 +31,38 @@ M.HIGHLIGHTS = {
 
 local OP_GROUPS = { create = "DamOpNew", update = "DamOpChanged", delete = "DamOpRemoved" }
 
---- One ASCII column each, so the rendering is the same width whether or not
---- mini.icons is installed.
-local FALLBACKS = { task = "-", event = "@", remote = ">", conflict = "!" }
-local MINI = {
+local ONE_COLUMN_ASCII_ICONS = { task = "-", event = "@", remote = ">", conflict = "!" }
+local MINI_ICON_ARGS = {
   task = { "default", "file" },
   event = { "default", "calendar" },
   remote = { "default", "git" },
   conflict = { "default", "error" },
 }
 
---- Declare every group. Called once when the first window opens.
 function M.define()
   for group, target in pairs(M.HIGHLIGHTS) do
     vim.api.nvim_set_hl(0, group, { link = target, default = true })
   end
 end
 
---- mini.icons when it is loaded, the ASCII fallback when it is not. Looked up
---- at render time rather than required at load.
----@param kind string
----@return string
 function M.icon(kind)
   local ok, icons = pcall(require, "mini.icons")
   if not ok then
-    return FALLBACKS[kind] or "-"
+    return ONE_COLUMN_ASCII_ICONS[kind] or "-"
   end
 
-  local args = MINI[kind] or MINI.task
+  local args = MINI_ICON_ARGS[kind] or MINI_ICON_ARGS.task
   local glyph = icons.get(args[1], args[2])
 
-  return (type(glyph) == "string" and glyph ~= "" and glyph) or FALLBACKS[kind] or "-"
+  return (type(glyph) == "string" and glyph ~= "" and glyph) or ONE_COLUMN_ASCII_ICONS[kind] or "-"
 end
 
---- A line under construction. `add` appends a segment, records its mark and
---- pads out to a display column, so a subject holding wide characters does not
---- shift the columns after it.
+local OVERRUN_GAP = " "
+
 local function row()
   local parts, marks, bytes, display = {}, {}, 0, 0
 
-  local function add(text, group, column)
+  local function add(text, group, pad_to_display_column)
     text = tostring(text)
 
     if group and #text > 0 then
@@ -90,15 +73,13 @@ local function row()
     bytes = bytes + #text
     display = display + vim.fn.strdisplaywidth(text)
 
-    if column then
+    if pad_to_display_column then
       local fill = ""
 
-      if display < column then
-        fill = (" "):rep(column - display)
-      elseif display > column then
-        -- One space where the segment already overran its column, so a long
-        -- subject pushes the next field along rather than running into it.
-        fill = " "
+      if display < pad_to_display_column then
+        fill = (" "):rep(pad_to_display_column - display)
+      elseif display > pad_to_display_column then
+        fill = OVERRUN_GAP
       end
 
       parts[#parts + 1] = fill
@@ -115,15 +96,10 @@ local function row()
   }
 end
 
----@return damnit.Line
 local function blank()
   return { text = "", kind = "blank", marks = {} }
 end
 
----@param label string
----@param value string
----@param group string?
----@return damnit.Line
 local function header_line(label, value, group)
   local built = row()
   built.add(label, "DamHeader", 9)
@@ -132,14 +108,9 @@ local function header_line(label, value, group)
   return built.line("header")
 end
 
---- Naming none is a claim, so it is made only where the list was read. An
---- unread list still names whatever the unpushed rows named.
----@param remotes { remote: string, commits: integer }[]
----@param known boolean
----@return damnit.Line
-local function remotes_line(remotes, known)
+local function remotes_line(remotes, list_was_read)
   if #remotes == 0 then
-    return header_line("Remotes:", known and "none configured" or "unknown")
+    return header_line("Remotes:", list_was_read and "none configured" or "unknown")
   end
 
   local built = row()
@@ -157,8 +128,6 @@ local function remotes_line(remotes, known)
   return built.line("header")
 end
 
----@param running { label: string, elapsed: number, pending: integer }
----@return damnit.Line
 local function running_line(running)
   local built = row()
   built.add("Running:", "DamHeader", 9)
@@ -173,8 +142,6 @@ local function running_line(running)
   return built.line("header")
 end
 
----@param section damnit.Section
----@return damnit.Line
 local function section_line(section)
   local built = row()
   built.add(("%s (%d)"):format(section.name, #section.entries), "DamSection")
@@ -182,8 +149,6 @@ local function section_line(section)
   return built.line("section")
 end
 
----@param entry table
----@return damnit.Line
 local function change_line(entry)
   local built = row()
 
@@ -204,8 +169,6 @@ local function change_line(entry)
   return built.line("change", entry.oid)
 end
 
----@param entry table
----@return damnit.Line
 local function remote_line(entry)
   local built = row()
   built.add(M.icon("remote"))
@@ -216,8 +179,6 @@ local function remote_line(entry)
   return built.line("remote")
 end
 
----@param entry table
----@return damnit.Line
 local function conflict_line(entry)
   local built = row()
   built.add(M.icon("conflict"))
@@ -229,8 +190,6 @@ local function conflict_line(entry)
   return built.line("conflict", entry.oid)
 end
 
----@param entry table
----@return damnit.Line
 local function notice_line(entry)
   local built = row()
   built.add("  ")
@@ -246,17 +205,6 @@ local ENTRY_LINES = {
   notice = notice_line,
 }
 
----@class damnit.Line
----@field text string the line as it is written to the buffer
----@field kind string what the line is, which drives folds and the keys
----@field oid string? the object this line stands for
----@field section string? the section kind that owns this line
----@field marks { col: integer, length: integer, group: string }[]
-
---- The lines one model becomes.
----@param model damnit.Model
----@param state { store: string, running: { label: string, elapsed: number, pending: integer }? }
----@return damnit.Line[]
 function M.lines(model, state)
   local lines = { header_line("Store:", state.store), remotes_line(model.remotes, model.remotes_known) }
 
@@ -290,13 +238,6 @@ function M.lines(model, state)
   return lines
 end
 
---- Colour a run of lines, clearing whatever the rows held before.
----
---- Replacing a buffer's lines takes their extmarks with them, so every writer
---- of those rows re-marks them.
----@param buf integer
----@param lines damnit.Line[] the lines now occupying the rows
----@param from integer the zero-based row `lines[1]` sits on
 function M.mark(buf, lines, from)
   vim.api.nvim_buf_clear_namespace(buf, M.NAMESPACE, from, from + #lines)
 
@@ -310,34 +251,30 @@ function M.mark(buf, lines, from)
   end
 end
 
---- Put the lines in a buffer and colour them.
----
---- The buffer is unmodifiable, so the write is bracketed. Every mark is cleared
---- and reapplied, because the whole buffer is redrawn rather than patched.
----@param buf integer
----@param lines damnit.Line[]
-function M.draw(buf, lines)
-  local text, kinds, oids, sections = {}, {}, {}, {}
+local NOT_A_HOLE = false
 
-  -- `false` rather than nil on a line that has none: a buffer variable turns a
-  -- hole into vim.NIL, which is truthy, and drops a trailing one, so the line
-  -- numbers would stop lining up with the buffer's.
-  for index, line in ipairs(lines) do
-    text[index] = line.text
-    kinds[index] = line.kind
-    oids[index] = line.oid or false
-    sections[index] = line.section or false
-  end
-
-  -- Recorded before the text: the fold expression reads the kinds, and replacing
-  -- the lines is what makes Neovim recompute the fold levels.
+local function record_line_roles_before_the_text(buf, kinds, oids, sections)
   vim.b[buf].damnit_kinds = kinds
   vim.b[buf].damnit_oids = oids
   vim.b[buf].damnit_sections = sections
+end
 
-  -- Replacing every line carries a virtual-line mark past the last row, where a
-  -- ranged clear no longer reaches it, so the whole namespace goes first.
+local function clear_every_mark_including_virtual_lines(buf)
   vim.api.nvim_buf_clear_namespace(buf, M.NAMESPACE, 0, -1)
+end
+
+function M.draw(buf, lines)
+  local text, kinds, oids, sections = {}, {}, {}, {}
+
+  for index, line in ipairs(lines) do
+    text[index] = line.text
+    kinds[index] = line.kind
+    oids[index] = line.oid or NOT_A_HOLE
+    sections[index] = line.section or NOT_A_HOLE
+  end
+
+  record_line_roles_before_the_text(buf, kinds, oids, sections)
+  clear_every_mark_including_virtual_lines(buf)
 
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, text)

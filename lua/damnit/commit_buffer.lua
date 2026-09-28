@@ -1,30 +1,19 @@
--- The commit message buffer and its write.
---
--- Written to commit rather than quit to commit: `dam commit -m` takes the
--- message as an argument, so this buffer is the plugin's own editing surface
--- rather than a file dam asked for.
-
 local M = {}
 
 local message = require("damnit.message")
 
---- The message a buffer's lines hold: everything that is not a comment line.
----@param lines string[]
----@return string
 function M.message(lines)
-  local kept = {}
+  local non_comment_lines = {}
 
   for _, line in ipairs(lines) do
     if not vim.startswith(line, "#") then
-      kept[#kept + 1] = line
+      non_comment_lines[#non_comment_lines + 1] = line
     end
   end
 
-  return vim.trim(table.concat(kept, "\n"))
+  return vim.trim(table.concat(non_comment_lines, "\n"))
 end
 
---- Send what the buffer holds, or say why nothing was sent.
----@param buf integer
 function M.write(buf)
   local text = M.message(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
 
@@ -49,9 +38,6 @@ function M.write(buf)
   })
 end
 
---- The staged section of the status the window last drew.
----@param key string?
----@return damnit.Section?
 local function staged(key)
   local model = require("damnit.window").model(key)
 
@@ -64,9 +50,6 @@ local function staged(key)
   return nil
 end
 
---- Open the message buffer for what is staged, or say nothing is.
----@param key string?
----@return integer? buf
 function M.open(key)
   local section = staged(key)
 

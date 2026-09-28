@@ -1,21 +1,10 @@
--- `:Dam` and its subcommands.
---
--- Declared here rather than behind `setup` so that entering Neovim on one
--- works, which is how a herdr pane and the list buffer open an object:
--- `nvim +"Dam task <oid>"` in an editor holding nothing else.
-
 if vim.g.loaded_damnit then
   return
 end
 vim.g.loaded_damnit = true
 
---- The subcommands whose one argument is a view name, so `:Dam <name> <TAB>`
---- completes on the views rather than on the subcommands again.
----@type table<string, boolean>
-local TAKES_A_VIEW = { list = true, pick = true }
+local SUBCOMMANDS_TAKING_A_VIEW = { list = true, pick = true }
 
---- One entry per subcommand. `""` is `:Dam` with no argument.
----@type table<string, fun(args: string[], cmd: table)>
 local SUBCOMMANDS = {
   [""] = function()
     require("damnit.window").open()
@@ -49,7 +38,6 @@ local SUBCOMMANDS = {
   end,
 }
 
----@return string
 local function usage()
   local names = {}
   for name in pairs(SUBCOMMANDS) do
@@ -62,21 +50,18 @@ local function usage()
   return "usage is :Dam, " .. table.concat(names, ", ")
 end
 
----@param lead string what has been typed of the argument being completed
----@param line string the whole command line so far
----@return string[]
-local function complete(lead, line)
-  local typed = vim.split(vim.trim(line), "%s+")
+local function complete(arg_lead, cmd_line)
+  local typed = vim.split(vim.trim(cmd_line), "%s+")
 
-  if #typed > 1 and TAKES_A_VIEW[typed[2]] then
+  if #typed > 1 and SUBCOMMANDS_TAKING_A_VIEW[typed[2]] then
     return vim.tbl_filter(function(name)
-      return vim.startswith(name, lead)
+      return vim.startswith(name, arg_lead)
     end, require("damnit.views").declared())
   end
 
   local names = {}
   for name in pairs(SUBCOMMANDS) do
-    if name ~= "" and vim.startswith(name, lead) then
+    if name ~= "" and vim.startswith(name, arg_lead) then
       names[#names + 1] = name
     end
   end
