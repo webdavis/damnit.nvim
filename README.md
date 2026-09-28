@@ -411,6 +411,9 @@ nvim --headless --clean -l tests/run.lua poll_spec  # one spec
 stylua --check . && luacheck .
 ```
 
+`luacheck` reads the code as Lua 5.1 with a `vim` global, because Neovim runs LuaJIT, and leaves line
+length to `stylua`, which wraps at 120 columns.
+
 Every spec runs headless against a fake `dam` placed at the front of `PATH`, so no test reaches the
 network, a real store or a real account. `tests/performance_spec.lua` times a full re-render and
 warns rather than failing, because a timing assertion on a shared runner reddens a build on code
