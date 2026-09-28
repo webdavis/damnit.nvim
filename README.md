@@ -182,7 +182,8 @@ forward instead of setting a flag.
 
 ## Lists and named views
 
-`:Dam list` shows every open object as a tree built from each object's `path`. An object's parent is
+`:Dam list` shows every open object as a tree built from each object's `path`, in one read-only list
+buffer that every view reuses. An object's parent is
 the one whose path is its own with the last segment removed, and a query can match a child without
 its parent, so a child whose parent the view does not hold is drawn at the top level. `:Dam list
 <view>` shows one view, and a view that matches nothing says `No objects.`

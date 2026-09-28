@@ -139,8 +139,8 @@ function M.pick(name)
 
   local title = format.title(spec)
 
-  list.fetch(spec, function(objects, err_the_queue_reported)
-    if err_the_queue_reported then
+  list.fetch(spec, function(objects, err)
+    if err then
       return
     end
 
