@@ -225,14 +225,21 @@ overdue)`.
 | `x` | Complete this object. |
 | `X` | Reopen this object. |
 | `dd` | Remove this object, after a confirm. |
-| `p` | Cycle its priority. |
-| `s` | Set its due date. |
+| `p` | Cycle its priority towards urgent, wrapping from `p1` back to 4. |
+| `s` | Set its due date, in any form dam's `--due` reads. |
 | `l` | Toggle a label on it. |
-| `m` | Move it into another path. |
+| `m` | Move it into another path the view reaches, or the top level. |
 | `a` | Add an object where the cursor is. |
 | `>` `<` | Move it under the object above, or out from under its parent. |
 | `S` | Hand it to the agent pane. |
 | `g?` | Show this table. |
+
+Every prompt here is `vim.ui.input` and every choice is `vim.ui.select`, so whatever you have made
+those into is what you get. A due date dam cannot read comes back in dam's own words. `l` offers the
+labels dam's config declares in categories, in dam's order, then any label the object carries that no
+category lists, so a stray one can still be taken off. `m` offers each object's path and every
+container above it, even one no object sits at. After every edit the view is read again, so what is
+drawn is what dam holds.
 
 Completing a parent whose children or dependencies are still open is refused by `dam`, which names
 the blockers. The plugin shows you that list and asks what to do with them rather than asking yes or
