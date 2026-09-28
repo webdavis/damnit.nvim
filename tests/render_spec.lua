@@ -11,7 +11,7 @@ local function fixture(name)
   return vim.json.decode(text, { luanil = { object = true } })
 end
 
-local function one_fixture_holding_only_the_sections(...)
+local function full_status_with_only_the_sections(...)
   local full = fixture("full/status.json")
   local kept = { staged = {}, unstaged = {}, conflicts = {}, notices = {}, unpushed = {} }
 
@@ -66,11 +66,11 @@ return {
   end,
 
   ["draws each section on its own"] = function()
-    golden("working", lines_of(one_fixture_holding_only_the_sections("unstaged")))
-    golden("staged", lines_of(one_fixture_holding_only_the_sections("staged")))
-    golden("unpushed", lines_of(one_fixture_holding_only_the_sections("unpushed")))
-    golden("notices", lines_of(one_fixture_holding_only_the_sections("notices")))
-    golden("conflicts", lines_of(one_fixture_holding_only_the_sections("conflicts")))
+    golden("working", lines_of(full_status_with_only_the_sections("unstaged")))
+    golden("staged", lines_of(full_status_with_only_the_sections("staged")))
+    golden("unpushed", lines_of(full_status_with_only_the_sections("unpushed")))
+    golden("notices", lines_of(full_status_with_only_the_sections("notices")))
+    golden("conflicts", lines_of(full_status_with_only_the_sections("conflicts")))
   end,
 
   ["draws every section at once, conflicts first"] = function()
@@ -91,7 +91,7 @@ return {
   end,
 
   ["marks the verb, the oid and the path with their own groups"] = function()
-    local lines = lines_of(one_fixture_holding_only_the_sections("unstaged"))
+    local lines = lines_of(full_status_with_only_the_sections("unstaged"))
 
     local change = nil
     for _, line in ipairs(lines) do

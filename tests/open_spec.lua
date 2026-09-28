@@ -69,7 +69,10 @@ return {
       assert(body:find("stage the shopping list", 1, true), body)
       assert(body:find("buy oat milk", 1, true), body)
 
-      assert(not body:find("renew the passport", 1, true), "fake is one commit behind, so the older one is not drawn")
+      assert(
+        not body:find("renew the passport", 1, true),
+        "fake is one commit behind, so the older one is not drawn: " .. body
+      )
 
       local skipped_past_a_failed_commit =
         "dam skips past a commit whose objects failed and marks later ones pushed, so the newest need not be the unpushed: "
