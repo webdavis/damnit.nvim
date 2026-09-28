@@ -19,7 +19,9 @@ name, and nothing in this repository ever sees one. `dam` resolves its own.
 - Neovim 0.12.5. It is developed and tested there, and needs `vim.system`, `vim.uv`, extmarks and
   `vim.health`.
 - `dam` on your `PATH`, in the range `>=0.2.0 <0.3.0`. Older or newer and the plugin says so and
-  refuses rather than guessing at a document shape.
+  refuses rather than guessing at a document shape. A `dam --version` that prints no version at all
+  is warned about once and not refused. The version is read once per session, and again after a
+  `setup`, because new options may name a different `dam`.
 - No token. See above.
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua) is optional. Without it the search falls back to
   `vim.ui.select`.
