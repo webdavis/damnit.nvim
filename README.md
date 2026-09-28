@@ -19,9 +19,9 @@ name, and nothing in this repository ever sees one. `dam` resolves its own.
 - Neovim 0.12.5. It is developed and tested there, and needs `vim.system`, `vim.uv`, extmarks and
   `vim.health`.
 - `dam` on your `PATH`, in the range `>=0.2.0 <0.3.0`. Older or newer and the plugin says so and
-  refuses rather than guessing at a document shape. A `dam --version` that prints no version at all
-  is warned about once and not refused. The version is read once per session, and again after a
-  `setup`, because new options may name a different `dam`.
+  refuses rather than guessing at a document shape. A `dam --version` that exits cleanly but prints no
+  version is warned about and not refused. The version is read once per session, and again after each
+  `setup`.
 - No token. See above.
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua) is optional. Without it the search falls back to
   `vim.ui.select`.
@@ -128,7 +128,8 @@ when the one on screen carries no objects to compare.
 
 Every highlight group links to a standard group, so the window takes your colourscheme's colours and
 this plugin writes none of its own. With [mini.icons](https://github.com/echasnovski/mini.icons)
-installed, each line's kind is drawn with its glyph; without it, with one ASCII character.
+installed, each change, remote and conflict line starts with its glyph; without it, with one ASCII
+character.
 
 ## Non-blocking, and what that means here
 
@@ -336,8 +337,8 @@ answering is worse than no count.
 
 Asking for the string is what starts the reader. It runs `dam ls '!done & (due:today | overdue)'
 --no-pull` every `refresh_interval` seconds, skips a turn while another call holds the store, and
-stops on exit. `--no-pull` is what lets it promise to reach no remote, and `!done` is what drops a
-task from the count the moment you complete it, because `due:today` matches a completed task too.
+stops on exit. `--no-pull` is what lets it promise to reach no remote, and `!done` is what keeps a
+completed task out of the count, because `due:today` matches a completed task too.
 
 ## Due reminders
 
