@@ -11,9 +11,7 @@ local function fixture(name)
   return vim.json.decode(text, { luanil = { object = true } })
 end
 
---- One status holding only the named sections, so nine window states come from
---- one fixture rather than from nine.
-local function only(...)
+local function one_fixture_holding_only_the_sections(...)
   local full = fixture("full/status.json")
   local kept = { staged = {}, unstaged = {}, conflicts = {}, notices = {}, unpushed = {} }
 
@@ -48,7 +46,11 @@ local function golden(name, lines)
   local want = file:read("*a")
   file:close()
 
-  assert(text == want, ("golden %s differs\n--- got ---\n%s--- want ---\n%s"):format(name, text, want))
+  assert(
+    text == want,
+    ("golden %s differs; regenerate with DAMNIT_GOLDEN_UPDATE=1 and read the diff before committing it\n"):format(name)
+      .. ("--- got ---\n%s--- want ---\n%s"):format(text, want)
+  )
 end
 
 local function lines_of(status, state)
@@ -64,11 +66,11 @@ return {
   end,
 
   ["draws each section on its own"] = function()
-    golden("working", lines_of(only("unstaged")))
-    golden("staged", lines_of(only("staged")))
-    golden("unpushed", lines_of(only("unpushed")))
-    golden("notices", lines_of(only("notices")))
-    golden("conflicts", lines_of(only("conflicts")))
+    golden("working", lines_of(one_fixture_holding_only_the_sections("unstaged")))
+    golden("staged", lines_of(one_fixture_holding_only_the_sections("staged")))
+    golden("unpushed", lines_of(one_fixture_holding_only_the_sections("unpushed")))
+    golden("notices", lines_of(one_fixture_holding_only_the_sections("notices")))
+    golden("conflicts", lines_of(one_fixture_holding_only_the_sections("conflicts")))
   end,
 
   ["draws every section at once, conflicts first"] = function()
@@ -89,7 +91,7 @@ return {
   end,
 
   ["marks the verb, the oid and the path with their own groups"] = function()
-    local lines = lines_of(only("unstaged"))
+    local lines = lines_of(one_fixture_holding_only_the_sections("unstaged"))
 
     local change = nil
     for _, line in ipairs(lines) do
@@ -118,10 +120,12 @@ return {
     local oids = vim.b[buf].damnit_oids
     local sections = vim.b[buf].damnit_sections
 
-    -- A buffer variable turns a hole into vim.NIL, which is truthy, and drops a
-    -- trailing one, so every line records something falsy rather than nothing.
-    assert(#oids == #lines, ("%d oids for %d lines"):format(#oids, #lines))
-    assert(#sections == #lines, ("%d sections for %d lines"):format(#sections, #lines))
+    local a_hole_reads_back_as_truthy_nil_or_drops_off_the_end = "%d %s for %d lines"
+    assert(#oids == #lines, a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#oids, "oids", #lines))
+    assert(
+      #sections == #lines,
+      a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#sections, "sections", #lines)
+    )
 
     for index, line in ipairs(lines) do
       assert(kinds[index] == line.kind, ("line %d kind %s"):format(index, tostring(kinds[index])))
@@ -145,12 +149,15 @@ return {
       end
     end
 
-    -- One heading plus its entries: conflicts 1+1, working 1+2, staged 1+1,
-    -- unpushed 1+2, notices 1+5.
-    assert(
-      vim.deep_equal(seen, { conflicts = 2, working = 3, staged = 2, unpushed = 3, notices = 6 }),
-      vim.inspect(seen)
-    )
+    local heading = 1
+    local heading_plus_its_entries = {
+      conflicts = heading + 1,
+      working = heading + 2,
+      staged = heading + 1,
+      unpushed = heading + 2,
+      notices = heading + 5,
+    }
+    assert(vim.deep_equal(seen, heading_plus_its_entries), vim.inspect(seen))
   end,
 
   ["puts a space after a segment too wide for its column"] = function()
