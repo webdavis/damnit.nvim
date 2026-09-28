@@ -55,7 +55,7 @@ return {
 ```
 
 `setup` is optional: every command works without it. Calling it is how you declare views and change
-the options below.
+the options below. A later call merges over the earlier one, and the next command reads the result.
 
 ## Commands
 
