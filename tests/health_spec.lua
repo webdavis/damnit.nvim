@@ -1,9 +1,3 @@
--- :checkhealth damnit, which reports where dam is, what it holds and which of
--- the declared views it will run.
---
--- Nothing here reports anything about a credential, because nothing here reads
--- one: dam resolves its own and never hands one back.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local health = require("damnit.health")
 
@@ -14,8 +8,6 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local REFUSAL =
   '{"error": {"kind": "refused", "rule": "bad_query", "message": "\\"nonsense\\" is not a declared category", "oids": []}}'
 
----@param run fun(): nil
----@return { level: string, text: string }[]
 local function report(run)
   local lines = {}
   local real = { ok = vim.health.ok, warn = vim.health.warn, error = vim.health.error, start = vim.health.start }
@@ -37,10 +29,6 @@ local function report(run)
   return lines
 end
 
----@param lines { level: string, text: string }[]
----@param level string
----@param needle string
----@return boolean
 local function said(lines, level, needle)
   for _, line in ipairs(lines) do
     if line.level == level and line.text:find(needle, 1, true) then

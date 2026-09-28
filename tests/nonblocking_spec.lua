@@ -1,6 +1,3 @@
--- The requirement that prompted the whole design: nothing in this plugin takes
--- the editor hostage while dam runs.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
 
@@ -39,8 +36,7 @@ return {
     queue.reset()
 
     assert(submit_ms < 100, ("submit took %.1fms, so something waited"):format(submit_ms))
-    -- A blocking implementation produces zero ticks.
-    assert(ticks >= 5, ("the loop ticked %d times while dam ran"):format(ticks))
+    assert(ticks >= 5, ("the loop ticked %d times while dam ran, and a blocking call ticks none"):format(ticks))
     assert(log[#log] == "push --json", vim.inspect(log))
   end,
 
@@ -61,9 +57,9 @@ return {
       end,
     })
 
-    -- The handshake spawns first, so the push is the second recorded argv.
+    local handshake_then_push = 2
     fake_dam.settle(function()
-      return #fake_dam.argv_log(fake) >= 2
+      return #fake_dam.argv_log(fake) >= handshake_then_push
     end)
 
     assert(queue.cancel())
@@ -81,7 +77,7 @@ return {
     assert(queue.running() == nil, "the lane is empty once the cancelled entry exits")
   end,
 
-  ["cancels a call that the handshake has not let spawn yet"] = function()
+  ["cancels a call with no settle first, while the version handshake it waits on is in flight"] = function()
     local fake = fake_dam.install({ sleep = "5" })
     queue.reset()
     local grace = queue.GRACE_MS
@@ -98,8 +94,6 @@ return {
       end,
     })
 
-    -- No settle first: the cancel lands while the version handshake is still in
-    -- flight, so there is nothing spawned to signal.
     assert(queue.cancel())
 
     fake_dam.settle(function()

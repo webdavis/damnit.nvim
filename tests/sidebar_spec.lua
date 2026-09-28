@@ -1,8 +1,3 @@
--- The sidebar: a fixed-width split holding one view.
---
--- Every case runs in a tabpage of its own against a fake dam, so one case's
--- layout is never another case's starting point and nothing reaches a store.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -18,10 +13,6 @@ local WIDTH = 34
 --- Run `body` in its own tabpage, with the sidebar configured and a fake dam at
 --- the front of PATH. `answer` false installs a fake that never answers, which
 --- is what a slow first fetch looks like.
----@param opts { side: string?, width: integer?, view: string?, views: table?, answer: boolean? }
----@param body fun(fake: damnit.FakeDam): any
----@return any result
----@return string[] notifications
 local function in_tab(opts, body)
   local options = damnit.options
   local real_notify = vim.notify
@@ -81,21 +72,17 @@ local function in_tab(opts, body)
 end
 
 --- Wait for the view in the sidebar to have been drawn from dam's answer.
----@param win integer
 local function drawn(win)
   fake_dam.settle(function()
     return vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win)) > 3
   end)
 end
 
----@return integer count windows in this tabpage
 local function windows()
   return #vim.api.nvim_tabpage_list_wins(0)
 end
 
 --- Put the cursor on the line of `win`'s buffer holding `needle`.
----@param win integer
----@param needle string
 local function cursor_to(win, needle)
   for index, line in ipairs(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false)) do
     if line:find(needle, 1, true) then

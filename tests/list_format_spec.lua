@@ -1,13 +1,9 @@
--- The rendering of a list, as pure functions over dam's own objects.
-
 local format = require("damnit.list_format")
 local location = require("damnit.location")
 
 --- The sidebar's default width, which is the narrowest a list is drawn at.
 local SIDEBAR_WIDTH = 40
 
----@param fields table
----@return table
 local function object(fields)
   return vim.tbl_extend("force", {
     oid = ("%040x"):format(#tostring(fields.subject or "")),
@@ -27,9 +23,6 @@ local CHILD = object({ subject = "Tag it", path = "work/release/tag/" })
 local GRANDCHILD = object({ subject = "Sign the tag", path = "work/release/tag/sign/" })
 
 --- The number of the one line holding `needle`.
----@param lines string[]
----@param needle string
----@return integer
 local function line_of(lines, needle)
   local found = nil
 
@@ -45,8 +38,6 @@ local function line_of(lines, needle)
   return found
 end
 
----@param lines string[]
----@return string
 local function joined(lines)
   return table.concat(lines, "\n")
 end

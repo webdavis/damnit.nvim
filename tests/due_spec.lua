@@ -1,21 +1,11 @@
--- Where a task stands against the clock.
---
--- Every case hands in its own clock, so no answer here depends on the day the
--- suite runs, the hour it runs at, or the timezone of the machine running it.
-
 local due = require("damnit.due")
 
 --- A clock five hours behind UTC, at two in the afternoon on a fixed day.
----@param stamp string?
----@param utc_offset integer?
----@return { stamp: string, utc_offset: integer }
 local function clock(stamp, utc_offset)
   return { stamp = stamp or "2026-09-17T14:00:00", utc_offset = utc_offset or -5 * 3600 }
 end
 
 --- One object's `task` sub-table, which is where dam puts `due`.
----@param value any
----@return table
 local function task(value)
   return { done = false, priority = 4, due = value }
 end

@@ -1,13 +1,7 @@
--- The commit message buffer: what it carries, what :w sends, and what it
--- refuses to send.
-
 local commit_buffer = require("damnit.commit_buffer")
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
----@param notifications string[]
----@param text string
----@return boolean
 local function said(notifications, text)
   return vim.tbl_contains(notifications, text)
 end

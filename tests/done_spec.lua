@@ -1,6 +1,3 @@
--- Completing a task, and what happens when dam refuses because something under
--- it is still open.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -27,8 +24,6 @@ local NOT_A_TASK = table.concat({
   '"oids": ["a070c369a6dfc382d57988322e453d85d62ef9cf"]}}',
 })
 
----@param run fun(fake: damnit.FakeDam, notifications: string[])
----@param opts { fixtures: string?, exit: integer?, stderr: string? }?
 local function with_dam(run, opts)
   opts = opts or {}
 

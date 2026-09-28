@@ -1,22 +1,7 @@
--- What each phase of a full re-render costs, against a status document far
--- larger than any real store.
---
--- The case always passes and the warning is the output. A timing assertion
--- against a shared runner reddens main on code nobody touched, so a phase over
--- its budget says so and leaves the verdict to whoever reads the run.
---
--- Every budget below is set from a median measured on a machine at a load
--- average of 96, with enough headroom that load alone cannot cross it. The
--- sample count and the document are both sized so the whole case stays well
--- under a second, which is what every test in this suite is held to.
-
 local status_model = require("damnit.status_model")
 local render = require("damnit.render")
 
 --- Time `run` five times and warn when the median is over `target_ms`.
----@param name string
----@param target_ms number
----@param run fun()
 local function phase(name, target_ms, run)
   local samples = {}
 
@@ -40,8 +25,6 @@ end
 --- 300 is far more than a real store carries into one working layer, and the
 --- cost is linear in it: `render.lines` measures each segment's display width
 --- through `vim.fn`, one bridge call per segment.
----@param count integer
----@return table
 local function generated(count)
   local unstaged = {}
 

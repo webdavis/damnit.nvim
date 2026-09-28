@@ -1,5 +1,3 @@
--- The inline field diff, and what X will and will not throw away.
-
 local diff = require("damnit.render.diff")
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local render = require("damnit.render")
@@ -10,9 +8,7 @@ local AFTER = { subject = "buy oat milk", labels = { "errand", "home" }, task = 
 
 local STAGED_CREATE = "5cf398f699045d551091eccc347f6b70f41f9bcf"
 
---- Every virtual line the window drew, as plain text.
----@return string[]
-local function virt_lines()
+local function drawn_virtual_lines_as_text()
   local buf = vim.api.nvim_get_current_buf()
   local drawn = {}
 
@@ -95,32 +91,31 @@ return {
       vim.api.nvim_feedkeys("=", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and #virt_lines() > 0
+        return #fake_dam.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
       end)
 
       assert(fake_dam.argv_log(fake)[before + 1] == "status --full --json", vim.inspect(fake_dam.argv_log(fake)))
 
-      local drawn = table.concat(virt_lines(), "\n")
+      local drawn = table.concat(drawn_virtual_lines_as_text(), "\n")
       assert(drawn:find("subject", 1, true), drawn)
       assert(drawn:find("buy oat milk", 1, true), drawn)
       assert(drawn:find("buy soy milk", 1, true), drawn)
     end)
   end,
 
-  ["a second = closes the fields again"] = function()
+  ["a second = closes the fields and goes back to the lean read, with nothing left to compare"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("=", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and #virt_lines() > 0
+        return #fake_dam.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
       end)
 
       vim.api.nvim_feedkeys("=", "x", false)
-      assert(#virt_lines() == 0, vim.inspect(virt_lines()))
+      assert(#drawn_virtual_lines_as_text() == 0, vim.inspect(drawn_virtual_lines_as_text()))
 
-      -- With nothing left to compare, the window goes back to the lean read.
       local closed = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
@@ -139,7 +134,7 @@ return {
       vim.api.nvim_feedkeys("=", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > opened and #virt_lines() > 0
+        return #fake_dam.argv_log(fake) > opened and #drawn_virtual_lines_as_text() > 0
       end)
 
       local before = #fake_dam.argv_log(fake)
@@ -148,7 +143,7 @@ return {
         return #fake_dam.argv_log(fake) > before
       end)
 
-      assert(#virt_lines() > 0, "the diff was forgotten by the re-read")
+      assert(#drawn_virtual_lines_as_text() > 0, "the diff was forgotten by the re-read")
     end)
   end,
 

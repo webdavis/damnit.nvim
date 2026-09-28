@@ -1,16 +1,8 @@
--- What the window looks like, compared whole against a golden file.
---
--- A one-character change to a rendering is then a diff a reviewer can read.
--- Regenerate every golden with DAMNIT_GOLDEN_UPDATE=1 and read the diff before
--- committing it.
-
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
----@param name string
----@return table
 local function fixture(name)
   local file = assert(io.open(("%s/fixtures/%s"):format(TESTS_DIR, name), "r"))
   local text = file:read("*a")
@@ -21,8 +13,6 @@ end
 
 --- One status holding only the named sections, so nine window states come from
 --- one fixture rather than from nine.
----@param ... string
----@return table
 local function only(...)
   local full = fixture("full/status.json")
   local kept = { staged = {}, unstaged = {}, conflicts = {}, notices = {}, unpushed = {} }
@@ -36,8 +26,6 @@ end
 
 local STATE = { store = "~/.local/share/dam/dam.db" }
 
----@param name string
----@param lines damnit.Line[]
 local function golden(name, lines)
   local path = ("%s/golden/%s.txt"):format(TESTS_DIR, name)
   local text = table.concat(
@@ -63,9 +51,6 @@ local function golden(name, lines)
   assert(text == want, ("golden %s differs\n--- got ---\n%s--- want ---\n%s"):format(name, text, want))
 end
 
----@param status table
----@param state table?
----@return damnit.Line[]
 local function lines_of(status, state)
   return render.lines(status_model.build(status, fixture("full/remote.json")), state or STATE)
 end

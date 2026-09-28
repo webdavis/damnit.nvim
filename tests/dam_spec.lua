@@ -1,17 +1,9 @@
--- The dam boundary: the argv it builds, the JSON it decodes, and the error
--- table it makes of every exit code.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local dam = require("damnit.dam")
 local damnit = require("damnit")
 
----@param opts table? passed to fake_dam.install
----@param args string[]
----@return table? data
----@return damnit.Error? err
----@return string[] argv_log
-local function call(opts, args)
-  local fake = fake_dam.install(opts)
+local function call_through_a_fake(fake_opts, args)
+  local fake = fake_dam.install(fake_opts)
 
   local answered, data, err = false, nil, nil
   dam.call(args, nil, function(value, failure)
@@ -56,7 +48,7 @@ return {
   end,
 
   ["decodes the JSON dam printed on a clean exit"] = function()
-    local data, err, log = call(nil, { "status", "--json" })
+    local data, err, log = call_through_a_fake(nil, { "status", "--json" })
 
     assert(err == nil, err and err.message)
     assert(type(data) == "table" and vim.islist(data.staged), vim.inspect(data))
@@ -64,7 +56,10 @@ return {
   end,
 
   ["calls exit 1 an error and strips dam's own prefix off the line"] = function()
-    local _, err = call({ exit = 1, stderr = "dam: storage: the store is locked" }, { "add", "78b8950", "--json" })
+    local _, err = call_through_a_fake(
+      { exit = 1, stderr = "dam: storage: the store is locked" },
+      { "add", "78b8950", "--json" }
+    )
 
     assert(err.kind == "error", err.kind)
     assert(err.code == 1, tostring(err.code))
@@ -73,9 +68,10 @@ return {
   end,
 
   ["reads a refusal out of dam's error document, rule and oids included"] = function()
-    -- dam writes a header, one indented line per blocker, then its advice.
-    local blocked = "98d8780 cannot be completed:\n  child a9db854 is open\n"
-      .. "use --force to complete it anyway, or --force --interactive to decide what happens to them"
+    local header = "98d8780 cannot be completed:\n"
+    local one_indented_line_per_blocker = "  child a9db854 is open\n"
+    local advice = "use --force to complete it anyway, or --force --interactive to decide what happens to them"
+    local blocked = header .. one_indented_line_per_blocker .. advice
     local document = vim.json.encode({
       error = {
         kind = "refused",
@@ -84,7 +80,7 @@ return {
         oids = { "98d878013fb0e026d37170e7ceed6707192ae99a", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77" },
       },
     })
-    local _, err = call({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
+    local _, err = call_through_a_fake({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
 
     assert(err.kind == "refused", err.kind)
     assert(err.code == 4, tostring(err.code))
@@ -98,7 +94,7 @@ return {
     local document = vim.json.encode({
       error = { kind = "credential", rule = vim.NIL, message = "no credential for todoist", oids = {} },
     })
-    local _, err = call({ exit = 1, stderr = document }, { "push", "--json" })
+    local _, err = call_through_a_fake({ exit = 1, stderr = document }, { "push", "--json" })
 
     assert(err.kind == "credential", err.kind)
     assert(err.rule == nil, tostring(err.rule))
@@ -107,7 +103,7 @@ return {
 
   ["carries standard error that is not a document as the message it is"] = function()
     local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
-    local _, err = call({ exit = 2, stderr = usage }, { "dpne", "--json" })
+    local _, err = call_through_a_fake({ exit = 2, stderr = usage }, { "dpne", "--json" })
 
     assert(err.kind == "usage", err.kind)
     assert(err.code == 2, tostring(err.code))
@@ -116,7 +112,7 @@ return {
   end,
 
   ["says which call failed when dam failed and wrote nothing at all"] = function()
-    local _, err = call({ exit = 1 }, { "status", "--json" })
+    local _, err = call_through_a_fake({ exit = 1 }, { "status", "--json" })
 
     assert(err.kind == "error", err.kind)
     assert(err.message == "a dam call failed with exit 1 and said nothing", err.message)
@@ -124,7 +120,7 @@ return {
   end,
 
   ["calls exit 3 cancelled"] = function()
-    local _, err = call({ exit = 3, stderr = "dam: cancelled" }, { "push", "--json" })
+    local _, err = call_through_a_fake({ exit = 3, stderr = "dam: cancelled" }, { "push", "--json" })
 
     assert(err.kind == "cancelled", err.kind)
     assert(err.code == 3, tostring(err.code))

@@ -1,9 +1,3 @@
--- The location a body holds, as text.
---
--- A body is text a person can edit on their phone, so every answer here is
--- either a location or nil. Nothing here reaches an editor or a task store:
--- following a location is `location_edit`, and its cases live beside it.
-
 local location = require("damnit.location")
 
 return {

@@ -1,10 +1,3 @@
--- `S`: the brief's text, which pane it reaches, and where it goes when herdr
--- cannot take it.
---
--- The herdr CLI is a double here and so is the clipboard: no process runs, no
--- register is written and no live pane is touched. dam has no comments, so no
--- hand-off leaves a record in the store and every notification says so.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -41,8 +34,6 @@ local PASTE_END = "\27[201~"
 
 --- A doubled host. `in_herdr` is the environment's answer, `listing` is what
 --- `agent list` says, and `refuse` refuses every call after it.
----@param env table
----@return table host, table seen
 local function host_double(env)
   local seen = { calls = {}, copied = nil }
 
@@ -68,9 +59,6 @@ local function host_double(env)
 end
 
 --- Hand `object` over against a doubled host and report what was seen.
----@param env table
----@param object table?
----@return table seen
 local function hand_over(env, object)
   local host, seen = host_double(env)
   seen.said = {}
@@ -89,8 +77,6 @@ local function hand_over(env, object)
 end
 
 --- The text of the one `pane send-text` call, with its paste framing taken off.
----@param seen table
----@return string
 local function sent(seen)
   for _, call in ipairs(seen.calls) do
     local framed = call:match("^pane send%-text w1:p2 (.*)$")

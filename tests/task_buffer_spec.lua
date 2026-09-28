@@ -1,6 +1,3 @@
--- One object as a buffer: what it draws, what :w sends, and where a refusal
--- lands.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 -- `:Dam` is declared by the plugin file rather than by `setup`, so the case
@@ -21,8 +18,6 @@ local CYCLE = table.concat({
   '"oids": ["badb4903b653809e591c31118004e07de7c8183c", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}',
 })
 
----@param run fun(buf: integer, fake: damnit.FakeDam, notifications: string[])
----@param opts { open: fun(oid: string): integer? }?
 local function with_task(run, opts)
   local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
   queue.reset()
@@ -49,9 +44,6 @@ local function with_task(run, opts)
   assert(ok, err)
 end
 
----@param buf integer
----@param key string
----@param value string
 local function set_field(buf, key, value)
   for index, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
     if line:match("^" .. key .. ":") then
@@ -66,8 +58,6 @@ end
 
 --- Write the buffer and hand back the one argv that went out, or nil when none
 --- did.
----@param fake damnit.FakeDam
----@return string?
 local function written(fake)
   local before = #fake_dam.argv_log(fake)
   vim.cmd("write")
@@ -83,8 +73,6 @@ local function written(fake)
   return fake_dam.argv_log(fake)[before + 1]
 end
 
----@param buf integer
----@return vim.Diagnostic[]
 local function diagnostics(buf)
   return vim.diagnostic.get(buf, { namespace = task_buffer.NAMESPACE })
 end

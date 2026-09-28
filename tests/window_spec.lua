@@ -1,6 +1,3 @@
--- The status window: one per store, re-read rather than patched, and the keys
--- that move around it.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 local queue = require("damnit.queue")
@@ -86,8 +83,6 @@ return {
     with_window(function(fake)
       local buf = window.buffer()
 
-      ---@param kind string
-      ---@return integer
       local function heading_of(kind)
         local sections = vim.b[buf].damnit_sections
         local kinds = vim.b[buf].damnit_kinds

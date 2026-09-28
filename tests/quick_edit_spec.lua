@@ -1,5 +1,3 @@
--- The quick edits, by the argv each one sends.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -11,11 +9,6 @@ local CHILD = "8fbff8b04f0bdbd5eb5d9a1ee81c82ace01e65b1"
 
 --- Press a key on the object whose line holds `needle` and hand back the argv
 --- lines that went out because of it.
----@param key string
----@param answer string? what vim.ui.input or vim.ui.select answers with
----@param needle string?
----@param count integer? how many calls to wait for
----@return string[]
 local function sent(key, answer, needle, count)
   local new = {}
 

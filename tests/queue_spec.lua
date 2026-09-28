@@ -1,12 +1,7 @@
--- The queue: one dam per store at a time, a refused second network call, and
--- what cancelling drops.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
 local damnit = require("damnit")
 
----@param run fun(fake: damnit.FakeDam, notifications: string[])
----@param opts table?
 local function with_fake(run, opts)
   local fake = fake_dam.install(opts)
   queue.reset()
@@ -27,9 +22,6 @@ local function with_fake(run, opts)
   assert(ok, err)
 end
 
----@param args string[]
----@param extra table?
----@return table entry
 local function entry(args, extra)
   return vim.tbl_extend("force", { args = args, label = table.concat(args, " ") }, extra or {})
 end
@@ -53,10 +45,14 @@ return {
       local running = queue.running()
       local foreground = queue.foreground()
 
-      -- A read the plugin started on its own behalf holds the lane, so the
-      -- queue reports it, and says nothing about it where a person is reading.
-      assert(running ~= nil and running.background == true, vim.inspect(running))
-      assert(foreground == nil, vim.inspect(foreground))
+      assert(
+        running ~= nil and running.background == true,
+        "a background read still holds the lane: " .. vim.inspect(running)
+      )
+      assert(
+        foreground == nil,
+        "nothing is said about a background read where a person is reading: " .. vim.inspect(foreground)
+      )
     end, { sleep = "0.3" })
   end,
 
@@ -124,14 +120,16 @@ return {
         end,
       }))
 
-      -- setup forgets the handshake this call is waiting on.
       damnit.setup({})
 
       fake_dam.settle(function()
         return answered
       end)
 
-      assert(err ~= nil and err.kind == "cancelled", vim.inspect(err))
+      assert(
+        err ~= nil and err.kind == "cancelled",
+        "setup forgets the handshake the call waits on, so the call is cancelled: " .. vim.inspect(err)
+      )
       assert(queue.running() == nil, "a lane left running here is one no later call ever gets out of")
     end, { sleep = "0.2" })
   end,

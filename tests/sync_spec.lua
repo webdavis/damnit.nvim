@@ -1,12 +1,10 @@
--- Push, pull and resolve: the argv each sends, and the sentence each reports.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
 local CONFLICT = "f3784324d2d2793b7daa6c532887b034bd365ddf"
 
 return {
-  ["P pushes every remote and reports dam's own counts"] = function()
+  ["P pushes every remote, re-reads the remote list a push moves, and reports dam's own counts"] = function()
     status_window.with(function(fake, notifications)
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("P", "x", false)
@@ -17,10 +15,7 @@ return {
 
       local log = fake_dam.argv_log(fake)
       assert(log[before + 1] == "push --json", vim.inspect(log))
-
-      -- A push moves what each remote last had, so the window re-reads the
-      -- remote list as well as the status.
-      assert(log[before + 2] == "remote list --json", vim.inspect(log))
+      assert(log[before + 2] == "remote list --json", "a push moves what each remote last had: " .. vim.inspect(log))
       assert(log[before + 3] == "status --json", vim.inspect(log))
 
       local said = table.concat(notifications, "\n")

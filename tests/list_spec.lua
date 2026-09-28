@@ -1,14 +1,9 @@
--- The list buffer: what it asks dam for, what it draws, and what it refuses.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local damnit = require("damnit")
 
---- The indent one line carries.
----@param line string
----@return integer
 local function indent_of(line)
   return #line:match("^%s*")
 end
@@ -114,8 +109,7 @@ return {
       list_buffer.cursor_to(buf, "- parent")
       vim.api.nvim_feedkeys("za", "x", false)
 
-      -- A fold here means lines that were never drawn, not lines hidden.
-      assert(vim.api.nvim_buf_line_count(buf) < full, "the child's line is gone")
+      assert(vim.api.nvim_buf_line_count(buf) < full, "a fold here is a line never drawn, not a line hidden")
       assert(
         not table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):find("- child", 1, true),
         "the child is still drawn"
@@ -146,15 +140,13 @@ return {
       local before = #fake_dam.argv_log(fake)
 
       vim.api.nvim_feedkeys("u", "x", false)
-      -- Long enough for a call to reach the log, so one that should not have
-      -- been made is caught rather than raced past.
-      vim.wait(200, function()
-        return #fake_dam.argv_log(fake) > before
-      end, 5)
+      fake_dam.wait_long_enough_to_catch_a_stray_call(fake, before)
 
-      -- A plain `dam ls` holds completed objects too, and reopening one clears
-      -- `completed_at` with no verb that puts it back.
-      assert(#fake_dam.argv_log(fake) == before, vim.inspect(fake_dam.argv_log(fake)))
+      assert(
+        #fake_dam.argv_log(fake) == before,
+        "a plain dam ls holds completed objects too, and reopening one clears completed_at for good: "
+          .. vim.inspect(fake_dam.argv_log(fake))
+      )
       assert(
         notifications[#notifications] == "damnit.nvim: u reopens in the completed history; X reopens an object here",
         vim.inspect(notifications)

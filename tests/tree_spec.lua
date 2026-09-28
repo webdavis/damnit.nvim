@@ -1,14 +1,5 @@
--- The shape of a tree, and where a reparent sends an object.
---
--- dam models the tree as `path`: an object's parent is the object whose path is
--- this one's with the last segment removed (`children_of`, dam-application).
--- Pure functions over tables: no buffer, no call.
-
 local tree = require("damnit.tree")
 
----@param subject string
----@param path string
----@return table
 local function object(subject, path)
   return {
     oid = ("%040x"):format(#subject * 7 + #path),
@@ -31,10 +22,6 @@ local TOP = object("top", "work/")
 local ROOTED = object("rooted", "")
 
 --- Every object a walk visits, as `subject@depth`.
----@param index damnit.Tree
----@param root table
----@param collapsed table<string, boolean>?
----@return string
 local function walked(index, root, collapsed)
   local seen = {}
 

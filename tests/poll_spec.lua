@@ -1,8 +1,3 @@
--- The statusline count, the due reminders, and the one poller behind both.
---
--- Every case drives `poll.apply` directly, so no case waits on a timer: what is
--- under test is the reading of an answer, not libuv's clock.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local poll = require("damnit.poll")
 local queue = require("damnit.queue")
@@ -15,16 +10,11 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local TODAY = os.date("%Y-%m-%d")
 local YESTERDAY = os.date("%Y-%m-%d", os.time() - 86400)
 
----@param oid string
----@param value string?
----@return table
 local function object(oid, value)
   return { oid = oid, subject = "x", path = "inbox/", task = { done = false, due = value } }
 end
 
 --- The `ls` line the fake recorded, if it recorded one.
----@param fake damnit.FakeDam
----@return string?
 local function ls_line(fake)
   for _, line in ipairs(fake_dam.argv_log(fake)) do
     if line:find("^ls ") then

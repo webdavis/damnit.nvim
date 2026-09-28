@@ -1,9 +1,3 @@
--- A task made out of the code in front of you.
---
--- The argv is the contract, so most of these cases are the argv one capture
--- becomes. The last one drives `:Dam capture` over a range, which is what
--- proves the command, the range read and the call are wired to each other.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")

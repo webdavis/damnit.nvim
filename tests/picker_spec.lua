@@ -1,10 +1,3 @@
--- Searching the objects of a view, by the line each one becomes and by the call
--- the search makes.
---
--- The front end is stubbed rather than driven: `vim.ui.select` in a headless
--- run has no terminal to read, and what these cases are about is which view was
--- asked for and what the entries carry.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -24,7 +17,6 @@ local OBJECT = {
 ---
 --- The record is what a case waits on: the argv log grows when the call is
 --- spawned, and the entries only exist once its answer has been read.
----@param body fun(opened: string[][])
 local function without_a_front_end(body)
   local real = vim.ui.select
   local opened = {}

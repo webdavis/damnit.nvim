@@ -1,9 +1,3 @@
--- Getting back to the code a task came from.
---
--- A body is text a person can edit on their phone, so these cases are mostly
--- about what `jump` does with one it cannot use. Nothing here reaches a task
--- store: a location is a string, and the files are made by the spec.
-
 local location_edit = require("damnit.location_edit")
 
 -- A jump changes the tabpage's directory, and the runner's `package.path` is
@@ -12,9 +6,6 @@ local location_edit = require("damnit.location_edit")
 require("damnit.sidebar")
 
 --- A repository holding one file of `lines` lines.
----@param lines integer
----@return string root
----@return string relative path of the file inside it
 local function repository(lines)
   local root = vim.fs.normalize(vim.fn.tempname())
   vim.fn.mkdir(root .. "/lua", "p")
@@ -33,12 +24,6 @@ local function repository(lines)
 end
 
 --- Jump from inside `root`, in a tabpage of its own, and report what was said.
----@param root string the directory the editor is in
----@param parsed damnit.Location?
----@return boolean jumped
----@return string[] said
----@return string opened the file the window ended on
----@return integer line the cursor's line
 local function jump_from(root, parsed)
   local real_notify, cwd = vim.notify, vim.uv.cwd()
   local said = {}
