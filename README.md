@@ -100,7 +100,7 @@ so what you see is what dam last said.
 | `co` | Settle this conflict with ours. |
 | `ct` | Settle this conflict with theirs. |
 | `<C-c>` | Cancel the running operation. |
-| `gu` `gs` `gp` `gn` `gc` | Jump to Working, Staged, Unpushed, Notices, Conflicts. |
+| `gu` `gs` `gp` `gn` `gc` | Jump to Working, Staged, Unpushed, Notices, Conflicts. A count picks the entry, and a count past the last lands on the last. |
 | `q` `gq` | Close the window. |
 | `g?` | Show this table for the buffer you are in. |
 
