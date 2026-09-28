@@ -27,7 +27,7 @@ Carried verbatim from the brief:
   second.
 - No em-dashes anywhere.
 - Comments say what the code does or why, never what was rejected.
-- Conventional commits with `SKIP_AI_COMMIT=1` and no co-author trailer.
+- Conventional commits with no co-author trailer.
 - The plugin never holds or reads a Todoist token (dam does).
 - Every `dam` call is non-blocking (`vim.system` with a callback) except reads the spec names as
   synchronous.
@@ -126,10 +126,9 @@ proposed one:
 
 Two pieces of the design live outside this repository and are not tasks here.
 
-The lazy.nvim spec and the which-key label in the operator's dotfiles
-(`dot_config/nvim/lua/plugins/todoist.lua` becoming `damnit.lua`) are a change to that repository. Section
-2 of the design carries the file to write, and Task 28 puts the same spec in this repository's README so
-the two cannot drift silently.
+A user's own lazy.nvim spec is a change to their configuration, not to this repository. Section 2 of
+the design carries an example, and Task 28 puts the same spec in this repository's README so the two
+cannot drift silently.
 
 The GitHub rename of `webdavis/todoist.nvim` to `webdavis/damnit.nvim` is already done. Nothing in these
 tasks depends on it beyond the module names Task 1 writes.
@@ -207,7 +206,7 @@ Expected: both silent, exit 0.
 
 ```bash
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: rename the plugin to damnit.nvim in place"
+git commit -m "refactor: rename the plugin to damnit.nvim in place"
 ```
 
 ---
@@ -328,7 +327,7 @@ Expected: no output at all.
 ```bash
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: delete the Todoist client, the token and the features built on them"
+git commit -m "refactor: delete the Todoist client, the token and the features built on them"
 ```
 
 ---
@@ -514,7 +513,7 @@ Expected: the Task 2 count plus 3, `0 failed`.
 ```bash
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: add the message prefix rule and the dam store options"
+git commit -m "feat: add the message prefix rule and the dam store options"
 ```
 
 ---
@@ -1300,7 +1299,7 @@ Expected: `8 passed, 0 failed` then `5 passed, 0 failed`, each in well under a s
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: add the dam process boundary and its version handshake"
+git commit -m "feat: add the dam process boundary and its version handshake"
 ```
 
 **What landed on top of this transcription.** Four behaviours the module above does not have, each
@@ -1906,7 +1905,7 @@ finish in well under a second each.
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: add the per-store operation queue and its cancellation ladder"
+git commit -m "feat: add the per-store operation queue and its cancellation ladder"
 ```
 
 **What landed on top of this transcription.** `on_spawn` sends the interrupt itself when the entry
@@ -2121,7 +2120,7 @@ Expected: `5 passed, 0 failed`.
 ```bash
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: resolve a view name against the options and dam's saved filters"
+git commit -m "feat: resolve a view name against the options and dam's saved filters"
 ```
 
 ---
@@ -2605,7 +2604,7 @@ Expected: no output.
 ```bash
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: model a dam status document for the staging window"
+git commit -m "feat: model a dam status document for the staging window"
 ```
 
 ---
@@ -3111,7 +3110,7 @@ Expected: `6 passed, 0 failed`.
 ```bash
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: render the staging window's model as lines and extmarks"
+git commit -m "feat: render the staging window's model as lines and extmarks"
 ```
 
 ---
@@ -3988,7 +3987,7 @@ Expected: `8 passed, 0 failed`.
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: open the staging window and move around it"
+git commit -m "feat: open the staging window and move around it"
 ```
 
 ---
@@ -4284,7 +4283,7 @@ gives a range meaning:
 nvim --headless --clean -l tests/run.lua keys_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: stage and unstage objects from the status window"
+git commit -m "feat: stage and unstage objects from the status window"
 ```
 
 Expected: `6 passed, 0 failed`.
@@ -4644,7 +4643,7 @@ In `lua/damnit/keys.lua`, in the `damstatus` table:
 nvim --headless --clean -l tests/run.lua diff_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: discard an uncommitted create and show a change's fields inline"
+git commit -m "feat: discard an uncommitted create and show a change's fields inline"
 ```
 
 Expected: `5 passed, 0 failed`.
@@ -4862,7 +4861,7 @@ task's third case avoids that line and Task 16's own spec covers it.
 nvim --headless --clean -l tests/run.lua open_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: open a conflict and an unpushed commit from the status window"
+git commit -m "feat: open a conflict and an unpushed commit from the status window"
 ```
 
 Expected: `3 passed, 0 failed`.
@@ -5098,7 +5097,7 @@ In `lua/damnit/keys.lua`:
 nvim --headless --clean -l tests/run.lua commit_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: commit what is staged through a message buffer"
+git commit -m "feat: commit what is staged through a message buffer"
 ```
 
 Expected: `5 passed, 0 failed`.
@@ -5398,7 +5397,7 @@ nvim --headless --clean -l tests/run.lua sync_spec
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: push, pull and resolve conflicts from the status window"
+git commit -m "feat: push, pull and resolve conflicts from the status window"
 ```
 
 Expected: `6 passed, 0 failed`, then the whole suite green.
@@ -5850,7 +5849,7 @@ nvim --headless --clean -l tests/run.lua task_format_spec
 grep -nE 'vim\.(api|fn|system|notify|schedule)' lua/damnit/task_format.lua
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: retarget the task frontmatter at dam's field set"
+git commit -m "refactor: retarget the task frontmatter at dam's field set"
 ```
 
 Expected: `8 passed, 0 failed`, and the grep finds nothing.
@@ -6210,7 +6209,7 @@ nvim --headless --clean -l tests/run.lua task_buffer_spec
 nvim --headless --clean -l tests/run.lua open_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: edit one dam object as a buffer"
+git commit -m "feat: edit one dam object as a buffer"
 ```
 
 Expected: `6 passed, 0 failed`, and `open_spec` still green.
@@ -6488,7 +6487,7 @@ nvim --headless --clean -l tests/run.lua list_format_spec
 grep -nE 'vim\.(api|fn|system|notify|schedule)' lua/damnit/tree.lua lua/damnit/list_format.lua
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: build the subtask tree from dam's path"
+git commit -m "refactor: build the subtask tree from dam's path"
 ```
 
 Expected: both green, and the grep finds nothing.
@@ -6751,7 +6750,7 @@ In `lua/damnit/init.lua`, restore `M.open(name)` from the pre-strip commit, reso
 nvim --headless --clean -l tests/run.lua list_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: list a dam view in a buffer"
+git commit -m "feat: list a dam view in a buffer"
 ```
 
 ---
@@ -7091,7 +7090,7 @@ nvim --headless --clean -l tests/run.lua done_spec
 nvim --headless --clean -l tests/run.lua quick_edit_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: quick edits on the list, including dam's blocked completion"
+git commit -m "feat: quick edits on the list, including dam's blocked completion"
 ```
 
 ---
@@ -7212,7 +7211,7 @@ The module is the old one with `content` becoming `subject`, the project and sec
 nvim --headless --clean -l tests/run.lua picker_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: search the dam objects with fzf-lua or vim.ui.select"
+git commit -m "feat: search the dam objects with fzf-lua or vim.ui.select"
 ```
 
 ---
@@ -7381,7 +7380,7 @@ end
 nvim --headless --clean -l tests/run.lua history_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: read the completed history in one query"
+git commit -m "feat: read the completed history in one query"
 ```
 
 ---
@@ -7611,7 +7610,7 @@ could not pass it before.
 nvim --headless --clean -l tests/run.lua
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: keep the editor calls of a location out of the pure half"
+git commit -m "refactor: keep the editor calls of a location out of the pure half"
 ```
 
 - [ ] **Step 5: Write the failing test**
@@ -7692,7 +7691,7 @@ nvim --headless --clean -l tests/run.lua capture_spec
 nvim --headless --clean -l tests/run.lua location_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: capture a task from the code and jump back to it"
+git commit -m "feat: capture a task from the code and jump back to it"
 ```
 
 ---
@@ -7800,7 +7799,7 @@ than a second one. The brief carries no URL, because a dam object is local.
 nvim --headless --clean -l tests/run.lua send_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: hand a dam object to the agent pane"
+git commit -m "feat: hand a dam object to the agent pane"
 ```
 
 ---
@@ -7906,7 +7905,7 @@ Expected: the five jump cases still pass. Each opens a tabpage with no sidebar i
 nvim --headless --clean -l tests/run.lua sidebar_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: keep a dam view beside your work in the sidebar"
+git commit -m "feat: keep a dam view beside your work in the sidebar"
 ```
 
 ---
@@ -8074,7 +8073,7 @@ nvim --headless --clean -l tests/run.lua poll_spec
 nvim --headless --clean -l tests/run.lua due_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: poll dam for the statusline count and the due reminders"
+git commit -m "feat: poll dam for the statusline count and the due reminders"
 ```
 
 ---
@@ -8247,7 +8246,7 @@ nvim --headless --clean -l tests/run.lua health_spec
 nvim --headless --clean --cmd 'set rtp+=.' -c 'checkhealth damnit' -c 'qa!'
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: report dam, the store and the remotes in checkhealth"
+git commit -m "feat: report dam, the store and the remotes in checkhealth"
 ```
 
 ---
@@ -8431,7 +8430,7 @@ assertion against a real spawn on a shared runner reddens main on code nobody to
 nvim --headless --clean -l tests/run.lua performance_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "ci: gate the architecture rules and warn on a slow phase"
+git commit -m "ci: gate the architecture rules and warn on a slow phase"
 ```
 
 ---
@@ -8480,7 +8479,7 @@ Expected: every command appears in `SUBCOMMANDS` in `plugin/damnit.lua`, and eve
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "docs: rewrite the README for damnit.nvim"
+git commit -m "docs: rewrite the README for damnit.nvim"
 ```
 
 Expected: the whole suite green, and the run under five seconds with every individual spec under a
@@ -8566,7 +8565,7 @@ nvim --headless --clean -l tests/run.lua quick_edit_spec
 nvim --headless --clean -l tests/run.lua task_format_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: reopen a completed task with dam edit --undone"
+git commit -m "feat: reopen a completed task with dam edit --undone"
 ```
 
 ---
@@ -8619,7 +8618,7 @@ which of the two is about to happen, because one is reversible and the other is 
 nvim --headless --clean -l tests/run.lua diff_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: discard any working change with dam restore"
+git commit -m "feat: discard any working change with dam restore"
 ```
 
 ---
@@ -8660,7 +8659,7 @@ and the `into:<name>` entry asks for the name through `vim.ui.input` before send
 nvim --headless --clean -l tests/run.lua done_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: choose what happens to the children when completing a parent"
+git commit -m "feat: choose what happens to the children when completing a parent"
 ```
 
 ---
@@ -8708,7 +8707,7 @@ Every hit must be a search of something this plugin wrote or of a buffer line, n
 nvim --headless --clean -l tests/run.lua actions_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: act on dam's error kind rather than on its wording"
+git commit -m "refactor: act on dam's error kind rather than on its wording"
 ```
 
 ---
@@ -8757,7 +8756,7 @@ nvim --headless --clean -l tests/run.lua status_model_spec
 nvim --headless --clean -l tests/run.lua render_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: read a change's field list from dam"
+git commit -m "refactor: read a change's field list from dam"
 ```
 
 ---
@@ -8806,7 +8805,7 @@ nvim --headless --clean -l tests/run.lua open_spec
 nvim --headless --clean -l tests/run.lua status_model_spec
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "refactor: read both sides of a conflict with dam show"
+git commit -m "refactor: read both sides of a conflict with dam show"
 ```
 
 ---
@@ -8848,7 +8847,7 @@ git diff tests/golden
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: keep the poll local and say how fresh each remote is"
+git commit -m "feat: keep the poll local and say how fresh each remote is"
 ```
 
 The relative age must be computed from a clock the spec can fix, or the goldens will differ by a minute
@@ -8895,5 +8894,5 @@ nvim --headless --clean -l tests/run.lua views_spec
 nvim --headless --clean -l tests/run.lua | tail -1
 stylua --check . && luacheck .
 git add -A
-SKIP_AI_COMMIT=1 git commit -m "feat: list dam's saved filters instead of probing for one"
+git commit -m "feat: list dam's saved filters instead of probing for one"
 ```
