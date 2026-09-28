@@ -127,7 +127,8 @@ or a notice line has nothing to stage. `<CR>` on a change opens the object in th
 when the one on screen carries no objects to compare.
 
 Every highlight group links to a standard group, so the window takes your colourscheme's colours and
-this plugin writes none of its own.
+this plugin writes none of its own. With [mini.icons](https://github.com/echasnovski/mini.icons)
+installed, each line's kind is drawn with its glyph; without it, with one ASCII character.
 
 ## Non-blocking, and what that means here
 
