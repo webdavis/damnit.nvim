@@ -40,7 +40,7 @@ return {
     views = {
       today = "due:today | overdue",
       upcoming = "due:this-week | due:next-week",
-      dotfiles = "path:dotfiles/ & !done",
+      app = "path:example/app/ & !done",
     },
   },
   keys = {
@@ -296,7 +296,7 @@ Nothing else is set, so a capture lands in `inbox/`, which is where it belongs u
 ## Sending an object to the agent
 
 `S` in a list hands the object under the cursor to the agent pane as a plain-text brief. Inside
-[herdr](https://github.com/webdavis/herdr) it goes into the agent pane's input as one bracketed
+[herdr](https://herdr.dev) it goes into the agent pane's input as one bracketed
 paste and is never submitted, so you read it, add to it and press return yourself. Outside herdr, or
 whenever herdr will not take it, the same brief goes to the clipboard and the notification says so.
 

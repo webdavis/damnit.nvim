@@ -180,10 +180,9 @@ keeps a redirect for the old path, so an existing clone's `origin` and an unchan
 both keep resolving. The rename is done in the same sitting as the first `damnit.nvim` release, not
 before.
 
-### The lazy.nvim spec in dotfiles
+### A lazy.nvim spec
 
-`dot_config/nvim/lua/plugins/todoist.lua` becomes `dot_config/nvim/lua/plugins/damnit.lua`. Every
-part of it that exists to reach Todoist goes away:
+A lazy.nvim spec for the plugin carries nothing that exists to reach Todoist:
 
 ```lua
 -- damnit.nvim: the dam task store from inside the editor.
@@ -197,7 +196,7 @@ return {
     views = {
       today = "due:today | overdue",
       upcoming = "due:this-week | due:next-week",
-      dotfiles = "path:webdavis/dotfiles/ & !done",
+      app = "path:example/app/ & !done",
     },
   },
   keys = {
@@ -213,23 +212,18 @@ return {
 }
 ```
 
-The `<leader>T` group in `dot_config/nvim/lua/plugins/which-key.lua` is relabelled from `todoist` to
-`dam`. Nothing else in the Neovim configuration changes.
-
-The three view queries above are the dotfiles ones rewritten in dam's grammar. `today | overdue`
-becomes `due:today | overdue`, `7 days` becomes `due:this-week | due:next-week`, and
-`##webdavis & #dotfiles` becomes a `path:` prefix, because dam has no project-versus-parent
+The three view queries above are Todoist filters rewritten in dam's grammar. `today | overdue`
+becomes `due:today | overdue`, `7 days` becomes `due:this-week | due:next-week`, and a project
+filter such as `##example & #app` becomes a `path:` prefix, because dam has no project-versus-parent
 distinction to qualify: a project is a task with children and its identity is its path
 (dam spec 103 to 111).
 
 ### The token leaves
 
 The three token options (`token`, `token_command`, `token_env`) are deleted with no replacement.
-This is the single largest reduction in the plugin, and it also removes a live defect: the operator's
-current configuration carries a comment explaining that `vim.system` closes standard input, so an
-interactive `keepassxc-cli` could never resolve a token from inside Neovim, and a macOS keychain read
-stands in for it. That trade moves to `dam`, which documents the same constraint from its own side
-(dam spec 375 to 377). See section 3 for what the plugin must still do about it.
+This is the single largest reduction in the plugin, and it also removes a live defect: `vim.system`
+closes standard input, so an interactive `keepassxc-cli` could never resolve a token from inside
+Neovim. That constraint moves to `dam`, which documents it from its own side (dam spec 375 to 377). See section 3 for what the plugin must still do about it.
 
 ### No compatibility shim
 
@@ -871,8 +865,7 @@ on every render. No syntax file, no regular expressions over the rendered text.
 ### Icons
 
 `mini.icons` is optional and looked up at render time, never required at load, which is how
-`todoist.nvim` treats `fzf-lua` (`README.md`, the picker section). The operator has it installed as
-a dependency of `oil.nvim` (`dot_config/nvim/lua/plugins/oil.lua`).
+`todoist.nvim` treats `fzf-lua` (`README.md`, the picker section).
 
 | Thing | Glyph | Fallback |
 | --- | --- | --- |
@@ -891,16 +884,14 @@ the way `:Git` opens its summary. `opts.window.float = true` opens a snacks-styl
 instead, through `Snacks.win` when snacks is loaded and a plain `nvim_open_win` when it is not.
 
 A split is the default because staging is not a glance: the user reads changes, opens task buffers
-with `<CR>`, comes back, and commits. A float that closes on focus loss fights all of that, and the
-operator's snacks configuration uses floats for pickers and notifications rather than for working
-surfaces.
+with `<CR>`, comes back, and commits. A float that closes on focus loss fights all of that.
 
 Decided 2026-09-20: a split, the recommended option. Cost to reverse: one option flip. The renderer
 does not know which kind of window it is in.
 
 `vim.ui.select` is used for every choice with a fixed set (which remote, ours or theirs when the key
-is ambiguous, which path to move to), so the operator's snacks input and picker configuration is what
-appears. `vim.ui.input` is used for every free-text prompt. `vim.notify` is used for every outcome,
+is ambiguous, which path to move to), so whichever `vim.ui` provider the user configured, snacks for
+one, is what appears. `vim.ui.input` is used for every free-text prompt. `vim.notify` is used for every outcome,
 so noice and the snacks notifier render them.
 
 ______________________________________________________________________
@@ -917,8 +908,7 @@ is `jobwait([job], 1)` (`:3624`), and inside the loop it calls `getchar()` and f
 keystroke to the child (`:3644` to `:3649`). While a push runs, Neovim is not editing: every key you
 press goes to git. A slow remote parks the editor for as long as the remote is slow. The doc offers
 `:Git!` to run in the background and stream to the preview window (`fugitive.txt:38` to `41`), but
-the operator's own mappings are plain `:Git push` and `:Git push --force-with-lease`
-(`dot_config/nvim/lua/plugins/git.lua:1444`, `:1445`).
+a mapping to plain `:Git push` or `:Git push --force-with-lease` still blocks.
 
 `damnit.nvim` has no equivalent. There is no blocking path, no bang variant that unlocks one, and no
 setting that turns blocking on.
@@ -1514,7 +1504,7 @@ model from a JSON fixture, renders into a scratch buffer, and compares the lines
 ### File size
 
 Every file targets 300 lines and none exceeds 500, comments and inline tests included. This is the
-standing rule for Rust in the dotfiles repository and it applies here for the same reason: a file
+rule the `dam` repository keeps for its Rust and it applies here for the same reason: a file
 that has to be read whole to be changed safely is the limit.
 
 The two files most at risk are `actions` and `render`. `actions` splits by section when it grows:
