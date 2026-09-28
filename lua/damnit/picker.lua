@@ -141,7 +141,7 @@ function M.pick(name)
 
   list.fetch(spec, function(objects, err)
     if err then
-      return
+      return message.report(err)
     end
 
     local entries = M.entries(objects)

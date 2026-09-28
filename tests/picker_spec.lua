@@ -68,4 +68,26 @@ return {
       end)
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,
+
+  ["says dam's own reason when the view it searches is refused, and offers nothing"] = function()
+    list_buffer.with(function(_, fake, notifications)
+      with_select_recording_what_it_offered(function(offered)
+        local logged_before = #fake_dam.argv_log(fake)
+        local said_before = #notifications
+
+        picker.pick("today")
+        fake_dam.settle(function()
+          return #fake_dam.argv_log(fake) > logged_before and require("damnit.queue").running() == nil
+        end)
+
+        assert(#offered == 0, "a refused view offered " .. vim.inspect(offered))
+        assert(notifications[said_before + 1] == "the store is locked", vim.inspect(notifications))
+      end)
+    end, {
+      views = { today = "due:today | overdue" },
+      name = "today",
+      exit = 1,
+      stderr = '{"error": {"kind": "store", "rule": null, "message": "the store is locked", "oids": []}}',
+    })
+  end,
 }
