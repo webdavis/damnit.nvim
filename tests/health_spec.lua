@@ -1,21 +1,11 @@
--- :checkhealth damnit, which reports where dam is, what it holds and which of
--- the declared views it will run.
---
--- Nothing here reports anything about a credential, because nothing here reads
--- one: dam resolves its own and never hands one back.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local health = require("damnit.health")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
---- dam's own refusal document, which is what it writes on standard error under
---- `--json` when it will not answer.
-local REFUSAL =
+local REFUSAL_DAM_WRITES_ON_STDERR_UNDER_JSON =
   '{"error": {"kind": "refused", "rule": "bad_query", "message": "\\"nonsense\\" is not a declared category", "oids": []}}'
 
----@param run fun(): nil
----@return { level: string, text: string }[]
 local function report(run)
   local lines = {}
   local real = { ok = vim.health.ok, warn = vim.health.warn, error = vim.health.error, start = vim.health.start }
@@ -37,10 +27,6 @@ local function report(run)
   return lines
 end
 
----@param lines { level: string, text: string }[]
----@param level string
----@param needle string
----@return boolean
 local function said(lines, level, needle)
   for _, line in ipairs(lines) do
     if line.level == level and line.text:find(needle, 1, true) then
@@ -60,19 +46,20 @@ return {
     assert(said(lines, "ok", "dam 0.2.0"), vim.inspect(lines))
     assert(said(lines, "ok", ">=0.2.0 <0.3.0"), vim.inspect(lines))
 
-    -- Which dam answered, not just that one did: a machine can carry a
-    -- cargo-installed dam and a Homebrew one, and the report is where you find
-    -- out which is on PATH first.
-    assert(said(lines, "ok", fake.dir .. "/dam"), vim.inspect(lines))
+    assert(
+      said(lines, "ok", fake.script_dir .. "/dam"),
+      "which dam answered, since a machine can carry two and the report says which is first on PATH: "
+        .. vim.inspect(lines)
+    )
     assert(said(lines, "ok", "4 objects"), "the object count comes off the same ls")
     assert(said(lines, "ok", "the remote fake speaks through the fake helper at fake::"), vim.inspect(lines))
 
-    -- A remote with stale set makes a read pull before it answers, which is
-    -- the one configuration the poller's --no-pull is there for, so the report
-    -- says which remotes carry it.
     assert(said(lines, "ok", "the remote flaky speaks through the flaky helper at flaky::"), vim.inspect(lines))
     assert(said(lines, "ok", "narrowed to work/"), vim.inspect(lines))
-    assert(said(lines, "ok", "stale after 1s, so a read may pull it first"), vim.inspect(lines))
+    assert(
+      said(lines, "ok", "stale after 1s, so a read may pull it first"),
+      "a stale remote is the one the poller's --no-pull is there for, so the report names it: " .. vim.inspect(lines)
+    )
     assert(said(lines, "ok", "today"), "dam's own saved filters are named")
 
     for _, line in ipairs(lines) do
@@ -111,7 +98,7 @@ return {
     assert(said(lines, "ok", "the config is /from/the/environment.toml, from DAM_CONFIG"), vim.inspect(lines))
   end,
 
-  ["prefers the setup option over the environment, the way dam itself does"] = function()
+  ["prefers the setup option over the environment, as dam's flag beats its own env fallback"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
     local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
     vim.env.DAM_STORE = "/from/the/environment.db"
@@ -126,8 +113,6 @@ return {
     vim.env.DAM_CONFIG = saved.config
     fake_dam.remove(fake)
 
-    -- `dam.argv` passes --store and --config when the options name them, and
-    -- clap's flag beats its own env fallback, so the report has to agree.
     assert(said(lines, "ok", "the store is /from/setup.db, from setup"), vim.inspect(lines))
     assert(said(lines, "ok", "the config is /from/setup.toml, from setup"), vim.inspect(lines))
     assert(not said(lines, "ok", "from DAM_STORE"), vim.inspect(lines))
@@ -148,11 +133,10 @@ return {
     local lines = report(health.check)
     fake_dam.remove(fake)
 
-    -- full/status.json carries one, and co and ct are what settle it.
     assert(said(lines, "warn", "1 object is in conflict"), vim.inspect(lines))
   end,
 
-  ["names the store and the config the plugin passes, and where each came from"] = function()
+  ["names the store and the config the plugin passes, and where each came from, since dam prints neither"] = function()
     local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
     require("damnit").setup({ store = "/somewhere/dam.db", config = "/somewhere/config.toml" })
 
@@ -162,7 +146,6 @@ return {
     require("damnit").options.config = nil
     fake_dam.remove(fake)
 
-    -- dam prints neither path, so the honest report is what it was told.
     assert(said(lines, "ok", "/somewhere/dam.db"), vim.inspect(lines))
     assert(said(lines, "ok", "/somewhere/config.toml"), vim.inspect(lines))
     assert(said(lines, "ok", "from setup"), vim.inspect(lines))
@@ -178,8 +161,12 @@ return {
   end,
 
   ["errors naming each declared view dam refuses, and carries dam's own words"] = function()
-    local fake =
-      fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full", stderr = REFUSAL, exit = 4, version = "0.2.0" })
+    local fake = fake_dam.install({
+      fixtures = TESTS_DIR .. "/fixtures/full",
+      stderr = REFUSAL_DAM_WRITES_ON_STDERR_UNDER_JSON,
+      exit = 4,
+      version = "0.2.0",
+    })
     require("damnit").setup({ views = { broken = "nonsense:zzz" } })
 
     local lines = report(health.check)

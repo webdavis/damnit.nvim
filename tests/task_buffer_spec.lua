@@ -1,11 +1,7 @@
--- One object as a buffer: what it draws, what :w sends, and where a refusal
--- lands.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
--- `:Dam` is declared by the plugin file rather than by `setup`, so the case
--- that runs the command loads it the way Neovim would.
-dofile(TESTS_DIR .. "/../plugin/damnit.lua")
+local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
+dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
@@ -13,16 +9,12 @@ local task_buffer = require("damnit.task_buffer")
 
 local OID = "badb4903b653809e591c31118004e07de7c8183c"
 
---- dam's own refusal for a dependency that would close a loop, as
---- `CliError::document` writes it. The chain is invented; the shape is not.
-local CYCLE = table.concat({
+local REFUSAL_FOR_A_DEPENDENCY_THAT_WOULD_CLOSE_A_LOOP = table.concat({
   '{"error": {"kind": "refused", "rule": "cycle", ',
   '"message": "badb490 cannot depend on that: it would form a cycle through a9db854 -> badb490", ',
   '"oids": ["badb4903b653809e591c31118004e07de7c8183c", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}',
 })
 
----@param run fun(buf: integer, fake: damnit.FakeDam, notifications: string[])
----@param opts { open: fun(oid: string): integer? }?
 local function with_task(run, opts)
   local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
   queue.reset()
@@ -49,9 +41,6 @@ local function with_task(run, opts)
   assert(ok, err)
 end
 
----@param buf integer
----@param key string
----@param value string
 local function set_field(buf, key, value)
   for index, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
     if line:match("^" .. key .. ":") then
@@ -64,27 +53,17 @@ local function set_field(buf, key, value)
   error("no " .. key .. " line in the buffer")
 end
 
---- Write the buffer and hand back the one argv that went out, or nil when none
---- did.
----@param fake damnit.FakeDam
----@return string?
-local function written(fake)
+local function argv_the_write_sent_or_nil(fake)
   local before = #fake_dam.argv_log(fake)
   vim.cmd("write")
 
-  -- A case expecting no call still waits long enough for one to be logged, so
-  -- an accidental call is caught rather than raced past.
-  if not pcall(fake_dam.settle, function()
-    return #fake_dam.argv_log(fake) > before
-  end, 200) then
+  if not fake_dam.wait_long_enough_to_catch_a_stray_call(fake, before) then
     return nil
   end
 
   return fake_dam.argv_log(fake)[before + 1]
 end
 
----@param buf integer
----@return vim.Diagnostic[]
 local function diagnostics(buf)
   return vim.diagnostic.get(buf, { namespace = task_buffer.NAMESPACE })
 end
@@ -125,7 +104,10 @@ return {
     with_task(function(buf, fake)
       set_field(buf, "subject", "buy the oat milk")
 
-      assert(written(fake) == ("edit %s --subject buy the oat milk --json"):format(OID), "the wrong argv")
+      assert(
+        argv_the_write_sent_or_nil(fake) == ("edit %s --subject buy the oat milk --json"):format(OID),
+        "the wrong argv"
+      )
 
       fake_dam.settle(function()
         return vim.bo[buf].modified == false
@@ -138,13 +120,13 @@ return {
     with_task(function(buf, fake)
       set_field(buf, "path", "home/inbox/")
 
-      assert(written(fake) == ("mv %s home/ --json"):format(OID), "the wrong argv")
+      assert(argv_the_write_sent_or_nil(fake) == ("mv %s home/ --json"):format(OID), "the wrong argv")
     end)
   end,
 
   ["sends nothing when nothing changed"] = function()
     with_task(function(buf, fake, notifications)
-      assert(written(fake) == nil, "nothing was sent")
+      assert(argv_the_write_sent_or_nil(fake) == nil, "nothing was sent")
       assert(notifications[#notifications] == "damnit.nvim: nothing changed", vim.inspect(notifications))
       assert(vim.bo[buf].modified == false)
     end)
@@ -154,7 +136,7 @@ return {
     with_task(function(buf, fake)
       set_field(buf, "priority", "9")
 
-      assert(written(fake) == nil, "a local refusal costs no call")
+      assert(argv_the_write_sent_or_nil(fake) == nil, "a local refusal costs no call")
 
       local found = diagnostics(buf)
       assert(#found == 1, vim.inspect(found))
@@ -168,9 +150,9 @@ return {
     with_task(function(buf, fake)
       set_field(buf, "depends", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77")
       vim.env.DAMNIT_TEST_EXIT = "4"
-      vim.env.DAMNIT_TEST_STDERR = CYCLE
+      vim.env.DAMNIT_TEST_STDERR = REFUSAL_FOR_A_DEPENDENCY_THAT_WOULD_CLOSE_A_LOOP
 
-      assert(written(fake) ~= nil, "the edit went out")
+      assert(argv_the_write_sent_or_nil(fake) ~= nil, "the edit went out")
       fake_dam.settle(function()
         return #diagnostics(buf) > 0
       end)

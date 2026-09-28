@@ -1,6 +1,3 @@
--- The status window: one per store, re-read rather than patched, and the keys
--- that move around it.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 local queue = require("damnit.queue")
@@ -9,6 +6,11 @@ local window = require("damnit.window")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local with_window = status_window.with
+
+local function tick_twice_by_hand_full_redraw_then_header_only()
+  window.tick(queue.key())
+  window.tick(queue.key())
+end
 
 return {
   ["opens one buffer per store and focuses it rather than opening a second"] = function()
@@ -36,13 +38,14 @@ return {
 
       queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
-      window.tick(queue.key())
-      window.tick(queue.key())
+      tick_twice_by_hand_full_redraw_then_header_only()
 
-      -- An open window would otherwise flash the poller's label every minute.
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
       for _, line in ipairs(header) do
-        assert(not line:find("Running:", 1, true), vim.inspect(header))
+        assert(
+          not line:find("Running:", 1, true),
+          "an open window would flash the poller's label every minute: " .. vim.inspect(header)
+        )
       end
 
       fake_dam.settle(function()
@@ -56,24 +59,16 @@ return {
       local buf = window.buffer()
       local before = #fake_dam.argv_log(fake)
 
-      -- Called directly rather than through the queue's listener: window.lua
-      -- registers one at load and queue.reset() drops it before this file runs.
       queue.submit({ args = { "status", "--json" }, label = "push fake" })
-
-      -- The first tick adds a header line, so it redraws in full. The second
-      -- is the one the timer repeats every 250 ms, on the header alone.
-      window.tick(queue.key())
-      window.tick(queue.key())
+      tick_twice_by_hand_full_redraw_then_header_only()
 
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
       assert(header[3]:find("Running: push fake", 1, true), vim.inspect(header))
       assert(header[3]:find("[C-c to cancel]", 1, true), header[3])
 
-      -- The header-only rewrite replaces the lines, which takes their extmarks
-      -- with it, so every header row is re-marked rather than left unstyled.
       for lnum = 0, 3 do
         local marks = vim.api.nvim_buf_get_extmarks(buf, render.NAMESPACE, { lnum, 0 }, { lnum, -1 }, {})
-        assert(#marks > 0, ("header row %d lost every mark"):format(lnum))
+        assert(#marks > 0, ("the header-only rewrite replaced row %d and left it with no mark"):format(lnum))
       end
 
       fake_dam.settle(function()
@@ -86,8 +81,6 @@ return {
     with_window(function(fake)
       local buf = window.buffer()
 
-      ---@param kind string
-      ---@return integer
       local function heading_of(kind)
         local sections = vim.b[buf].damnit_sections
         local kinds = vim.b[buf].damnit_kinds
@@ -106,9 +99,8 @@ return {
       vim.cmd("normal! zc")
       assert(vim.fn.foldclosed(heading) == heading, ("fold at %d: %d"):format(heading, vim.fn.foldclosed(heading)))
 
-      -- One object moves from Working to Staged, which is what `s` does, so
-      -- Staged gains a row and its heading slides up a line.
-      vim.env.DAMNIT_TEST_FIXTURES = TESTS_DIR .. "/fixtures/shifted"
+      local one_object_staged_so_the_staged_heading_slides_up = TESTS_DIR .. "/fixtures/shifted"
+      vim.env.DAMNIT_TEST_FIXTURES = one_object_staged_so_the_staged_heading_slides_up
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_dam.settle(function()
@@ -139,11 +131,10 @@ return {
     with_window(function(_, notifications)
       vim.cmd("Dam bogus")
 
-      -- The list grows with every subcommand, so the case pins the shape and
-      -- one member rather than the whole literal.
       local said = notifications[#notifications]
+      local one_member_of_a_list_that_grows_with_every_subcommand = ":Dam cancel"
       assert(vim.startswith(tostring(said), "damnit.nvim: usage is :Dam, "), tostring(said))
-      assert(tostring(said):find(":Dam cancel", 1, true), tostring(said))
+      assert(tostring(said):find(one_member_of_a_list_that_grows_with_every_subcommand, 1, true), tostring(said))
     end)
   end,
 

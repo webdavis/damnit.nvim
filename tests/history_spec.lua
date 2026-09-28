@@ -1,5 +1,3 @@
--- The completed history: one query, drawn flat, newest completion first.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
@@ -8,9 +6,7 @@ local damnit = require("damnit")
 
 local REPORT = "37b186f6e73ed2c4d25a4854023c694e6bec8715"
 
---- Open the history against the `done` fixtures and hand it to `run`.
----@param run fun(buf: integer, fake: damnit.FakeDam, notifications: string[])
-local function history(run)
+local function history_over_the_done_fixtures(run)
   list_buffer.with(run, {
     fixtures = TESTS_DIR .. "/fixtures/done",
     open = function()
@@ -21,7 +17,7 @@ end
 
 return {
   ["asks dam for the done objects in one call"] = function()
-    history(function(_, fake)
+    history_over_the_done_fixtures(function(_, fake)
       local reads = 0
       for _, line in ipairs(fake_dam.argv_log(fake)) do
         if vim.startswith(line, "ls ") then
@@ -35,11 +31,9 @@ return {
   end,
 
   ["draws it flat, newest completion first"] = function()
-    history(function(buf)
+    history_over_the_done_fixtures(function(buf)
       local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-      -- dam answers a query in path order, so the document's own order is
-      -- bins, rent, report while the completions ran rent, bins, report.
       local subjects = {}
       for index = 3, #lines do
         local subject = lines[index]:match("^%-%s(.-)%s%s")
@@ -48,7 +42,10 @@ return {
         end
       end
 
-      assert(vim.deep_equal(subjects, { "filed the report", "took out the bins", "paid the rent" }), vim.inspect(lines))
+      local newest_completion_first = { "filed the report", "took out the bins", "paid the rent" }
+      local dams_path_order = { "took out the bins", "paid the rent", "filed the report" }
+      assert(not vim.deep_equal(newest_completion_first, dams_path_order))
+      assert(vim.deep_equal(subjects, newest_completion_first), vim.inspect(lines))
 
       for index = 3, #lines do
         if lines[index] ~= "" then
@@ -59,7 +56,7 @@ return {
   end,
 
   ["u reopens the object the cursor is on"] = function()
-    history(function(buf, fake)
+    history_over_the_done_fixtures(function(buf, fake)
       list_buffer.cursor_to(buf, "filed the report")
       local before = #fake_dam.argv_log(fake)
 

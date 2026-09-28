@@ -1,12 +1,7 @@
--- One status document into the window's model, and the field summary the window
--- draws in parentheses.
-
 local status_model = require("damnit.status_model")
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
----@param name string
----@return table
 local function fixture(name)
   local file = assert(io.open(("%s/fixtures/%s"):format(TESTS_DIR, name), "r"))
   local text = file:read("*a")
@@ -15,9 +10,6 @@ local function fixture(name)
   return vim.json.decode(text, { luanil = { object = true } })
 end
 
----@param model damnit.Model
----@param kind string
----@return damnit.Section?
 local function section(model, kind)
   for _, candidate in ipairs(model.sections) do
     if candidate.kind == kind then
@@ -36,16 +28,15 @@ return {
     assert(#model.sections == 0, vim.inspect(model.sections))
   end,
 
-  ["leaves a remote with nothing unpushed out of the section"] = function()
-    -- dam writes an unpushed row for every configured remote, zero commits
-    -- included, and filters them out of its own human form.
+  ["leaves a remote with nothing unpushed out of the section, as dam's own human form does"] = function()
     local model = status_model.build(fixture("clean/status.json"), fixture("full/remote.json"))
 
     assert(section(model, "unpushed") == nil, vim.inspect(model.sections))
     assert(model.empty == true, vim.inspect(model.sections))
 
-    local want = { { remote = "fake", commits = 0 }, { remote = "flaky", commits = 0 } }
-    assert(vim.deep_equal(model.remotes, want), vim.inspect(model.remotes))
+    local dam_writes_a_row_for_every_remote_zero_included =
+      { { remote = "fake", commits = 0 }, { remote = "flaky", commits = 0 } }
+    assert(vim.deep_equal(model.remotes, dam_writes_a_row_for_every_remote_zero_included), vim.inspect(model.remotes))
   end,
 
   ["puts conflicts first, because they are the only section that blocks a pull"] = function()

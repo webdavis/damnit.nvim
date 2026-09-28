@@ -1,6 +1,3 @@
--- Every staging key in the status window, asserted by the argv the fake dam
--- recorded.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 

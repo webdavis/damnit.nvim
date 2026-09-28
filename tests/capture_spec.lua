@@ -1,18 +1,11 @@
--- A task made out of the code in front of you.
---
--- The argv is the contract, so most of these cases are the argv one capture
--- becomes. The last one drives `:Dam capture` over a range, which is what
--- proves the command, the range read and the call are wired to each other.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local capture = require("damnit.capture")
 local queue = require("damnit.queue")
 
--- `:Dam` is declared by the plugin file rather than by `setup`, so a spec that
--- runs the command loads it the way Neovim would.
-dofile(TESTS_DIR .. "/../plugin/damnit.lua")
+local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
+dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 return {
   ["builds the argv dam new takes, with the location in the body"] = function()
@@ -63,11 +56,7 @@ return {
     end
 
     capture.create("", nil)
-    -- Long enough for a call to reach the log, so one that should not have been
-    -- made is caught rather than raced past.
-    vim.wait(200, function()
-      return #fake_dam.argv_log(fake) > 0
-    end, 5)
+    fake_dam.wait_long_enough_to_catch_a_stray_call(fake, 0)
 
     vim.notify = real
     local log = fake_dam.argv_log(fake)
@@ -89,13 +78,10 @@ return {
       table.insert(said, text)
     end
 
-    -- A range means the selection is the subject, so nothing is asked for. The
-    -- prompt is stubbed to record that rather than to answer: the real one has
-    -- no terminal to read in a headless run.
-    local asked = 0
+    local prompts_opened = 0
     local real_input = vim.ui.input
     vim.ui.input = function()
-      asked = asked + 1
+      prompts_opened = prompts_opened + 1
     end
 
     local buf = vim.api.nvim_create_buf(false, true)
@@ -115,10 +101,11 @@ return {
     queue.reset()
     fake_dam.remove(fake)
 
-    -- A scratch buffer is no file with a line in it, so the capture carries no
-    -- location and sends no `--body`.
-    assert(asked == 0, "a range was given, so nothing should have been asked for")
-    assert(log[#log] == "new hold the sidebar width --path inbox/ --json", vim.inspect(log))
+    assert(prompts_opened == 0, "a range makes the selection the subject, so nothing should have been asked for")
+    assert(
+      log[#log] == "new hold the sidebar width --path inbox/ --json",
+      "a scratch buffer is no file with a line in it, so no location and no --body: " .. vim.inspect(log)
+    )
     assert(said[#said] == "damnit.nvim: captured hold the sidebar width", vim.inspect(said))
   end,
 }

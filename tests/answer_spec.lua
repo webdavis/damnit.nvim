@@ -1,6 +1,3 @@
--- Reading one finished dam process: the exit code, the signal, and the error
--- document dam writes on standard error under --json.
-
 local answer = require("damnit.answer")
 
 return {
