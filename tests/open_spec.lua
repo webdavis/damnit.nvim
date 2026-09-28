@@ -1,9 +1,6 @@
--- What <CR> opens, and what it leaves alone.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
----@return string[]
 local function open_buffer_names()
   local names = {}
 
@@ -72,21 +69,22 @@ return {
       assert(body:find("stage the shopping list", 1, true), body)
       assert(body:find("buy oat milk", 1, true), body)
 
-      -- fake is one commit behind, so the older one is not drawn.
-      assert(not body:find("renew the passport", 1, true), body)
+      assert(
+        not body:find("renew the passport", 1, true),
+        "fake is one commit behind, so the older one is not drawn: " .. body
+      )
 
-      -- dam skips past a commit whose objects failed and marks later ones
-      -- pushed, so the newest are not necessarily the unpushed ones.
-      assert(body:find("the newest 1 commit", 1, true), body)
-      assert(body:find("1 unpushed", 1, true), body)
-      assert(body:find("dam does not name which commits are unpushed", 1, true), body)
+      local skipped_past_a_failed_commit =
+        "dam skips past a commit whose objects failed and marks later ones pushed, so the newest need not be the unpushed: "
+      assert(body:find("the newest 1 commit", 1, true), skipped_past_a_failed_commit .. body)
+      assert(body:find("1 unpushed", 1, true), skipped_past_a_failed_commit .. body)
+      assert(body:find("dam does not name which commits are unpushed", 1, true), skipped_past_a_failed_commit .. body)
 
-      -- The listing splits, the way a conflict does, so the status stays open.
       local shown = false
       for _, win in ipairs(vim.api.nvim_list_wins()) do
         shown = shown or vim.api.nvim_win_get_buf(win) == status_buf
       end
-      assert(shown, "the status window survives the listing")
+      assert(shown, "the listing splits, the way a conflict does, so the status window survives it")
     end)
   end,
 

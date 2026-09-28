@@ -1,10 +1,5 @@
--- The prefix rule: what this plugin says carries its name, what dam said does
--- not, so the two are never confused in a notification.
-
 local message = require("damnit.message")
 
----@param run fun()
----@return { text: string, level: integer }[]
 local function notifications(run)
   local seen = {}
   local real = vim.notify

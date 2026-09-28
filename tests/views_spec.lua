@@ -1,11 +1,6 @@
--- Resolving a view name against the two sources, and what a name in neither
--- costs.
-
 local views = require("damnit.views")
 local damnit = require("damnit")
 
----@param declared table<string, string>
----@param run fun(notifications: string[])
 local function with_views(declared, run)
   views.reset()
   damnit.options.views = declared

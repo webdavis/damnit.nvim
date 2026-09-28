@@ -1,15 +1,8 @@
--- The version handshake: what the plugin accepts, what it refuses for the rest
--- of the session, and what it shrugs at.
-
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local dam = require("damnit.dam")
 
----@param version string what the fake prints for `dam --version`
----@return damnit.Error? err
----@return string[] notifications
----@return string[] argv_log
-local function first_call(version)
-  local fake = fake_dam.install({ version = version })
+local function first_call_to_a_dam_whose_version_says(version_banner)
+  local fake = fake_dam.install({ version = version_banner })
 
   local notifications = {}
   local real = vim.notify
@@ -35,7 +28,7 @@ end
 
 return {
   ["accepts 0.2.0 and goes on to make the call"] = function()
-    local err, _, log = first_call("0.2.0")
+    local err, _, log = first_call_to_a_dam_whose_version_says("0.2.0")
 
     assert(err == nil, err and err.message)
     assert(log[1] == "--version", vim.inspect(log))
@@ -43,7 +36,7 @@ return {
   end,
 
   ["refuses a version above the range and never spawns the call"] = function()
-    local err, _, log = first_call("0.9.0")
+    local err, _, log = first_call_to_a_dam_whose_version_says("0.9.0")
 
     assert(err.kind == "unsupported", vim.inspect(err))
     assert(err.message == "dam 0.9.0 is outside the supported range >=0.2.0 <0.3.0; update damnit.nvim", err.message)
@@ -58,7 +51,7 @@ return {
   end,
 
   ["warns once about a banner it cannot read, then makes the call anyway"] = function()
-    local err, notifications, log = first_call("banana")
+    local err, notifications, log = first_call_to_a_dam_whose_version_says("banana")
 
     assert(err == nil, err and err.message)
     assert(#notifications == 1, vim.inspect(notifications))

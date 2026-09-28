@@ -1,14 +1,5 @@
--- The shape of a tree, and where a reparent sends an object.
---
--- dam models the tree as `path`: an object's parent is the object whose path is
--- this one's with the last segment removed (`children_of`, dam-application).
--- Pure functions over tables: no buffer, no call.
-
 local tree = require("damnit.tree")
 
----@param subject string
----@param path string
----@return table
 local function object(subject, path)
   return {
     oid = ("%040x"):format(#subject * 7 + #path),
@@ -30,12 +21,7 @@ local OTHER = object("other", "work/other/")
 local TOP = object("top", "work/")
 local ROOTED = object("rooted", "")
 
---- Every object a walk visits, as `subject@depth`.
----@param index damnit.Tree
----@param root table
----@param collapsed table<string, boolean>?
----@return string
-local function walked(index, root, collapsed)
+local function walk_as_subject_at_depth(index, root, collapsed)
   local seen = {}
 
   tree.descend(index, root, collapsed or {}, function(node, depth)
@@ -75,19 +61,27 @@ return {
     assert(tree.is_root(index, TOP), "work/ is not inside a root object")
     assert(tree.child_count(index, "") == 0, tostring(tree.child_count(index, "")))
 
-    -- An object at the root is its own parent under the path rule, so a walk
-    -- that let the root parent anything would never return.
-    assert(walked(index, ROOTED) == "rooted@0", walked(index, ROOTED))
+    assert(
+      walk_as_subject_at_depth(index, ROOTED) == "rooted@0",
+      "a root object is its own parent under the path rule, so a walk it could parent would never return: "
+        .. walk_as_subject_at_depth(index, ROOTED)
+    )
   end,
 
   ["walks an object, then its children, then theirs, and stops at a collapsed one"] = function()
     local index = tree.index({ PARENT, CHILD, GRANDCHILD })
 
-    assert(walked(index, PARENT) == "parent@0 child@1 grandchild@2", walked(index, PARENT))
-    assert(walked(index, PARENT, { ["work/parent/"] = true }) == "parent@0", walked(index, PARENT))
     assert(
-      walked(index, PARENT, { ["work/parent/child/"] = true }) == "parent@0 child@1",
-      walked(index, PARENT, { ["work/parent/child/"] = true })
+      walk_as_subject_at_depth(index, PARENT) == "parent@0 child@1 grandchild@2",
+      walk_as_subject_at_depth(index, PARENT)
+    )
+    assert(
+      walk_as_subject_at_depth(index, PARENT, { ["work/parent/"] = true }) == "parent@0",
+      walk_as_subject_at_depth(index, PARENT)
+    )
+    assert(
+      walk_as_subject_at_depth(index, PARENT, { ["work/parent/child/"] = true }) == "parent@0 child@1",
+      walk_as_subject_at_depth(index, PARENT, { ["work/parent/child/"] = true })
     )
   end,
 
@@ -100,7 +94,7 @@ return {
     assert(tree.is_root(index, alpha) and tree.is_root(index, beta), "both sit at the top of this view")
     assert(index.by_path["work/"] == beta, "the last object indexed at a path holds its seat")
 
-    local drawn = walked(index, alpha) .. " " .. walked(index, beta)
+    local drawn = walk_as_subject_at_depth(index, alpha) .. " " .. walk_as_subject_at_depth(index, beta)
     local seen = select(2, drawn:gsub("gamma@", ""))
     assert(seen == 1, drawn)
   end,

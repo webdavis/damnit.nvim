@@ -1,16 +1,9 @@
--- The list buffer, opened against a fake dam, for the length of one case.
---
--- Every spec that presses a key in the list drives the same setup: a fake dam
--- at the front of PATH, a captured `vim.notify`, one open list, and a full
--- teardown whether the case passed or not.
-
 local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
--- `:Dam` is declared by the plugin file rather than by `setup`, so a spec that
--- runs the command loads it the way Neovim would.
-dofile(TESTS_DIR .. "/../plugin/damnit.lua")
+local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
+dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local damnit = require("damnit")
@@ -18,12 +11,13 @@ local list = require("damnit.list")
 local queue = require("damnit.queue")
 local views = require("damnit.views")
 
---- The fixture directory a case gets when it names none.
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
 
---- Open a list against a fake dam and hand it to `run`.
----@param run fun(buf: integer, fake: damnit.FakeDam, notifications: string[])
----@param opts { views: table?, name: string?, fixtures: string?, exit: integer?, stderr: string?, open: fun(): integer? }?
+local function forget_the_session_folds_and_refused_view_names()
+  list.forget_folds()
+  views.reset()
+end
+
 function M.with(run, opts)
   opts = opts or {}
 
@@ -34,10 +28,7 @@ function M.with(run, opts)
   })
   queue.reset()
 
-  -- Both are the session's, not the buffer's, so a case starts from a list
-  -- that has folded nothing and refused no view name.
-  list.forget_folds()
-  views.reset()
+  forget_the_session_folds_and_refused_view_names()
   damnit.options.views = opts.views or {}
 
   local notifications = {}
@@ -53,11 +44,7 @@ function M.with(run, opts)
 
   local ok, err = pcall(run, buf, fake, notifications)
 
-  -- A call still in flight answers after the teardown and lands its message in
-  -- the next case, so the lane is drained before the fake is taken away.
-  pcall(fake_dam.settle, function()
-    return queue.running() == nil
-  end, 2000)
+  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
 
   vim.notify = real
   damnit.options.views = {}
@@ -69,9 +56,6 @@ function M.with(run, opts)
   assert(ok, err)
 end
 
---- Put the cursor on the line holding `needle`.
----@param buf integer
----@param needle string
 function M.cursor_to(buf, needle)
   for index, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
     if line:find(needle, 1, true) then

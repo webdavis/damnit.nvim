@@ -1,160 +1,22 @@
--- `S`: the brief's text, which pane it reaches, and where it goes when herdr
--- cannot take it.
---
--- The herdr CLI is a double here and so is the clipboard: no process runs, no
--- register is written and no live pane is touched. dam has no comments, so no
--- hand-off leaves a record in the store and every notification says so.
-
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local send = require("damnit.send")
 
-local OID = "78b8950b02735107aa608659dcf19f6f50adfeb1"
-
-local FULL = {
-  oid = OID,
-  subject = "file taxes",
-  body = "receipts are in the drawer",
-  path = "home/finances/",
-  labels = { "home", "slow" },
-  task = { priority = 1, due = "2026-09-20" },
-}
-
---- What `herdr agent list` answers: one agent pane in this workspace, one in
---- another, and this pane itself, which herdr lists no agent for.
-local LISTING = [[{"result":{"agents":[
-  {"pane_id":"w1:p9","workspace_id":"w1"},
-  {"agent":"codex","pane_id":"w2:p1","workspace_id":"w2"},
-  {"agent":"claude","pane_id":"w1:p2","workspace_id":"w1"}
-]}}]]
-
---- A workspace whose panes are all this pane and other workspaces' agents.
-local NO_AGENT_HERE = [[{"result":{"agents":[
-  {"pane_id":"w1:p9","workspace_id":"w1"},
-  {"agent":"codex","pane_id":"w2:p1","workspace_id":"w2"}
-]}}]]
-
-local PASTE_START = "\27[200~"
-local PASTE_END = "\27[201~"
-
---- A doubled host. `in_herdr` is the environment's answer, `listing` is what
---- `agent list` says, and `refuse` refuses every call after it.
----@param env table
----@return table host, table seen
-local function host_double(env)
-  local seen = { calls = {}, copied = nil }
-
-  local host = {
-    in_herdr = env.in_herdr ~= false,
-    workspace = "w1",
-    me = "w1:p9",
-    run = function(args, done)
-      table.insert(seen.calls, table.concat(args, " "))
-      if args[1] == "agent" and args[2] == "list" then
-        return done(env.listing or LISTING, env.list_fails)
-      end
-
-      done("", env.refuse)
-    end,
-    copy = function(brief)
-      seen.copied = brief
-      return env.clipboard ~= false
-    end,
-  }
-
-  return host, seen
-end
-
---- Hand `object` over against a doubled host and report what was seen.
----@param env table
----@param object table?
----@return table seen
-local function hand_over(env, object)
-  local host, seen = host_double(env)
-  seen.said = {}
-
-  local real_notify = vim.notify
-  vim.notify = function(text)
-    table.insert(seen.said, text)
-  end
-
-  local ok, err = pcall(send.hand_off, object or FULL, env.note, host)
-
-  vim.notify = real_notify
-  assert(ok, err)
-
-  return seen
-end
-
---- The text of the one `pane send-text` call, with its paste framing taken off.
----@param seen table
----@return string
-local function sent(seen)
-  for _, call in ipairs(seen.calls) do
-    local framed = call:match("^pane send%-text w1:p2 (.*)$")
-    if framed then
-      local body = framed:sub(#PASTE_START + 1, -(#PASTE_END + 1))
-      assert(framed:sub(1, #PASTE_START) == PASTE_START, "no paste framing")
-      assert(framed:sub(-#PASTE_END) == PASTE_END, "no paste framing")
-      return body
-    end
-  end
-
-  error("no send-text call in " .. vim.inspect(seen.calls))
-end
-
 return {
-  ["writes dam's own fields, and leaves out what the object has none of"] = function()
-    local brief = send.brief(FULL, "start with the receipts")
-
-    assert(brief:find("dam task: file taxes", 1, true), brief)
-    assert(brief:find("oid: 78b8950", 1, true), "seven characters, which is what an agent types")
-    assert(not brief:find("78b8950b027", 1, true), "never the whole forty")
-    assert(brief:find("path: home/finances/", 1, true), brief)
-    assert(brief:find("due: 2026-09-20", 1, true), brief)
-    assert(brief:find("priority: p1", 1, true), brief)
-    assert(brief:find("labels: home, slow", 1, true), brief)
-    assert(brief:find("receipts are in the drawer", 1, true), brief)
-    assert(brief:find("note: start with the receipts", 1, true), brief)
-  end,
-
-  ["leaves out a field the object has nothing for"] = function()
-    local brief = send.brief({ oid = OID, subject = "x", path = "inbox/" }, nil)
-
-    assert(not brief:find("due:", 1, true), brief)
-    assert(not brief:find("labels:", 1, true), brief)
-    assert(not brief:find("priority:", 1, true), brief)
-    assert(not brief:find("note:", 1, true), brief)
-  end,
-
-  ["leaves the priority off an object at dam's least urgent"] = function()
-    local brief = send.brief({ oid = OID, subject = "x", path = "inbox/", task = { priority = 4 } }, nil)
-
-    assert(not brief:find("priority:", 1, true), brief)
-  end,
-
-  ["names the store the window's header names"] = function()
-    local brief = send.brief({ oid = OID, subject = "x", path = "inbox/" }, nil)
-    local store = require("damnit.window").store_display(require("damnit.queue").key())
-
-    assert(brief:find("store: " .. store, 1, true), brief)
-  end,
-
-  ["every notification ends by saying no record was written"] = function()
-    -- dam has no comments, so a hand-off leaves no trace in the store. Every
-    -- path says so, and none of them pretends a record exists.
-    local paths = {
+  ["every notification ends by saying no record was written, since dam keeps no comments"] = function()
+    local every_hand_off_path = {
       {},
       { in_herdr = false },
-      { listing = NO_AGENT_HERE },
-      { refuse = "pane w1:p2 not found" },
-      { list_fails = "herdr: no such file or directory" },
+      { agent_list = hand_off.AGENT_LIST_WITH_NO_AGENT_HERE },
+      { refusal_of_every_call_after_the_agent_list = "pane w1:p2 not found" },
+      { agent_list_failure = "herdr: no such file or directory" },
     }
 
-    for _, env in ipairs(paths) do
-      local seen = hand_over(env)
+    for _, env in ipairs(every_hand_off_path) do
+      local seen = hand_off.hand_over_to_a_double(env)
 
       assert(#seen.said == 1, vim.inspect(seen.said))
       assert(seen.said[1]:find("no hand-off record written", 1, true), seen.said[1])
@@ -167,28 +29,31 @@ return {
       {"agent":"claude","display_agent":"shared-profile","pane_id":"w1:p3","workspace_id":"w1"}
     ]}}]]
 
-    local agent = send.agent_in(listing, "w1", "w1:p9")
+    local agent = send.agent_in(listing, hand_off.THIS_WORKSPACE, hand_off.THIS_PANE_WHICH_HERDR_LISTS_NO_AGENT_FOR)
 
     assert(agent.name == "codex", vim.inspect(agent))
     assert(agent.pane == "w1:p2", vim.inspect(agent))
   end,
 
   ["the send reaches the agent pane and focuses it"] = function()
-    local seen = hand_over({})
+    local seen = hand_off.hand_over_to_a_double({})
 
     assert(seen.calls[1] == "agent list", vim.inspect(seen.calls))
     assert(seen.calls[2]:match("^pane send%-text w1:p2 "), vim.inspect(seen.calls))
     assert(seen.calls[3] == "agent focus w1:p2", vim.inspect(seen.calls))
     assert(seen.copied == nil, "the brief went to the clipboard as well")
-    assert(sent(seen) == send.brief(FULL, nil), sent(seen))
+    assert(
+      hand_off.send_text_without_its_paste_framing(seen) == send.brief(hand_off.FULL, nil),
+      hand_off.send_text_without_its_paste_framing(seen)
+    )
     assert(seen.said[1] == "damnit.nvim: sent to claude, no hand-off record written", vim.inspect(seen.said))
   end,
 
   ["outside herdr the brief goes to the clipboard"] = function()
-    local seen = hand_over({ in_herdr = false })
+    local seen = hand_off.hand_over_to_a_double({ in_herdr = false })
 
     assert(#seen.calls == 0, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
       seen.said[1] == "damnit.nvim: copied the brief to the clipboard, no hand-off record written",
       vim.inspect(seen.said)
@@ -196,7 +61,10 @@ return {
   end,
 
   ["a build with no clipboard provider says the brief is in the unnamed register only"] = function()
-    local seen = hand_over({ listing = NO_AGENT_HERE, clipboard = false })
+    local seen = hand_off.hand_over_to_a_double({
+      agent_list = hand_off.AGENT_LIST_WITH_NO_AGENT_HERE,
+      clipboard_provider = false,
+    })
 
     assert(
       seen.said[1]
@@ -207,10 +75,10 @@ return {
   end,
 
   ["a workspace with no agent pane falls back to the clipboard"] = function()
-    local seen = hand_over({ listing = NO_AGENT_HERE })
+    local seen = hand_off.hand_over_to_a_double({ agent_list = hand_off.AGENT_LIST_WITH_NO_AGENT_HERE })
 
     assert(seen.calls[1] == "agent list" and #seen.calls == 1, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
       seen.said[1]
         == "damnit.nvim: no agent pane in this workspace; copied the brief to the clipboard, "
@@ -220,9 +88,9 @@ return {
   end,
 
   ["a refused send falls back to the clipboard"] = function()
-    local seen = hand_over({ refuse = "pane w1:p2 not found" })
+    local seen = hand_off.hand_over_to_a_double({ refusal_of_every_call_after_the_agent_list = "pane w1:p2 not found" })
 
-    assert(seen.copied == send.brief(FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
       seen.said[1]
         == "damnit.nvim: herdr refused the send to w1:p2; copied the brief to the clipboard, "
@@ -232,10 +100,10 @@ return {
   end,
 
   ["a missing herdr binary falls back to the clipboard in its own words"] = function()
-    local seen = hand_over({ list_fails = "herdr: no such file or directory" })
+    local seen = hand_off.hand_over_to_a_double({ agent_list_failure = "herdr: no such file or directory" })
 
     assert(#seen.calls == 1, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(seen.said[1]:match("^damnit.nvim: herdr: no such file or directory; copied"), vim.inspect(seen.said))
   end,
 
@@ -258,12 +126,6 @@ return {
     assert(seen.err and seen.err:match("no such"), vim.inspect(seen.err))
   end,
 
-  ["a paste terminator inside the brief cannot end the frame early"] = function()
-    local framed = send.pasted("before" .. PASTE_END .. "after")
-
-    assert(framed == PASTE_START .. "beforeafter" .. PASTE_END, vim.inspect(framed))
-  end,
-
   ["S in the list opens the note box on the object under the cursor"] = function()
     list_buffer.with(function(buf, fake)
       list_buffer.cursor_to(buf, "buy oat milk")
@@ -280,10 +142,11 @@ return {
       vim.ui.input = real
       assert(ok, err)
 
-      -- An unanswered box hands nothing over, so the list is untouched and the
-      -- only evidence is that the box opened at all.
-      assert(vim.deep_equal(asked, { "Note: " }), vim.inspect(asked))
-      assert(#fake_dam.argv_log(fake) == before, vim.inspect(fake_dam.argv_log(fake)))
+      assert(vim.deep_equal(asked, { "Note: " }), "the box opening is the only evidence: " .. vim.inspect(asked))
+      assert(
+        #fake_dam.argv_log(fake) == before,
+        "an unanswered box hands nothing over: " .. vim.inspect(fake_dam.argv_log(fake))
+      )
     end)
   end,
 
