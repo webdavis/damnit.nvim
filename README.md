@@ -175,7 +175,12 @@ forward instead of setting a flag.
 `:Dam list` shows every open object as a tree built from each object's `path`. An object's parent is
 the one whose path is its own with the last segment removed, and a query can match a child without
 its parent, so a child whose parent the view does not hold is drawn at the top level. `:Dam list
-<view>` shows one view. A view name is looked up in your `views` option first and then handed to `dam`,
+<view>` shows one view, and a view that matches nothing says `No objects.`
+
+A line is the subject, then its badges: the due date in parentheses, the priority as `p1` to `p3`
+(the default, 4, is left off), each label as `@label`, a `⌖` when it was captured from code, and its
+path. The badges come after the subject so that a narrow sidebar cuts off a badge rather than the
+subject. A folded line ends with `(+n)`, the number of objects folded away under it. A view name is looked up in your `views` option first and then handed to `dam`,
 which resolves its own saved filters, so a name declared in `dam`'s config works in the editor, in a
 terminal and in a herdr pane from one declaration.
 
@@ -225,7 +230,8 @@ no.
 ## The completed history
 
 `:Dam done` lists what is completed, newest first, flat rather than as a tree. `dam` holds the whole
-history and answers it in one call, so there is nothing to page through.
+history and answers it in one call, so there is nothing to page through. A task completed elsewhere
+and pulled from a remote carries no completion time, so it is listed after every one that has one.
 
 `u` reopens the object under the cursor there. It is confined to this buffer on purpose: a plain
 `dam ls` view holds completed objects too, and reopening one from there is `X`.
@@ -289,7 +295,8 @@ vim.o.statusline = "%{%v:lua.require('damnit').status()%}"
 ```
 
 It draws nothing until the first read lands and nothing again whenever nothing is due, which is the
-right answer for no news. Otherwise it is `2 due, 1 overdue`. While a foreground `dam` call is running
+right answer for no news. Otherwise it is `2 due, 1 overdue`. A task with a time of day is overdue
+from that time on; a whole-day task is due for all of its day and overdue once the day is over. While a foreground `dam` call is running
 it is that instead, with its elapsed time: `dam: push todoist 3.2s`. A background read leaves the count
 in place. A read that failed reads `dam !`, because a count left standing after the store stopped
 answering is worse than no count.
