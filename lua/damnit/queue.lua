@@ -1,46 +1,15 @@
--- One dam process per store at a time.
---
--- This is what keeps the plugin from being a second writer against its own
--- SQLite store, and it is what makes a push and a pull impossible to overlap.
--- A read and a write share the lane, which costs a read the 30 ms a `dam
--- status` takes.
-
 local M = {}
 
 local dam = require("damnit.dam")
 local message = require("damnit.message")
 
---- How often the elapsed time is rewritten, and how long cancellation waits
---- between signals.
 M.TICK_MS = 250
 M.GRACE_MS = 2000
 
----@class damnit.Entry
----@field args string[] the subcommand and its flags, `--json` included
----@field label string what the header calls it, such as `push todoist`
----@field verb string? the word a refusal uses, such as `push`
----@field network boolean? whether this one reaches a remote
----@field background boolean? whether the plugin started it on its own behalf
----@field on_done fun(data: table?, err: damnit.Error?)?
----@field started_at integer? vim.uv.hrtime when it began
----@field handle table?
----@field finished boolean?
----@field cancelled boolean?
+local lanes_by_store = {}
 
----@class damnit.Lane
----@field running damnit.Entry?
----@field pending damnit.Entry[]
----@field timer uv.uv_timer_t?
+local tick_listeners = {}
 
----@type table<string, damnit.Lane>
-local lanes = {}
-
----@type fun(key: string)[]
-local listeners = {}
-
---- The store this session works against, which is the queue's key and the
---- status window's identity.
----@return string
 function M.key()
   local store = require("damnit").options.store
   if type(store) == "string" and store ~= "" then
@@ -55,23 +24,18 @@ function M.key()
   return "default"
 end
 
----@param key string
----@return damnit.Lane
 local function lane_for(key)
-  lanes[key] = lanes[key] or { pending = {} }
+  lanes_by_store[key] = lanes_by_store[key] or { pending = {} }
 
-  return lanes[key]
+  return lanes_by_store[key]
 end
 
----@param key string
 local function tick(key)
-  for _, listener in ipairs(listeners) do
+  for _, listener in ipairs(tick_listeners) do
     listener(key)
   end
 end
 
----@param key string
----@param lane damnit.Lane
 local function start_timer(key, lane)
   if lane.timer then
     return
@@ -87,8 +51,6 @@ local function start_timer(key, lane)
   )
 end
 
----@param key string
----@param lane damnit.Lane
 local function stop_timer(key, lane)
   if not lane.timer then
     return
@@ -101,7 +63,6 @@ local function stop_timer(key, lane)
   tick(key)
 end
 
----@param key string
 local function advance(key)
   local lane = lane_for(key)
   if lane.running then
@@ -124,9 +85,8 @@ local function advance(key)
     on_spawn = function(handle)
       entry.handle = handle
 
-      -- A cancel that arrived while the handshake ran had nothing to signal, so
-      -- the signal is sent here instead.
-      if entry.cancelled and handle then
+      local cancelled_during_handshake = entry.cancelled and handle
+      if cancelled_during_handshake then
         handle:kill("sigint")
       end
     end,
@@ -142,9 +102,6 @@ local function advance(key)
   end)
 end
 
---- The network entry this lane already holds, running or waiting.
----@param lane damnit.Lane
----@return damnit.Entry?
 local function network_entry(lane)
   if lane.running and lane.running.network then
     return lane.running
@@ -159,25 +116,18 @@ local function network_entry(lane)
   return nil
 end
 
---- Put one call in this store's lane.
----
---- A second network call is refused rather than queued: a queued push is a push
---- nobody asked for, against a store that has changed since they did, arriving
---- minutes later with no one watching.
----@param entry damnit.Entry
----@return boolean queued
 function M.submit(entry)
   local key = M.key()
   local lane = lane_for(key)
 
   if entry.network then
-    local busy = network_entry(lane)
+    local network_call_in_lane = network_entry(lane)
 
-    if busy then
-      if busy.verb == entry.verb then
-        message.warn(("%s is already running; C-c cancels it"):format(busy.label))
+    if network_call_in_lane then
+      if network_call_in_lane.verb == entry.verb then
+        message.warn(("%s is already running; C-c cancels it"):format(network_call_in_lane.label))
       else
-        message.warn(("%s is running; C-c cancels it, then %s"):format(busy.label, entry.verb))
+        message.warn(("%s is running; C-c cancels it, then %s"):format(network_call_in_lane.label, entry.verb))
       end
 
       return false
@@ -190,11 +140,8 @@ function M.submit(entry)
   return true
 end
 
---- What is running in one store's lane, and how long it has been.
----@param key string?
----@return { label: string, elapsed: number, pending: integer, background: boolean? }?
 function M.running(key)
-  local lane = lanes[key or M.key()]
+  local lane = lanes_by_store[key or M.key()]
   if not lane or not lane.running then
     return nil
   end
@@ -207,14 +154,6 @@ function M.running(key)
   }
 end
 
---- What is running that somebody asked for, which is what a header and a
---- statusline draw.
----
---- A read the plugin started on its own behalf holds the lane like any other
---- entry, and `running` reports it, because that is what the lane is doing. It
---- is not what a person is waiting on, so it is not what they are shown.
----@param key string?
----@return { label: string, elapsed: number, pending: integer, background: boolean? }?
 function M.foreground(key)
   local running = M.running(key)
 
@@ -225,8 +164,6 @@ function M.foreground(key)
   return running
 end
 
----@param entry damnit.Entry
----@param signal string
 local function escalate(entry, signal)
   local timer = vim.uv.new_timer()
 
@@ -252,12 +189,9 @@ local function escalate(entry, signal)
   )
 end
 
---- Stop what is running and drop what is waiting.
----@param key string?
----@return boolean cancelled
 function M.cancel(key)
   key = key or M.key()
-  local lane = lanes[key]
+  local lane = lanes_by_store[key]
 
   if not lane or not lane.running then
     message.warn("nothing is running")
@@ -271,8 +205,6 @@ function M.cancel(key)
   entry.cancelled = true
 
   if entry.handle then
-    -- dam handles SIGINT, sets its cancellation flag and exits 3, so it gets to
-    -- stop its helper and leave the store consistent.
     entry.handle:kill("sigint")
     escalate(entry, "sigterm")
   end
@@ -280,22 +212,17 @@ function M.cancel(key)
   return true
 end
 
---- Call `fn` with the store key every tick while anything is running, and once
---- more when the lane empties.
----@param fn fun(key: string)
 function M.on_tick(fn)
-  table.insert(listeners, fn)
+  table.insert(tick_listeners, fn)
 end
 
---- Drop every lane and every tick listener. Specs call it between cases;
---- nothing in the plugin does.
 function M.reset()
-  for key, lane in pairs(lanes) do
+  for key, lane in pairs(lanes_by_store) do
     stop_timer(key, lane)
   end
 
-  lanes = {}
-  listeners = {}
+  lanes_by_store = {}
+  tick_listeners = {}
 end
 
 return M

@@ -119,7 +119,12 @@ in a terminal, or to fix the source in dam's config.
 
 `X` works on an uncommitted create only. On a change whose op is an update or a delete it says so
 and does nothing, because throwing one of those away means restoring the committed state and this
-key does not do that yet.
+key does not do that yet. It always asks first, because nothing undoes it.
+
+`-`, `s` and `u` on a section heading act on every change in that section, in one call. A conflict
+or a notice line has nothing to stage. `<CR>` on a change opens the object in the window you opened
+`:Dam` from, or in a split when that window is gone. The first `=` on a change re-reads the status
+when the one on screen carries no objects to compare.
 
 Every highlight group links to a standard group, so the window takes your colourscheme's colours and
 this plugin writes none of its own.
