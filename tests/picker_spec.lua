@@ -12,19 +12,20 @@ local OBJECT = {
   task = { priority = 1, due = "2026-09-25" },
 }
 
---- Run `body` with `vim.ui.select` recording what it was offered rather than
---- reading a terminal, and hand it the record.
----
---- The record is what a case waits on: the argv log grows when the call is
---- spawned, and the entries only exist once its answer has been read.
-local function without_a_front_end(body)
+local function wait_until_the_answer_was_read_and_offered(offered, count)
+  fake_dam.settle(function()
+    return #offered == count
+  end)
+end
+
+local function with_select_recording_what_it_offered(body)
   local real = vim.ui.select
-  local opened = {}
+  local offered = {}
   vim.ui.select = function(entries)
-    table.insert(opened, entries)
+    table.insert(offered, entries)
   end
 
-  local ok, err = pcall(body, opened)
+  local ok, err = pcall(body, offered)
 
   vim.ui.select = real
   assert(ok, err)
@@ -48,12 +49,10 @@ return {
 
   ["follows the screen when it is given no name"] = function()
     list_buffer.with(function(_, fake)
-      without_a_front_end(function(opened)
+      with_select_recording_what_it_offered(function(offered)
         local before = #fake_dam.argv_log(fake)
         picker.pick(nil)
-        fake_dam.settle(function()
-          return #opened == 1
-        end)
+        wait_until_the_answer_was_read_and_offered(offered, 1)
 
         assert(
           fake_dam.argv_log(fake)[before + 1] == "ls due:today | overdue --json",
@@ -63,9 +62,7 @@ return {
         vim.cmd("silent! %bwipeout!")
         local alone = #fake_dam.argv_log(fake)
         picker.pick(nil)
-        fake_dam.settle(function()
-          return #opened == 2
-        end)
+        wait_until_the_answer_was_read_and_offered(offered, 2)
 
         assert(fake_dam.argv_log(fake)[alone + 1] == "ls --json", vim.inspect(fake_dam.argv_log(fake)))
       end)

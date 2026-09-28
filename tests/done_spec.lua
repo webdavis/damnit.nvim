@@ -7,18 +7,14 @@ local done = require("damnit.done")
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }
 local STANDUP = { oid = "a070c369a6dfc382d57988322e453d85d62ef9cf", subject = "standup" }
 
---- dam's own refusal for a parent whose child is open, captured from
---- `dam done <oid> --json` against a store in a temporary directory.
-local BLOCKED = table.concat({
+local REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN = table.concat({
   '{"error": {"kind": "refused", "rule": "blocked", ',
   '"message": "cfdc36e cannot be completed:\\n  child 4aa6797 is open\\n',
   'use --force to complete it anyway, or --force --interactive to decide what happens to them", ',
   '"oids": ["cfdc36e6c43673b75f02ea89501cba466e96625b", "4aa6797253e3610afe61c236650b6ec3f41877ee"]}}',
 })
 
---- dam's refusal for an object that is not a task at all, captured the same
---- way. No force can help it, and it names no blocker.
-local NOT_A_TASK = table.concat({
+local REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP = table.concat({
   '{"error": {"kind": "refused", "rule": "not_a_task", ',
   '"message": "a070c36 is an event; events are not completed", ',
   '"oids": ["a070c369a6dfc382d57988322e453d85d62ef9cf"]}}',
@@ -42,11 +38,7 @@ local function with_dam(run, opts)
 
   local ok, err = pcall(run, fake, notifications)
 
-  -- A call still in flight answers after the teardown and lands its message in
-  -- the next case, so the lane is drained before the fake is taken away.
-  pcall(fake_dam.settle, function()
-    return queue.running() == nil
-  end, 2000)
+  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
 
   vim.notify = real
   queue.reset()
@@ -88,11 +80,13 @@ return {
 
       local log = fake_dam.argv_log(fake)
       assert(log[2] == ("done %s --json"):format(TAXES.oid), vim.inspect(log))
-      -- `--children keep` states the answer the offer promised, which is also
-      -- what gets the call through where `done.interactive` is set.
-      assert(log[3] == ("done %s --force --children keep --json"):format(TAXES.oid), vim.inspect(log))
+      assert(
+        log[3] == ("done %s --force --children keep --json"):format(TAXES.oid),
+        "--children keep states the answer the offer promised, and gets through where done.interactive is set: "
+          .. vim.inspect(log)
+      )
       assert(chosen and chosen:find("4aa6797", 1, true), tostring(chosen))
-    end, { exit = 4, stderr = BLOCKED })
+    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
 
   ["sends nothing more when the offer is declined"] = function()
@@ -109,7 +103,7 @@ return {
       vim.ui.select = real
 
       assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
-    end, { exit = 4, stderr = BLOCKED })
+    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
 
   ["reports a refusal no force can help, and opens no picker"] = function()
@@ -130,7 +124,7 @@ return {
       assert(not offered, "an event is not blocked, so no force was offered")
       assert(notifications[1] == "a070c36 is an event; events are not completed", vim.inspect(notifications))
       assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
-    end, { exit = 4, stderr = NOT_A_TASK })
+    end, { exit = 4, stderr = REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP })
   end,
 
   ["says what it completed"] = function()

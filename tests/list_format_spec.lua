@@ -1,8 +1,7 @@
 local format = require("damnit.list_format")
 local location = require("damnit.location")
 
---- The sidebar's default width, which is the narrowest a list is drawn at.
-local SIDEBAR_WIDTH = 40
+local NARROWEST_LIST_WIDTH_OF_THE_DEFAULT_SIDEBAR = 40
 
 local function object(fields)
   return vim.tbl_extend("force", {
@@ -22,8 +21,7 @@ local PARENT = object({ subject = "Ship the release", path = "work/release/" })
 local CHILD = object({ subject = "Tag it", path = "work/release/tag/" })
 local GRANDCHILD = object({ subject = "Sign the tag", path = "work/release/tag/sign/" })
 
---- The number of the one line holding `needle`.
-local function line_of(lines, needle)
+local function the_only_line_holding(lines, needle)
   local found = nil
 
   for number, line in ipairs(lines) do
@@ -79,8 +77,8 @@ return {
   ["maps every line back to its object and leaves the title unmapped"] = function()
     local lines, entries = format.render({ title = "all open tasks" }, { PARENT, CHILD })
 
-    assert(entries[line_of(lines, "Ship the release")].object == PARENT, vim.inspect(entries))
-    assert(entries[line_of(lines, "Tag it")].object == CHILD, vim.inspect(entries))
+    assert(entries[the_only_line_holding(lines, "Ship the release")].object == PARENT, vim.inspect(entries))
+    assert(entries[the_only_line_holding(lines, "Tag it")].object == CHILD, vim.inspect(entries))
     assert(entries[1] == nil, "the title line held an object")
 
     local mapped = 0
@@ -111,9 +109,9 @@ return {
 
     local lines, entries = format.render({ title = "t" }, { captured, plain })
 
-    local where = entries[line_of(lines, "Hold the width")].location
+    local where = entries[the_only_line_holding(lines, "Hold the width")].location
     assert(where and where.path == "lua/list.lua" and where.line == 42, vim.inspect(entries))
-    assert(entries[line_of(lines, "Buy milk")].location == nil, vim.inspect(entries))
+    assert(entries[the_only_line_holding(lines, "Buy milk")].location == nil, vim.inspect(entries))
   end,
 
   ["the icon goes after the subject, so it cannot push it out of a 40-column sidebar"] = function()
@@ -121,8 +119,15 @@ return {
     local with_icon = format.object_line(object({ subject = subject, body = "damnit.nvim lua/x.lua:42" }), "")
     local without = format.object_line(object({ subject = subject }), "")
 
-    assert(with_icon:sub(1, SIDEBAR_WIDTH) == without:sub(1, SIDEBAR_WIDTH), with_icon)
-    assert(#without > SIDEBAR_WIDTH, "the case needs a line longer than the sidebar to prove anything")
+    assert(
+      with_icon:sub(1, NARROWEST_LIST_WIDTH_OF_THE_DEFAULT_SIDEBAR)
+        == without:sub(1, NARROWEST_LIST_WIDTH_OF_THE_DEFAULT_SIDEBAR),
+      with_icon
+    )
+    assert(
+      #without > NARROWEST_LIST_WIDTH_OF_THE_DEFAULT_SIDEBAR,
+      "the case needs a line longer than the sidebar to prove anything"
+    )
   end,
 
   ["draws a parent's children under it, one level further in"] = function()
@@ -144,16 +149,14 @@ return {
     )
   end,
 
-  ["draws a nested row once when two objects share the path it hangs off"] = function()
+  ["draws a nested row once when two objects share the path it hangs off, though both head a tree"] = function()
     local alpha = object({ subject = "alpha", path = "work/" })
     local beta = object({ subject = "beta", path = "work/" })
     local gamma = object({ subject = "gamma", path = "work/sub/" })
 
-    -- `line_of` refuses a needle on more than one line, which is the whole
-    -- assertion: both sharers head a tree, and only one may walk the children.
     local lines = format.render({ title = "v" }, { alpha, beta, gamma })
 
-    assert(line_of(lines, "- gamma") > line_of(lines, "- beta"), joined(lines))
+    assert(the_only_line_holding(lines, "- gamma") > the_only_line_holding(lines, "- beta"), joined(lines))
   end,
 
   ["a child whose parent this view does not hold is drawn at the top level"] = function()
