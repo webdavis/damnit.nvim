@@ -100,6 +100,14 @@ after every action rather than patching its own model, so what you see is what d
 | `q` `gq` | Close the window. |
 | `g?` | Show this table for the buffer you are in. |
 
+`cc` opens a message buffer listing what is staged. Writing it makes the commit; its `#` lines are
+left out of the message, and an empty message makes no commit.
+
+`<CR>` on a conflict opens ours and theirs side by side. On an Unpushed line it shows that remote's
+newest commits, as many as it is behind by. `dam` counts a remote's unpushed commits without naming
+them, and a push can leave an earlier commit behind while marking a later one pushed, so these are
+the newest commits and not necessarily the unpushed ones. The buffer says so.
+
 `X` works on an uncommitted create only. On a change whose op is an update or a delete it says so
 and does nothing, because throwing one of those away means restoring the committed state and this
 key does not do that yet.
@@ -225,15 +233,21 @@ inside a filter says so.
 ## Capture from code
 
 `:Dam capture` makes a task out of what is in front of you. In visual mode the selection becomes the
-subject, taken by whole lines; in normal mode it asks. Either way the task's body gets one line
-naming where it came from:
+subject, taken by whole lines; in normal mode it asks, with the current line's words already typed
+in. Either way the task's body gets one line naming where it came from:
 
 ```
 -- TODO(me): hold the width
 ```
 
-captured from `lua/damnit/sidebar.lua` becomes a task whose body holds
-`damnit.nvim lua/damnit/sidebar.lua:88`, and `gd` on that task in a list takes you back to the line.
+captured from `lua/damnit/sidebar.lua` becomes a task whose subject is `hold the width` and whose
+body holds `damnit.nvim lua/damnit/sidebar.lua:88`, and `gd` on that task in a list takes you back to
+the line.
+
+The subject loses each line's comment punctuation and a block comment's closing tail, and the first
+line with words on it loses a leading `TODO` or `FIXME` with the `(author)` and colon after it. The
+marker stays when a letter follows it, so `TODOS are the problem` keeps its first word. Several lines
+join into one, with runs of space collapsed.
 
 The path is always relative to the repository root, and a file in no repository goes out as its own
 name alone. A body reaches every device that pulls the store, so an absolute path would carry the

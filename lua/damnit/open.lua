@@ -1,18 +1,9 @@
--- The read-only buffers the status window opens.
---
--- Each is a scratch buffer built from a document dam already answered with, so
--- none of them is a second view of the store that could disagree with the one
--- the window drew.
-
 local M = {}
 
 local diff = require("damnit.render.diff")
 local message = require("damnit.message")
 local status_model = require("damnit.status_model")
 
----@param name string
----@param lines string[]
----@return integer buf
 local function read_only(name, lines)
   local buf = vim.api.nvim_create_buf(false, true)
 
@@ -27,10 +18,7 @@ local function read_only(name, lines)
   return buf
 end
 
---- One wire object as its set fields, one per line.
----@param object table?
----@return string[]
-local function object_lines(object)
+local function set_field_lines(object)
   local lines = {}
 
   for _, field in ipairs(diff.set_fields(object)) do
@@ -40,22 +28,16 @@ local function object_lines(object)
   return lines
 end
 
---- Both sides of a conflict, ours on the left and theirs on the right.
----
---- `dam status` carries the two objects in full, so this needs no call.
----@param entry table
 function M.conflict(entry)
   local short = entry.oid:sub(1, 7)
 
   vim.cmd("vsplit")
-  read_only(("damnit://conflict/%s/ours"):format(short), object_lines(entry.ours))
+  read_only(("damnit://conflict/%s/ours"):format(short), set_field_lines(entry.ours))
 
   vim.cmd("vsplit")
-  read_only(("damnit://conflict/%s/theirs"):format(short), object_lines(entry.theirs))
+  read_only(("damnit://conflict/%s/theirs"):format(short), set_field_lines(entry.theirs))
 end
 
----@param commit table
----@return string[]
 local function commit_lines(commit)
   local lines = {
     ("commit %s  %s"):format(tostring(commit.id):sub(1, 7), tostring(commit.at or "")),
@@ -78,13 +60,10 @@ local function commit_lines(commit)
   return lines
 end
 
---- One remote's newest commits, with what the status says it is behind by.
----
---- dam counts a remote's unpushed commits rather than naming them, so this
---- shows the newest ones the log holds and says so. They are not the unpushed
---- set: a push marks a later commit pushed while an earlier one whose objects
---- the helper did not answer stays behind. Naming them is a dam change.
----@param entry table the Unpushed row under the cursor
+local function newest(commits, count)
+  return vim.list_slice(commits, 1, count)
+end
+
 function M.unpushed(entry)
   if (entry.commits or 0) == 0 then
     return message.warn("this remote has no commit on this line")
@@ -104,11 +83,7 @@ function M.unpushed(entry)
         "",
       }
 
-      for index, commit in ipairs((data or {}).commits or {}) do
-        if index > entry.commits then
-          break
-        end
-
+      for _, commit in ipairs(newest((data or {}).commits or {}, entry.commits)) do
         vim.list_extend(lines, commit_lines(commit))
       end
 
