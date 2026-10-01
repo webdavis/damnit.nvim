@@ -194,9 +194,10 @@ its parent, so a child whose parent the view does not hold is drawn at the top l
 A line is the subject, then its badges: the due date in parentheses, the priority as `p1` to `p3`
 (the default, 4, is left off), each label as `@label`, a `⌖` when it was captured from code, and its
 path. The badges come after the subject so that a narrow sidebar cuts off a badge rather than the
-subject. A folded line ends with `(+n)`, the number of objects folded away under it. A view name is looked up in your `views` option first and then handed to `dam`,
-which resolves its own saved filters, so a name declared in `dam`'s config works in the editor, in a
-terminal and in a herdr pane from one declaration.
+subject. A folded line ends with `(+n)`, the number of objects folded away under it. A view name is looked up in your `views` option first and then among `dam`'s own
+saved filters, which the plugin lists once per session with `dam filter list`. So a name declared in
+`dam`'s config works in the editor, in a terminal and in a herdr pane from one declaration. A name in
+neither is refused before anything is run, and `:Dam list <Tab>` offers names from both.
 
 A view's value is a dam query. The grammar, as `dam 0.2.0` reads it:
 

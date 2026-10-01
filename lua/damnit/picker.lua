@@ -122,21 +122,8 @@ function M.show(entries, title)
   with_ui_select(entries, title)
 end
 
-function M.pick(name)
+local function search(spec)
   local list = require("damnit.list")
-  local views = require("damnit.views")
-  local spec
-
-  if name == nil or name == "" then
-    spec = list.current_spec() or views.resolve(nil)
-  else
-    spec = views.resolve(name)
-  end
-
-  if not spec then
-    return
-  end
-
   local title = format.title(spec)
 
   list.fetch(spec, function(objects, err)
@@ -151,6 +138,16 @@ function M.pick(name)
 
     M.show(entries, title)
   end)
+end
+
+function M.pick(name)
+  local list = require("damnit.list")
+
+  if name == nil or name == "" then
+    return search(list.current_spec() or require("damnit.views").resolve(nil))
+  end
+
+  require("damnit.views").resolve_then(name, search)
 end
 
 return M

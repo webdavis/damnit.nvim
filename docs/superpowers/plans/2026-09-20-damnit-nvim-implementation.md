@@ -8931,7 +8931,7 @@ it means completion offers dam's names beside the declared ones.
 
 **Files:** `lua/damnit/views.lua`, `plugin/damnit.lua`, `lua/damnit/health.lua`, `tests/views_spec.lua`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```lua
   ["reads dam's filters once per session and offers them for completion"] = function()
@@ -8941,7 +8941,7 @@ it means completion offers dam's names beside the declared ones.
   end,
 ```
 
-- [ ] **Step 2: Read the list once per session**
+- [x] **Step 2: Read the list once per session**
 
 `views.load(callback)` runs the listing once and caches it. `views.resolve` consults `opts.views`, then
 the cache, then refuses. `views.forget_filter` and the `probing` field go, and with them the case that
@@ -8951,7 +8951,7 @@ pinned the probe.
 both and stops running one `dam ls` per declared name to find the refused ones, because the listing
 answers that too.
 
-- [ ] **Step 3: Run, correct the README, lint and commit**
+- [x] **Step 3: Run, correct the README, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua views_spec

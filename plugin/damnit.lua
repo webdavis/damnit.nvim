@@ -54,9 +54,13 @@ local function complete(arg_lead, cmd_line)
   local typed = vim.split(vim.trim(cmd_line), "%s+")
 
   if #typed > 1 and SUBCOMMANDS_TAKING_A_VIEW[typed[2]] then
+    local views = require("damnit.views")
+    local the_next_tab_offers_dams_filters_too = views.load
+    the_next_tab_offers_dams_filters_too()
+
     return vim.tbl_filter(function(name)
       return vim.startswith(name, arg_lead)
-    end, require("damnit.views").declared())
+    end, views.known())
   end
 
   local names = {}

@@ -55,11 +55,7 @@ function M.pick(name)
 end
 
 function M.open(name)
-  local spec = require("damnit.views").resolve(name)
-
-  if spec then
-    return require("damnit.list").open(spec)
-  end
+  return require("damnit.views").resolve_then(name, require("damnit.list").open)
 end
 
 return M
