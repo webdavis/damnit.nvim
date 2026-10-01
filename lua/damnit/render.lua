@@ -108,7 +108,44 @@ local function header_line(label, value, group)
   return built.line("header")
 end
 
-local function remotes_line(remotes, list_was_read)
+local MINUTE, HOUR, DAY = 60, 3600, 86400
+
+-- Howard Hinnant's days_from_civil, so a UTC timestamp needs no local time zone to read.
+local function utc_epoch(timestamp)
+  local y, m, d, hh, mm, ss = timestamp:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
+  if not y then
+    return nil
+  end
+
+  y, m, d = tonumber(y) - (tonumber(m) <= 2 and 1 or 0), tonumber(m), tonumber(d)
+  local era = math.floor(y / 400)
+  local yoe = y - era * 400
+  local doy = math.floor((153 * (m + (m > 2 and -3 or 9)) + 2) / 5) + d - 1
+  local days = era * 146097 + yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy - 719468
+
+  return days * DAY + tonumber(hh) * HOUR + tonumber(mm) * MINUTE + tonumber(ss)
+end
+
+-- The same wording and units as `dam remote list`.
+local function pulled_ago(last_pull, now)
+  local at = last_pull and utc_epoch(last_pull)
+  if not at then
+    return last_pull and "pulled" or "never pulled"
+  end
+
+  local seconds = math.max(now - at, 0)
+  if seconds < MINUTE then
+    return "pulled just now"
+  elseif seconds < HOUR then
+    return ("pulled %dm ago"):format(seconds / MINUTE)
+  elseif seconds < DAY then
+    return ("pulled %dh ago"):format(seconds / HOUR)
+  end
+
+  return ("pulled %dd ago"):format(seconds / DAY)
+end
+
+local function remotes_line(remotes, list_was_read, now)
   if #remotes == 0 then
     return header_line("Remotes:", list_was_read and "none configured" or "unknown")
   end
@@ -122,7 +159,8 @@ local function remotes_line(remotes, list_was_read)
     end
 
     built.add(remote.remote, "DamRemote")
-    built.add(remote.commits > 0 and (" (%d unpushed)"):format(remote.commits) or " (clean)")
+    local commits = remote.commits > 0 and ("%d unpushed"):format(remote.commits) or "clean"
+    built.add((" (%s, %s)"):format(commits, pulled_ago(remote.last_pull, now)))
   end
 
   return built.line("header")
@@ -206,7 +244,7 @@ local ENTRY_LINES = {
 }
 
 function M.lines(model, state)
-  local lines = { header_line("Store:", state.store), remotes_line(model.remotes, model.remotes_known) }
+  local lines = { header_line("Store:", state.store), remotes_line(model.remotes, model.remotes_known, state.now) }
 
   if state.running then
     lines[#lines + 1] = running_line(state.running)

@@ -1,5 +1,5 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: fake (1 unpushed)  flaky (7 unpushed)
+Remotes: fake (1 unpushed, pulled 4m ago)  flaky (7 unpushed, never pulled)
 Running: push todoist  12.3s  (2 queued)     [C-c to cancel]
 Help:    g?
 

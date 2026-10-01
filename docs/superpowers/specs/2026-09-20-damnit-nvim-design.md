@@ -564,14 +564,19 @@ Four lines, before the first section, modelled on fugitive's Head and Push heade
 
 ```
 Store:   ~/.local/share/dam/dam.db
-Remotes: todoist (1 unpushed)  gcal (clean)
+Remotes: todoist (1 unpushed, pulled 4m ago)  gcal (clean, never pulled)
 Running: push todoist  12.3s     [C-c to cancel]
 Help:    g?
 ```
 
 - `Store` is the resolved store path, with the home directory shown as `~`.
 - `Remotes` is one entry per configured remote from `dam remote list --json`, each with its unpushed
-  commit count from `status.unpushed`. No remotes configured renders `Remotes: none configured`.
+  commit count from `status.unpushed` and how long ago it last pulled, from `last_pull`, in the same
+  one-unit wording `dam remote list` uses (`just now`, `4m ago`, `3h ago`, `2d ago`). A null
+  `last_pull` reads `never pulled`. No remotes configured renders `Remotes: none configured`. The age
+  is computed in the renderer from a `now` the window passes in, so the model stays free of a clock
+  and the goldens stay fixed. The remote list is read once per store and again after a push, a pull
+  or `R`, so a pull made in a terminal shows up on the next `R`.
 - `Running` is present only while an operation is in flight, and carries the elapsed time, updated
   every 250 ms. See section 5.
 - `Help` mirrors fugitive's `Help: g?` header, which fugitive emits unless `advice.statusHints` is
@@ -1795,7 +1800,7 @@ changes no default and no configuration; it lets a caller say "answer from what 
 
 ### 7. Last-pull times in `remote list`
 
-**Unblocked by dam 0.2.0:** the window header can report freshness.
+**Unblocked by dam 0.2.0, and read since:** the window header reports freshness.
 
 **Shipped in dam 0.2.0:** `dam remote list --json` reports name, helper, url, path, `stale_seconds`,
 `last_pull` and `last_push`. The timestamps are either a timestamp string or null, so the header can

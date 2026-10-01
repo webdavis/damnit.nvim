@@ -162,7 +162,8 @@ function M.build(status, remotes)
   local listed = {}
   for _, entry in ipairs((remotes or {}).remotes or {}) do
     local name = present(entry.name) or entry.remote
-    listed[#listed + 1] = { remote = name, commits = commits_by_remote[name] or 0 }
+    listed[#listed + 1] =
+      { remote = name, commits = commits_by_remote[name] or 0, last_pull = present(entry.last_pull) }
   end
 
   if #listed == 0 then

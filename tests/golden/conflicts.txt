@@ -1,5 +1,5 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: fake (clean)  flaky (clean)
+Remotes: fake (clean, pulled 4m ago)  flaky (clean, never pulled)
 Help:    g?
 
 Conflicts (1)

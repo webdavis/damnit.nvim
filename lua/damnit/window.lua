@@ -145,6 +145,10 @@ function M.open_diffs(key)
   return require("damnit.render.diff").open_set(key or queue.key())
 end
 
+local function header_state(key)
+  return { store = M.store_display(key), running = queue.foreground(key), now = os.time() }
+end
+
 function M.redraw_current(key)
   key = key or queue.key()
 
@@ -152,7 +156,7 @@ function M.redraw_current(key)
     return
   end
 
-  draw(key, render.lines(model_by_store[key], { store = M.store_display(key), running = queue.foreground(key) }))
+  draw(key, render.lines(model_by_store[key], header_state(key)))
 end
 
 function M.redraw(key, status)
@@ -163,7 +167,7 @@ function M.redraw(key, status)
 
   model_by_store[key] = status_model.build(status, remote_list_by_store[key])
 
-  draw(key, render.lines(model_by_store[key], { store = M.store_display(key), running = queue.foreground(key) }))
+  draw(key, render.lines(model_by_store[key], header_state(key)))
 end
 
 local function read_the_remote_list_until_cached(key)
@@ -216,7 +220,7 @@ function M.tick(key)
     return
   end
 
-  local lines = render.lines(model_by_store[key], { store = M.store_display(key), running = queue.foreground(key) })
+  local lines = render.lines(model_by_store[key], header_state(key))
 
   local header_count = 0
   for _, line in ipairs(lines) do

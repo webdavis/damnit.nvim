@@ -22,7 +22,9 @@ local function full_status_with_only_the_sections(...)
   return kept
 end
 
-local STATE = { store = "~/.local/share/dam/dam.db" }
+local TEN_AM_UTC_ON_THE_TWENTIETH = 1789898400
+
+local STATE = { store = "~/.local/share/dam/dam.db", now = TEN_AM_UTC_ON_THE_TWENTIETH }
 
 local function golden(name, lines)
   local path = ("%s/golden/%s.txt"):format(TESTS_DIR, name)
@@ -80,6 +82,7 @@ return {
   ["puts the running operation and its elapsed time in the header"] = function()
     local state = {
       store = STATE.store,
+      now = STATE.now,
       running = { label = "push todoist", elapsed = 12.34, pending = 2 },
     }
     local lines = lines_of(fixture("full/status.json"), state)
@@ -193,6 +196,32 @@ return {
 
     assert(render.lines(unread, STATE)[2].text == "Remotes: unknown", render.lines(unread, STATE)[2].text)
     assert(render.lines(none, STATE)[2].text == "Remotes: none configured", render.lines(none, STATE)[2].text)
+  end,
+
+  ["says how long ago each remote pulled, against the clock in state"] = function()
+    local lines = lines_of(fixture("full/status.json"))
+
+    assert(
+      lines[2].text == "Remotes: fake (1 unpushed, pulled 4m ago)  flaky (7 unpushed, never pulled)",
+      lines[2].text
+    )
+  end,
+
+  ["rounds a pull's age down to one unit and never into the future"] = function()
+    local ages = {
+      ["2026-09-20T09:59:30Z"] = "pulled just now",
+      ["2026-09-20T10:05:00Z"] = "pulled just now",
+      ["2026-09-20T07:00:00.123456Z"] = "pulled 3h ago",
+      ["2026-09-18T09:00:00Z"] = "pulled 2d ago",
+      ["2024-02-29T10:00:00Z"] = "pulled 934d ago",
+    }
+
+    for last_pull, expected in pairs(ages) do
+      local model = status_model.build({}, { remotes = { { name = "r", last_pull = last_pull } } })
+      local text = render.lines(model, STATE)[2].text
+
+      assert(text == ("Remotes: r (clean, %s)"):format(expected), last_pull .. ": " .. text)
+    end
   end,
 
   ["links every group to a standard one and writes no colour"] = function()
