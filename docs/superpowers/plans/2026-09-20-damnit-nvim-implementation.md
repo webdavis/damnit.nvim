@@ -8885,7 +8885,7 @@ to be local today. And the header can only count unpushed commits, never say how
 **Files:** `lua/damnit/poll.lua`, `lua/damnit/status_model.lua`, `lua/damnit/render.lua`,
 `tests/poll_spec.lua`, `tests/render_spec.lua`, `tests/golden/*.txt`, `README.md`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 The poll's fetch sends `--no-pull` before the subcommand, and the header reads
 `todoist (1 unpushed, pulled 4m ago)`.
@@ -8897,13 +8897,13 @@ The poll's fetch sends `--no-pull` before the subcommand, and the header reads
   end,
 ```
 
-- [ ] **Step 2: Send the flag and read the timestamp**
+- [x] **Step 2: Send the flag and read the timestamp**
 
 `poll.refresh` prepends `--no-pull`. `status_model.build` carries `last_pull` onto each remote line, and
 `render`'s `remotes_line` renders it as a relative age, computed in the renderer rather than in the
 model so the model stays pure of a clock.
 
-- [ ] **Step 3: Regenerate the goldens, read the diff, run, lint and commit**
+- [x] **Step 3: Regenerate the goldens, read the diff, run, lint and commit**
 
 ```bash
 DAMNIT_GOLDEN_UPDATE=1 nvim --headless --clean -l tests/run.lua render_spec

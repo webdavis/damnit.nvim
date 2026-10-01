@@ -35,7 +35,7 @@ return {
     assert(model.empty == true, vim.inspect(model.sections))
 
     local dam_writes_a_row_for_every_remote_zero_included =
-      { { remote = "fake", commits = 0 }, { remote = "flaky", commits = 0 } }
+      { { remote = "fake", commits = 0, last_pull = "2026-09-20T09:56:00Z" }, { remote = "flaky", commits = 0 } }
     assert(vim.deep_equal(model.remotes, dam_writes_a_row_for_every_remote_zero_included), vim.inspect(model.remotes))
   end,
 
@@ -135,7 +135,8 @@ return {
 
   ["carries a remote's unpushed count beside the name dam lists it under"] = function()
     local model = status_model.build(fixture("full/status.json"), fixture("full/remote.json"))
-    local want = { { remote = "fake", commits = 1 }, { remote = "flaky", commits = 7 } }
+    local want =
+      { { remote = "fake", commits = 1, last_pull = "2026-09-20T09:56:00Z" }, { remote = "flaky", commits = 7 } }
 
     assert(vim.deep_equal(model.remotes, want), vim.inspect(model.remotes))
   end,

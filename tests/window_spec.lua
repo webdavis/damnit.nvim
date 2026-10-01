@@ -31,6 +31,15 @@ return {
     end)
   end,
 
+  ["says how long ago each remote pulled, against the real clock"] = function()
+    with_window(function()
+      local remotes = vim.api.nvim_buf_get_lines(window.buffer(), 1, 2, false)[1]
+
+      assert(remotes:find("fake %(1 unpushed, pulled %d+d ago%)"), remotes)
+      assert(remotes:find("flaky (7 unpushed, never pulled)", 1, true), remotes)
+    end)
+  end,
+
   ["leaves the poller's own read out of the header"] = function()
     with_window(function(fake)
       local buf = window.buffer()
@@ -162,16 +171,18 @@ return {
     end)
   end,
 
-  ["R reads the status again"] = function()
+  ["R reads the remote list and the status again, so a pull made elsewhere shows its age"] = function()
     with_window(function(fake)
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "status --json", vim.inspect(fake_dam.argv_log(fake)))
+      local log = fake_dam.argv_log(fake)
+      assert(log[before + 1] == "remote list --json", vim.inspect(log))
+      assert(log[before + 2] == "status --json", vim.inspect(log))
     end)
   end,
 

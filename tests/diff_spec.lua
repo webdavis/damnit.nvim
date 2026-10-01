@@ -120,10 +120,11 @@ return {
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > closed
+        return #fake_dam.argv_log(fake) >= closed + 2
       end)
 
-      assert(fake_dam.argv_log(fake)[closed + 1] == "status --json", vim.inspect(fake_dam.argv_log(fake)))
+      local after_the_remote_list = closed + 2
+      assert(fake_dam.argv_log(fake)[after_the_remote_list] == "status --json", vim.inspect(fake_dam.argv_log(fake)))
     end)
   end,
 

@@ -1,5 +1,5 @@
 Store:   ~/.local/share/dam/dam.db
-Remotes: fake (1 unpushed)  flaky (7 unpushed)
+Remotes: fake (1 unpushed, pulled 4m ago)  flaky (7 unpushed, never pulled)
 Help:    g?
 
 Conflicts (1)

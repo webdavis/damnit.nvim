@@ -80,7 +80,8 @@ editor holding nothing else.
 
 `:Dam` opens it. It draws a header, then one section per thing that has something in it: Conflicts,
 Working, Staged, Unpushed, Notices. Conflicts come first because a conflict is what blocks a pull.
-Unpushed lists only the remotes that are behind; the header names every remote. Each section is a
+Unpushed lists only the remotes that are behind; the header names every remote and how long ago it
+last pulled, as in `todoist (1 unpushed, pulled 4m ago)`. Each section is a
 fold. It re-reads `dam status --json` in full after every action rather than patching its own model,
 so what you see is what dam last said.
 
@@ -94,7 +95,7 @@ so what you see is what dam last said.
 | `X` | Discard this working change. |
 | `=` | Show or hide which fields this change touches. |
 | `<CR>` | Open what the cursor is on. |
-| `R` | Re-read the status. |
+| `R` | Re-read the status and the remote list. |
 | `P` | Push. |
 | `p` | Pull. |
 | `co` | Settle this conflict with ours. |

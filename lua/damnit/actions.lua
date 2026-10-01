@@ -3,6 +3,7 @@ local M = {}
 local message = require("damnit.message")
 
 function M.refresh()
+  require("damnit.window").forget_remotes()
   require("damnit.window").refresh()
 end
 
