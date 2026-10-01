@@ -2,11 +2,8 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
 local sidebar = require("damnit.sidebar")
-local views = require("damnit.views")
-
-local function refuse_the_name_as_the_list_does_once_dam_answers_parse(name)
-  views.forget_filter(name)
-end
+local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local queue = require("damnit.queue")
 
 return {
   ["toggle opens a fixed-width split and a second call closes it"] = function()
@@ -113,12 +110,14 @@ return {
     assert(notifications[1]:find("sidebar.width", 1, true), notifications[1])
   end,
 
-  ["a view dam has already refused leaves the layout alone"] = function()
+  ["a view in neither the setup nor dam's saved filters leaves the layout alone"] = function()
     local _, notifications = sidebar_tab.in_its_own_tabpage({ view = "tomorrow" }, function()
-      refuse_the_name_as_the_list_does_once_dam_answers_parse("tomorrow")
-
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle()
+      fake_dam.settle(function()
+        return queue.running() == nil
+      end)
+
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
     end)
 

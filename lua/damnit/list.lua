@@ -187,19 +187,11 @@ function M.write(args, label, said)
   })
 end
 
-local function dam_knows_no_such_view(err, spec)
-  return err and err.kind == "parse" and spec.probing
-end
-
 function M.fetch(spec, callback)
   require("damnit.queue").submit({
     args = require("damnit.views").query_args(spec),
     label = "ls",
     on_done = function(data, err)
-      if dam_knows_no_such_view(err, spec) then
-        require("damnit.views").forget_filter(spec.title)
-      end
-
       callback(data and data.objects or {}, err)
     end,
   })

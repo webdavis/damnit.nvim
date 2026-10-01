@@ -2,7 +2,6 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
-local damnit = require("damnit")
 
 local function indent_of(line)
   return #line:match("^%s*")
@@ -48,37 +47,6 @@ return {
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,
 
-  ["reports dam's own wording for a name it cannot parse, and remembers it"] = function()
-    list_buffer.with(function(_, fake, notifications)
-      assert(notifications[#notifications] == "unexpected nonsense in query", vim.inspect(notifications))
-
-      local before = #fake_dam.argv_log(fake)
-      damnit.open("nonsense")
-
-      assert(#fake_dam.argv_log(fake) == before, "the second attempt costs no call")
-    end, {
-      name = "nonsense",
-      exit = 1,
-      stderr = '{"error": {"kind": "parse", "rule": null, "message": "unexpected nonsense in query", "oids": []}}',
-    })
-  end,
-
-  ["keeps a probed name when the failure said nothing about it"] = function()
-    list_buffer.with(function(_, fake)
-      local before = #fake_dam.argv_log(fake)
-      damnit.open("today")
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) > before
-      end, 1000)
-
-      assert(#fake_dam.argv_log(fake) > before, "a locked store must not refuse the name for the session")
-    end, {
-      name = "today",
-      exit = 1,
-      stderr = '{"error": {"kind": "store", "rule": null, "message": "the store is locked", "oids": []}}',
-    })
-  end,
-
   ["draws dam's own wording in the buffer when it refused the view"] = function()
     list_buffer.with(function(buf)
       local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
@@ -86,6 +54,7 @@ return {
       assert(body:find("dam refused this view:", 1, true), body)
       assert(body:find("unexpected nonsense in query", 1, true), body)
     end, {
+      views = { nonsense = "due:::" },
       name = "nonsense",
       exit = 1,
       stderr = '{"error": {"kind": "parse", "rule": null, "message": "unexpected nonsense in query", "oids": []}}',

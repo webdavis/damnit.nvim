@@ -1238,15 +1238,21 @@ A view is a name and a `dam` query. Two sources, merged, with the plugin's own t
 name collision:
 
 1. `opts.views`, a table of name to query string.
-1. `dam`'s own saved filters, from config (dam spec 248 to 254), read once per session through
+1. `dam`'s own saved filters, from config (dam spec 248 to 254), listed once per session through
+   `dam filter list --json` the first time a name not in `opts.views` is asked for, and then run as
    `dam ls <name> --json`, which resolves a saved filter by name
    (`crates/dam-application/src/use_cases/list.rs`; measured: `dam ls today --json` against a config
    holding `[filter.today]` returned an object list rather than a parse error).
 
 Reading dam's filters means a name declared once in `~/.config/dam/config.toml` works in the editor,
 in a terminal and in a herdr pane with no second declaration. A name in neither source is refused
-before any call, and the refusal names the declared ones, which is what `todoist.nvim` does today
-(`lua/todoist/init.lua`, `M.view`).
+before any `dam ls`, and the refusal names both sources, which is what `todoist.nvim` does today
+(`lua/todoist/init.lua`, `M.view`). `:Dam list` and `:Dam pick` complete against both sources: the
+declared names at once, and dam's from the first Tab after the list has been read.
+
+`:checkhealth damnit` lists dam's saved filters from the same listing, and still runs each declared
+view's query once, because a listing of dam's names says nothing about whether a query in
+`opts.views` parses.
 
 The query grammar is dam's, parsed by dam. The terms, from
 `crates/dam-domain/src/query/parse.rs`: `done`, `overdue`, `kind:task|event`, `due:`, `deadline:`,
@@ -1590,8 +1596,8 @@ Nothing in the suite reaches the network. Nothing runs the real `dam`. Nothing t
   `oids`, the choice sends `--force`, the
   `done.interactive` message is recognised, and a rolled-forward result is reported as rolled
   forward rather than as done.
-- **`views_spec`.** `opts.views` wins over a dam filter, an undeclared name is refused before any
-  call, and a refused query is reported in dam's wording.
+- **`views_spec`.** dam's filters are listed once per session, `opts.views` wins over a dam filter,
+  a name in neither source is refused before any `dam ls`, and completion offers both sources.
 - **`list_spec`, `list_format_spec`, `tree_spec`.** Ported from the current suite, retargeted at
   `path`.
 - **`picker_spec`, `sidebar_spec`, `capture_spec`, `location_spec`, `send_spec`.** Ported,
@@ -1703,7 +1709,7 @@ Each decided 2026-09-20 on the recommended option, with what it costs to reverse
    option. Cost to reverse: a two-word commit costs a `:w`. An `opts.commit.prompt = true` would
    switch it, and is not built.
 1. **dam's saved filters are read, with `opts.views` winning a collision.** Decided 2026-09-20: read
-   them, the recommended option. Cost to reverse: one extra `dam ls` per unknown name, and a name
+   them, the recommended option. Cost to reverse: one `dam filter list` per session, and a name
    that resolves differently in the editor than in a terminal when the operator declares it in both
    places with different queries.
 1. **No shim for `:Todoist`.** Decided 2026-09-20: none, the recommended option. Cost stated in

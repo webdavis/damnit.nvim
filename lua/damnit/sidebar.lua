@@ -32,6 +32,18 @@ local function split_full_height_at(side)
   vim.cmd(side == "right" and "botright vsplit" or "topleft vsplit")
 end
 
+local function open_beside(spec, opts)
+  split_full_height_at(opts.side)
+
+  local win = vim.api.nvim_get_current_win()
+  vim.w[win][SIDEBAR_WINDOW_FLAG] = true
+
+  require("damnit.list").open(spec)
+  hold(win, opts.width)
+
+  return win
+end
+
 function M.open()
   local existing = M.window()
   if existing then
@@ -49,20 +61,9 @@ function M.open()
     return message.fail(("sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)))
   end
 
-  local spec = require("damnit.views").resolve(opts.view)
-  if not spec then
-    return
-  end
-
-  split_full_height_at(opts.side)
-
-  local win = vim.api.nvim_get_current_win()
-  vim.w[win][SIDEBAR_WINDOW_FLAG] = true
-
-  require("damnit.list").open(spec)
-  hold(win, opts.width)
-
-  return win
+  return require("damnit.views").resolve_then(opts.view, function(spec)
+    return open_beside(spec, opts)
+  end)
 end
 
 function M.leave_fixed_window()
