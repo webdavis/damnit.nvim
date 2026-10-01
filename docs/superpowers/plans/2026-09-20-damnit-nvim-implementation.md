@@ -8692,7 +8692,7 @@ machine with `done.interactive = true`.
 
 **Files:** `lua/damnit/quick_edit.lua`, `tests/done_spec.lua`, `README.md`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```lua
   ["offers every disposition dam takes as a flag"] = function()
@@ -8705,13 +8705,13 @@ machine with `done.interactive = true`.
 
 Write it out in full, stubbing `vim.ui.select` to pick the second entry and asserting the argv.
 
-- [ ] **Step 2: Offer the choices**
+- [x] **Step 2: Offer the choices**
 
 `M.send_done` gains a disposition argument, the `vim.ui.select` list grows from two entries to four,
 and the `into:<name>` entry asks for the name through `vim.ui.input` before sending. The
 `interactive_refusal` path goes, because a flag now answers the question dam was asking.
 
-- [ ] **Step 3: Run, correct the README, lint and commit**
+- [x] **Step 3: Run, correct the README, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua done_spec

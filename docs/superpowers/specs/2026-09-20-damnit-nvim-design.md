@@ -1208,21 +1208,16 @@ So the confirm becomes an explanation plus a choice:
   the call runs, then `dam done <oid> --json` is sent with no prompt.
 - Given the task has open children or open dependencies, when `dam done` exits 4 with `rule`
   `blocked`, then the plugin
-  reads the blocker lines out of the message, shows them, and offers through `vim.ui.select`:
-  `Complete it anyway, keeping the children where they are` and `Cancel`.
-- Given the user chooses the first, when the call runs, then `dam done <oid> --force --json` is sent.
-- Given `done.interactive = true` is set in dam's config, when `dam done <oid> --force --json` runs,
-  then it exits 1 with `a question needs an answer; drop --json/--toon to answer interactively`,
-  because `--json` installs a refusing prompt (`crates/dam-cli/src/context.rs:53`,
-  `crates/dam-cli/src/prompt.rs:20`) and `done.interactive` turns every `--force` into a question
-  (`crates/dam-cli/src/commands/done.rs`). Measured and confirmed. The plugin recognises that exact
-  message and says
-  `damnit.nvim: dam is configured to ask what happens to the children; run dam done <oid> --force
-  --interactive in a terminal`.
-
-The other two dispositions dam offers interactively, moving the children up one level and moving them
-into a new group, cannot be reached from the plugin at all in version one. See **Needed from dam**
-for the flags that would fix this, which is the single highest-value change on that list.
+  reads the blockers from the refusal's `oids`, shows them, and offers through `vim.ui.select`:
+  `Complete it anyway, keeping the children where they are`, `Complete it anyway, moving the children
+  up one level`, `Complete it anyway, moving the children into a new group` and `Cancel`.
+- Given the user chooses the first or the second, when the call runs, then
+  `dam done <oid> --force --children keep --json` or `dam done <oid> --force --children up --json` is
+  sent.
+- Given the user chooses the third, when `vim.ui.input` asks for the group's name and gets one, then
+  `dam done <oid> --force --children into:<name> --json` is sent. A blank name sends nothing.
+- Given `done.interactive = true` is set in dam's config, the call still goes through without a
+  question, because a `--children` flag answers it on the command line.
 
 Completing a recurring task does not complete it: `dam` rolls it forward to the next occurrence and
 reports `rolled forward to <date>` (`crates/dam-cli/src/commands/done.rs`). The plugin shows that

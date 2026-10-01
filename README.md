@@ -244,8 +244,8 @@ container above it, even one no object sits at. After every edit the view is rea
 drawn is what dam holds.
 
 Completing a parent whose children or dependencies are still open is refused by `dam`, which names
-the blockers. The plugin shows you that list and asks what to do with them rather than asking yes or
-no.
+the blockers. The plugin shows you that list and lets you complete it anyway with the children kept
+where they are, moved up one level, or moved into a new group whose name it asks for.
 
 ## The completed history
 
