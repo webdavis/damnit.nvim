@@ -42,7 +42,7 @@ function M.open_entry(entry)
 end
 
 function M.complete_entry(entry)
-  require("damnit.done").send(entry.object, false)
+  require("damnit.done").send(entry.object)
 end
 
 function M.chosen_oid(selected)

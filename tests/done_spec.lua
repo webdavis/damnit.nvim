@@ -72,7 +72,7 @@ return {
         on_choice(items[1], 1)
       end
 
-      done.send(TAXES, false)
+      done.send(TAXES)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
       end, 2000)
@@ -89,6 +89,69 @@ return {
     end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
 
+  ["offers every disposition dam takes as a flag, and sends the one chosen"] = function()
+    with_dam(function(fake)
+      local offered = nil
+      local real = vim.ui.select
+      vim.ui.select = function(items, opts, on_choice)
+        offered = vim.tbl_map(opts.format_item, items)
+        on_choice(items[2], 2)
+      end
+
+      done.send(TAXES)
+      pcall(fake_dam.settle, function()
+        return #fake_dam.argv_log(fake) >= 3
+      end, 2000)
+      vim.ui.select = real
+
+      assert(#offered == 4, vim.inspect(offered))
+      assert(offered[4] == "Cancel", vim.inspect(offered))
+      local log = fake_dam.argv_log(fake)
+      assert(log[3] == ("done %s --force --children up --json"):format(TAXES.oid), vim.inspect(log))
+    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+  end,
+
+  ["asks for the group's name before moving the children into it"] = function()
+    with_dam(function(fake)
+      local real_select, real_input = vim.ui.select, vim.ui.input
+      vim.ui.select = function(items, _, on_choice)
+        on_choice(items[3], 3)
+      end
+      vim.ui.input = function(_, on_answer)
+        on_answer("leftovers")
+      end
+
+      done.send(TAXES)
+      pcall(fake_dam.settle, function()
+        return #fake_dam.argv_log(fake) >= 3
+      end, 2000)
+      vim.ui.select, vim.ui.input = real_select, real_input
+
+      local log = fake_dam.argv_log(fake)
+      assert(log[3] == ("done %s --force --children into:leftovers --json"):format(TAXES.oid), vim.inspect(log))
+    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+  end,
+
+  ["sends nothing when the group's name is left blank"] = function()
+    with_dam(function(fake)
+      local real_select, real_input = vim.ui.select, vim.ui.input
+      vim.ui.select = function(items, _, on_choice)
+        on_choice(items[3], 3)
+      end
+      vim.ui.input = function(_, on_answer)
+        on_answer("  ")
+      end
+
+      done.send(TAXES)
+      pcall(fake_dam.settle, function()
+        return #fake_dam.argv_log(fake) >= 3
+      end, 200)
+      vim.ui.select, vim.ui.input = real_select, real_input
+
+      assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
+    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+  end,
+
   ["sends nothing more when the offer is declined"] = function()
     with_dam(function(fake)
       local real = vim.ui.select
@@ -96,7 +159,7 @@ return {
         on_choice(items[#items], #items)
       end
 
-      done.send(TAXES, false)
+      done.send(TAXES)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
       end, 200)
@@ -115,7 +178,7 @@ return {
         on_choice(items[1], 1)
       end
 
-      done.send(STANDUP, false)
+      done.send(STANDUP)
       fake_dam.settle(function()
         return #notifications > 0
       end)
@@ -129,7 +192,7 @@ return {
 
   ["says what it completed"] = function()
     with_dam(function(_, notifications)
-      done.send(TAXES, false)
+      done.send(TAXES)
       fake_dam.settle(function()
         return #notifications > 0
       end)
@@ -140,7 +203,7 @@ return {
 
   ["reports a recurring task as rolled forward rather than as done"] = function()
     with_dam(function(_, notifications)
-      done.send({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" }, false)
+      done.send({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" })
       fake_dam.settle(function()
         return #notifications > 0
       end)
