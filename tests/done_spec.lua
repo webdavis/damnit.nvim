@@ -75,7 +75,7 @@ return {
       done.send(TAXES)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
-      end, 2000)
+      end)
       vim.ui.select = real
 
       local log = fake_dam.argv_log(fake)
@@ -101,7 +101,7 @@ return {
       done.send(TAXES)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
-      end, 2000)
+      end)
       vim.ui.select = real
 
       assert(#offered == 4, vim.inspect(offered))
@@ -124,7 +124,7 @@ return {
       done.send(TAXES)
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= 3
-      end, 2000)
+      end)
       vim.ui.select, vim.ui.input = real_select, real_input
 
       local log = fake_dam.argv_log(fake)

@@ -27,7 +27,7 @@ return {
 
     fake_dam.settle(function()
       return answered
-    end, 3000)
+    end)
 
     observer:stop()
     observer:close()
