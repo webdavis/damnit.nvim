@@ -50,9 +50,12 @@ function M.with(run, fixtures)
   assert(ok, err)
 end
 
-function M.answer_input(answer, run)
+function M.answer_input(answer, run, on_prompt)
   local real = vim.ui.input
-  vim.ui.input = function(_, on_answer)
+  vim.ui.input = function(opts, on_answer)
+    if on_prompt then
+      on_prompt(opts.prompt)
+    end
     on_answer(answer)
   end
 

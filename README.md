@@ -91,7 +91,7 @@ so what you see is what dam last said.
 | `u` | Unstage it. Takes a visual range. |
 | `U` | Unstage everything. |
 | `cc` | Commit what is staged, in a message buffer. |
-| `X` | Discard this working change. |
+| `X` | Discard this working change: an update or a delete goes back to its last commit, and a new object that was never committed is removed. Asks first. |
 | `=` | Show or hide which fields this change touches. |
 | `<CR>` | Open what the cursor is on. |
 | `R` | Re-read the status. |

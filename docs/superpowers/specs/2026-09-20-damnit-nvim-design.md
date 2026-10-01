@@ -673,23 +673,23 @@ that meaning, and `:e` is bound to the same function so a fugitive hand lands so
 
 **`X`, discard a working change.**
 
-`dam` has no verb that restores an object to its committed state. There is no `restore`, no
-`checkout` and no `reset --hard`; grepping the whole workspace for those words finds nothing outside
-tests. So `X` ships in version one only for the case where `dam` does have an exact inverse.
+`dam restore <oid>` sets an object's working layer back to its last commit, and refuses an object
+with no commit behind it. So `X` sends one of two verbs, chosen by the change's `op`, and the prompt
+says which, because one can be undone and the other cannot.
 
 - Given the cursor is on a change whose `op` is `create`, when `X` is pressed, then the prompt is
-  `Discard "buy oat milk"? This removes the object. (y/N)`, and on `y` the plugin queues
-  `dam rm <oid> --json`, which is `create`'s exact inverse: the object was never committed, so
-  removing it from the working layer leaves nothing behind.
-- Given the cursor is on a change whose `op` is `update` or `delete`, when `X` is pressed, then
-  nothing is sent and the message is
-  `damnit.nvim: dam has no verb that restores a committed object; commit the change or edit it back`.
+  `Discard "buy oat milk"? It was never committed, so this removes it for good. (y/N)`, and on `y` the
+  plugin queues `dam rm <oid> --json`, which is `create`'s exact inverse: the object was never
+  committed, so removing it from the working layer leaves nothing behind.
+- Given the cursor is on a change whose `op` is `update` or `delete`, when `X` is pressed, then the
+  prompt is `Discard "buy oat milk"? This puts it back to its last commit. (y/N)`, and on `y` the
+  plugin queues `dam restore <oid> --json`.
 - Given the confirm is answered `n` or `<Esc>`, when the prompt closes, then nothing is sent and the
   window is unchanged.
 
-There is no undo for the `create` case either. `dam rm` moves the object out of the working layer,
-and no dam verb brings it back. The confirm is therefore not optional and has no "do not ask again"
-setting. See **Needed from dam** for the `dam restore` that would make `X` whole and undoable.
+There is no undo for the `create` case. `dam rm` moves the object out of the working layer, and no
+dam verb brings back an object that was never committed. The confirm is therefore not optional and
+has no "do not ask again" setting.
 
 **`=`, the inline field diff.**
 
@@ -1156,7 +1156,7 @@ offending lines in namespace `damnit`:
 
 `dam` refuses everything else, and its refusal is turned into a diagnostic too:
 
-- Given `:w` sends an edit and `dam` exits 2, when the callback runs, then the message is attached as
+- Given `:w` sends an edit and `dam` exits 4, when the callback runs, then the message is attached as
   an `ERROR` diagnostic on the line of the field the message names, or on line one when it names
   none, and the buffer stays modified.
 - Given `:w` sends an edit and `dam` exits 0, when the callback runs, then the buffer is re-rendered
@@ -1289,9 +1289,8 @@ natural-language line has nothing to parse it here, and a half-parsed one would 
 in the store.
 
 `u` goes because the working layer is a better undo than a one-level in-memory stack: a completion
-that has not been committed is a working change, visible in the window, and once `dam restore` exists
-it is reversible there. Until then, an accidental `x` is reversed by editing `done` back, which also
-needs the missing verb. This is a real regression in version one and it is named as one.
+that has not been committed is a working change, visible in the window, and `X` there puts it back
+to its last commit through `dam restore`.
 
 Every write is followed by a re-read of the view on screen, unchanged from today.
 
@@ -1653,7 +1652,6 @@ Good:
 
 ```
 damnit.nvim: push todoist is already running; C-c cancels it
-damnit.nvim: dam has no verb that restores a committed object; commit the change or edit it back
 damnit.nvim: todoist: 3 sent, 3 ok, 0 failed, 0 skipped
 ```
 
@@ -1723,8 +1721,8 @@ Each decided 2026-09-20 on the recommended option, with what it costs to reverse
 1. **`X` blocks on updates rather than reconstructing the old value with `dam edit` flags.**
    Reconstructing it would mean reimplementing a dam verb in Lua, incompletely: `reminders` has no
    edit flag, `labels` and `depends` are sets that need a diff, and a partial restore that looks
-   complete is worse than a refusal. Decided 2026-09-20: block, the recommended option. Cost to
-   reverse: `X` is useful on one of three change kinds until `dam restore` ships.
+   complete is worse than a refusal. Decided 2026-09-20: block, the recommended option. Superseded
+   once dam 0.2.0 shipped `dam restore`: `X` now sends it for an update or a delete.
 1. **The 2,000-object performance target warns rather than fails**, for the CI-flake reason stated
    above. Decided 2026-09-20: warn, the recommended option. Cost to reverse: a performance regression
    ships and is caught by a human reading the warning rather than by a red build.
@@ -1840,9 +1838,8 @@ Made in the design conversation on 2026-09-20.
   saved filters are read alongside `opts.views`.
 - The completed history loses its paging entirely, because a local query has nothing to page.
 - The agent hand-off is kept and its record is dropped, because dam has no comments.
-- The session undo (`u`) is dropped in favour of the working layer, and this is a real regression
-  until `dam restore` ships.
-- `X` ships for a `create` only, through `dam rm`, and refuses on an `update` or a `delete` rather
-  than reconstructing the old value field by field in Lua.
+- The session undo (`u`) is dropped in favour of the working layer, where `X` discards a change.
+- `X` discards a `create` through `dam rm` and an `update` or a `delete` through `dam restore`,
+  rather than reconstructing the old value field by field in Lua.
 - Where the window needs something `dam` does not have, it is listed in **Needed from dam** with the
   proposed dam change, and the plugin does the reduced thing in the meantime and says so.
