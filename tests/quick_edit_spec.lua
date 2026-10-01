@@ -36,7 +36,7 @@ local function argv_sent_by_pressing(key, prompt_answer, needle, calls_to_wait_f
     else
       pcall(fake_dam.settle, function()
         return #fake_dam.argv_log(fake) >= before + (calls_to_wait_for or 1)
-      end, 1000)
+      end)
     end
 
     vim.ui.input, vim.ui.select = input, select

@@ -81,7 +81,7 @@ return {
 
       fake_dam.settle(function()
         return queue.running() == nil
-      end, 3000)
+      end)
 
       local pushes = 0
       for _, line in ipairs(fake_dam.argv_log(fake)) do
