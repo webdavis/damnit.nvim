@@ -72,7 +72,8 @@ the options below. A later call merges over the earlier one, and the next comman
 | `:Dam capture` | Capture a task from the code in front of you. Takes a range. |
 | `:Dam cancel` | Cancel the running operation. |
 
-`:Dam` completes its subcommands, and after `list` or `pick` it completes your declared view names.
+`:Dam` completes its subcommands, and after `list` or `pick` it completes your declared view names
+and dam's saved filters.
 The command is declared at load rather than behind `setup`, so `nvim +"Dam task <oid>"` works in an
 editor holding nothing else.
 
