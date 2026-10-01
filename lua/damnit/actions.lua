@@ -201,19 +201,20 @@ function M.discard()
   end
 
   local entry = found.entry
+  local never_committed = entry.op == "create"
+  local prompt = never_committed and 'Discard "%s"? It was never committed, so this removes it for good. (y/N) '
+    or 'Discard "%s"? This puts it back to its last commit. (y/N) '
 
-  if entry.op ~= "create" then
-    return message.warn("dam has no verb that restores a committed object; commit the change or edit it back")
-  end
-
-  vim.ui.input({
-    prompt = ('Discard "%s"? This removes the object. (y/N) '):format(entry.subject),
-  }, function(answer)
+  vim.ui.input({ prompt = prompt:format(entry.subject) }, function(answer)
     if answer ~= "y" and answer ~= "Y" then
       return
     end
 
-    M.write({ "rm", entry.oid, "--json" }, "rm")
+    if never_committed then
+      return M.write({ "rm", entry.oid, "--json" }, "rm")
+    end
+
+    M.write({ "restore", entry.oid, "--json" }, "restore")
   end)
 end
 

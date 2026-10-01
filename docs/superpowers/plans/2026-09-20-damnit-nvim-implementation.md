@@ -8638,7 +8638,7 @@ and it becomes undoable, which also removes the last reason the session undo was
 
 **Files:** `lua/damnit/actions.lua`, `tests/diff_spec.lua`, `README.md`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Replace the case that asserts the refusal on an update with one asserting the call:
 
@@ -8664,13 +8664,13 @@ Replace the case that asserts the refusal on an update with one asserting the ca
   end,
 ```
 
-- [ ] **Step 2: Rewrite `M.discard`**
+- [x] **Step 2: Rewrite `M.discard`**
 
 A `create` still goes through `dam rm`, because `restore` refuses an object with no committed state and
 `rm` is that op's exact inverse. An `update` or a `delete` goes through `dam restore`. The prompt names
 which of the two is about to happen, because one is reversible and the other is not.
 
-- [ ] **Step 3: Run, correct the README, lint and commit**
+- [x] **Step 3: Run, correct the README, lint and commit**
 
 ```bash
 nvim --headless --clean -l tests/run.lua diff_spec

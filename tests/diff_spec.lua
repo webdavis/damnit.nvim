@@ -7,6 +7,8 @@ local BEFORE = { subject = "oat milk", labels = { "home" }, task = { priority = 
 local AFTER = { subject = "buy oat milk", labels = { "errand", "home" }, task = { priority = 1, due = "2026-09-25" } }
 
 local STAGED_CREATE = "5cf398f699045d551091eccc347f6b70f41f9bcf"
+local UNSTAGED_UPDATE = "badb4903b653809e591c31118004e07de7c8183c"
+local UNSTAGED_DELETE = "e648ce077ff286a30e5d984a2d93a24739e090ad"
 
 local function drawn_virtual_lines_as_text()
   local buf = vim.api.nvim_get_current_buf()
@@ -180,17 +182,47 @@ return {
     end)
   end,
 
-  ["X refuses an update, because dam has no verb that restores one"] = function()
-    status_window.with(function(fake, notifications)
+  ["X restores an update to its committed state after a confirm"] = function()
+    status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
       local before = #fake_dam.argv_log(fake)
-      vim.api.nvim_feedkeys("X", "x", false)
+      local asked
 
-      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      status_window.answer_input("y", function()
+        vim.api.nvim_feedkeys("X", "x", false)
+      end, function(prompt)
+        asked = prompt
+      end)
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before
+      end)
+
       assert(
-        notifications[#notifications]
-          == "damnit.nvim: dam has no verb that restores a committed object; commit the change or edit it back",
-        notifications[#notifications]
+        fake_dam.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_UPDATE),
+        vim.inspect(fake_dam.argv_log(fake))
+      )
+      assert(asked:find("back to its last commit", 1, true), asked)
+    end)
+  end,
+
+  ["X restores a delete, bringing the object back"] = function()
+    status_window.with(function(fake)
+      vim.api.nvim_feedkeys("gu", "x", false)
+      vim.api.nvim_feedkeys("j", "x", false)
+      local before = #fake_dam.argv_log(fake)
+
+      status_window.answer_input("y", function()
+        vim.api.nvim_feedkeys("X", "x", false)
+      end)
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before
+      end)
+
+      assert(
+        fake_dam.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_DELETE),
+        vim.inspect(fake_dam.argv_log(fake))
       )
     end)
   end,
