@@ -1,0 +1,24 @@
+
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+[No Name]                                                     0,0-1          All
+Store:   dam's default
+Remotes: fake (1 unpushed, pulled 4m ago)  flaky (7 unpushed, never pulled)
+Help:    g?
+
+Conflicts (1)
+! f378432           shared shopping list (our edit) fake
+
+Working (2)
+- changed  badb490  buy soy milk                (subject, priority)     inbox/
+- removed  e648ce0  cancel gym membership
+damnit://status/default [-]                                   1,1            Top
+

@@ -1,0 +1,24 @@
+dam: all open tasks
+
+- parent  work/parent/
+  - child  work/parent/child/
+- buy oat milk  (2026-09-25)  p1  @errand  @home  inbox/
+- hold the sidebar width  ⌖
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+damnit://list [-]                                             1,1            All
+
