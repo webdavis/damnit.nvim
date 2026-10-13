@@ -15,8 +15,20 @@ local REFUSAL_FOR_A_DEPENDENCY_THAT_WOULD_CLOSE_A_LOOP = table.concat({
   '"oids": ["badb4903b653809e591c31118004e07de7c8183c", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}',
 })
 
+local REFUSAL_FOR_A_DUE_THAT_IS_NOT_A_DATE =
+  '{"error": {"kind": "usage", "rule": null, "message": "--due: cannot read \\"whenever-ish\\" as a date", "oids": []}}'
+
+local REFUSAL_FOR_A_MOVE_UNDER_ITS_OWN_CHILD = table.concat({
+  '{"error": {"kind": "refused", "rule": "cycle", ',
+  '"message": "badb490 cannot move under a9db854: that is its own child", ',
+  '"oids": ["badb4903b653809e591c31118004e07de7c8183c", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77"]}}',
+})
+
+local EDIT_ARGV = ("edit %s --subject buy the oat milk --json"):format(OID)
+local MV_ARGV = ("mv %s home/ --json"):format(OID)
+
 local function with_task(run, opts)
-  local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+  local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full", fail = (opts or {}).fail })
   queue.reset()
 
   local notifications = {}
@@ -66,6 +78,28 @@ end
 
 local function diagnostics(buf)
   return vim.diagnostic.get(buf, { namespace = task_buffer.NAMESPACE })
+end
+
+local function field_line(buf, key)
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    if vim.startswith(line, key .. ":") then
+      return line
+    end
+  end
+end
+
+local function write_a_new_subject_and_path_then_settle(buf, fake)
+  set_field(buf, "subject", "buy the oat milk")
+  set_field(buf, "path", "home/inbox/")
+
+  local before = #fake_dam.argv_log(fake)
+  vim.cmd("write")
+  fake_dam.settle(function()
+    return #diagnostics(buf) > 0 or vim.bo[buf].modified == false
+  end)
+  fake_dam.wait_long_enough_to_catch_a_stray_call(fake, #fake_dam.argv_log(fake))
+
+  return vim.list_slice(fake_dam.argv_log(fake), before + 1)
 end
 
 return {
@@ -161,6 +195,46 @@ return {
       assert(found[1].message:find("form a cycle", 1, true), found[1].message)
       assert(found[1].lnum == 0, tostring(found[1].lnum))
       assert(vim.bo[buf].modified == true)
+    end)
+  end,
+
+  ["a refused edit stops before the move and leaves the text as typed"] = function()
+    with_task(function(buf, fake)
+      local sent = write_a_new_subject_and_path_then_settle(buf, fake)
+
+      assert(vim.deep_equal(sent, { EDIT_ARGV }), vim.inspect(sent))
+      assert(field_line(buf, "subject") == "subject: buy the oat milk", field_line(buf, "subject"))
+      assert(vim.bo[buf].modified == true, "the text stays where it can be fixed")
+
+      local found = diagnostics(buf)
+      assert(#found == 1, vim.inspect(found))
+      assert(found[1].message == '--due: cannot read "whenever-ish" as a date', found[1].message)
+    end, { fail = { edit = { exit = 2, stderr = REFUSAL_FOR_A_DUE_THAT_IS_NOT_A_DATE } } })
+  end,
+
+  ["a refused move after a landed edit leaves the buffer as typed and modified"] = function()
+    with_task(function(buf, fake)
+      local sent = write_a_new_subject_and_path_then_settle(buf, fake)
+
+      assert(vim.deep_equal(sent, { EDIT_ARGV, MV_ARGV }), vim.inspect(sent))
+      assert(field_line(buf, "path") == "path: home/inbox/", field_line(buf, "path"))
+      assert(vim.bo[buf].modified == true, "the text stays where it can be fixed")
+
+      local found = diagnostics(buf)
+      assert(#found == 1, vim.inspect(found))
+      assert(found[1].message == "badb490 cannot move under a9db854: that is its own child", found[1].message)
+    end, { fail = { mv = { exit = 4, stderr = REFUSAL_FOR_A_MOVE_UNDER_ITS_OWN_CHILD } } })
+  end,
+
+  ["an edit and a move that both land redraw the buffer once, from the move's answer"] = function()
+    with_task(function(buf, fake)
+      local sent = write_a_new_subject_and_path_then_settle(buf, fake)
+
+      assert(vim.deep_equal(sent, { EDIT_ARGV, MV_ARGV }), vim.inspect(sent))
+      assert(field_line(buf, "subject") == "subject: buy soy milk", field_line(buf, "subject"))
+      assert(field_line(buf, "path") == "path: home/inbox/", field_line(buf, "path"))
+      assert(vim.bo[buf].modified == false, "a landed write leaves the buffer unmodified")
+      assert(#diagnostics(buf) == 0, vim.inspect(diagnostics(buf)))
     end)
   end,
 }

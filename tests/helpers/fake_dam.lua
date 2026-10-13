@@ -64,8 +64,14 @@ find_the_subcommand_past_global_flags_and_their_values "$@"
 
 if [ -n "$DAMNIT_TEST_SLEEP" ]; then sleep_in_the_background_so_a_trap_answers_at_once_and_no_pipe_is_held; fi
 
-if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
-if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
+fails_this_subcommand() {
+  [ -z "$DAMNIT_TEST_FAIL_SUBCOMMAND" ] || [ "$DAMNIT_TEST_FAIL_SUBCOMMAND" = "$subcommand" ]
+}
+
+if fails_this_subcommand; then
+  if [ -n "$DAMNIT_TEST_STDERR" ]; then printf '%s\n' "$DAMNIT_TEST_STDERR" >&2; fi
+  if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
+fi
 
 find_the_fixture_preferring_the_full_shape_when_asked_for "$@"
 cat "$fixture"
@@ -82,7 +88,15 @@ local VARIABLES_THAT_DRIVE_THE_SCRIPT = {
   "DAMNIT_TEST_SLEEP",
   "DAMNIT_TEST_STDERR",
   "DAMNIT_TEST_EXIT",
+  "DAMNIT_TEST_FAIL_SUBCOMMAND",
 }
+
+local function failure_in(opts)
+  local subcommand, failure = next(opts.fail or {})
+  assert(subcommand == nil or next(opts.fail, subcommand) == nil, "fail names one subcommand")
+
+  return subcommand or "", failure or opts
+end
 
 function M.install(opts)
   opts = opts or {}
@@ -113,8 +127,11 @@ function M.install(opts)
   vim.env.DAMNIT_TEST_FIXTURES = opts.fixtures or (TESTS_DIR .. "/fixtures/default")
   vim.env.DAMNIT_TEST_VERSION = opts.version or "0.2.0"
   vim.env.DAMNIT_TEST_SLEEP = opts.sleep or ""
-  vim.env.DAMNIT_TEST_STDERR = opts.stderr or ""
-  vim.env.DAMNIT_TEST_EXIT = opts.exit and tostring(opts.exit) or ""
+
+  local fail_subcommand, failure = failure_in(opts)
+  vim.env.DAMNIT_TEST_FAIL_SUBCOMMAND = fail_subcommand
+  vim.env.DAMNIT_TEST_STDERR = failure.stderr or ""
+  vim.env.DAMNIT_TEST_EXIT = failure.exit and tostring(failure.exit) or ""
 
   require("damnit.dam").forget()
 
