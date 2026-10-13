@@ -20,5 +20,5 @@ dam: all open tasks
 ~
 ~
 ~
-damnit://list [-]                                             1,1            All
+damnit://list/all open tasks [-]                              1,1            All
 
