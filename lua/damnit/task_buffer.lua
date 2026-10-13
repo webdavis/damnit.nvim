@@ -31,10 +31,12 @@ function M.show(object, buf)
   return buf
 end
 
-local function send(buf, args, label)
+local function run_in_order(buf, steps)
+  local step = table.remove(steps, 1)
+
   require("damnit.queue").submit({
-    args = args,
-    label = label,
+    args = step.args,
+    label = step.label,
     on_done = function(updated, failure)
       if not vim.api.nvim_buf_is_valid(buf) then
         return
@@ -44,7 +46,11 @@ local function send(buf, args, label)
         return diagnose(buf, failure.message, 1)
       end
 
-      M.show(updated, buf)
+      if #steps == 0 then
+        return M.show(updated, buf)
+      end
+
+      run_in_order(buf, steps)
     end,
   })
 end
@@ -73,17 +79,21 @@ function M.write(buf)
     return message.warn("nothing changed")
   end
 
+  local steps = {}
+
   if #changes.edit > 0 then
     local args = { "edit", object.oid }
     vim.list_extend(args, changes.edit)
     args[#args + 1] = "--json"
 
-    send(buf, args, "edit")
+    steps[#steps + 1] = { args = args, label = "edit" }
   end
 
   if changes.move then
-    send(buf, { "mv", object.oid, changes.move, "--json" }, "mv")
+    steps[#steps + 1] = { args = { "mv", object.oid, changes.move, "--json" }, label = "mv" }
   end
+
+  run_in_order(buf, steps)
 end
 
 function M.open(oid)
