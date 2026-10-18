@@ -98,7 +98,7 @@ function M.title(spec)
 end
 
 function M.refusal(spec, err)
-  return { M.title(spec), "", "dam refused this view:", "", "  " .. err.message }
+  return { M.title(spec), "", "dam refused this view:", "", "  " .. err.message:match("^[^\n]*") }
 end
 
 local function completed_at_of(object)

@@ -51,6 +51,14 @@ local function read(path)
   return text
 end
 
+local function moved_like_dam(argv, stdout)
+  return (
+    stdout:gsub('"path": "[^"]*"', function()
+      return ('"path": %s'):format(vim.json.encode(argv[4]))
+    end, 1)
+  )
+end
+
 local function stderr_of(failure)
   return failure.stderr and failure.stderr .. "\n" or ""
 end
@@ -72,6 +80,10 @@ local function answer_to(fake, argv)
   local stdout = failure.stdout or read(path)
   if not stdout then
     return { code = 1, stdout = "", stderr = ("no fixture at %s\n"):format(path) }
+  end
+
+  if subcommand == "mv" then
+    stdout = moved_like_dam(argv, stdout)
   end
 
   return { code = 0, stdout = stdout, stderr = stderr_of(failure) }

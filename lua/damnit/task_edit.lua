@@ -4,7 +4,6 @@ local dam_object = require("damnit.object")
 local task_check = require("damnit.task_check")
 local task_header = require("damnit.task_header")
 local text = dam_object.text
-local tree = require("damnit.tree")
 
 local CANNOT_BE_CLEARED = false
 
@@ -43,29 +42,6 @@ local function set_diff(wanted, held)
   end
 
   return added, removed
-end
-
-local function move_to(entry, held_path)
-  if entry.value:find("//", 1, true) then
-    return nil, task_check.refuse("`path` has an empty segment", entry)
-  end
-
-  if held_path == "" then
-    return entry.value
-  end
-
-  if tree.own_segment(entry.value) ~= tree.own_segment(held_path) then
-    return nil,
-      task_check.refuse(
-        ("`path` renames this object from %q to %q, and dam mv only moves one: keep the last segment and change what comes before it"):format(
-          tree.own_segment(held_path),
-          tree.own_segment(entry.value)
-        ),
-        entry
-      )
-  end
-
-  return tree.parent_path(entry.value)
 end
 
 local function append_flags(object, key, entry, edit)
@@ -124,12 +100,11 @@ function M.changes(object, header, body)
 
   local path = header.path
   if path and path.value ~= task_header.field_value(object, "path") then
-    local destination, refused = move_to(path, task_header.field_value(object, "path"))
-    if refused then
-      return nil, refused
+    if path.value:find("//", 1, true) then
+      return nil, task_check.refuse("`path` has an empty segment", path)
     end
 
-    move = destination
+    move = path.value
   end
 
   for _, key in ipairs(dam_object.header(object)) do
