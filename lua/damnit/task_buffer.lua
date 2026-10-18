@@ -48,6 +48,18 @@ local function line_named_by(refusal, header)
   return 1
 end
 
+local function show_when_a_window_shows(object, buf)
+  vim.bo[buf].modified = false
+
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      M.show(object, buf)
+    end,
+  })
+end
+
 local function run_in_order(app, buf, steps, header)
   local step = table.remove(steps, 1)
 
@@ -61,6 +73,10 @@ local function run_in_order(app, buf, steps, header)
 
       if failure then
         return diagnose(buf, failure.message, line_named_by(failure.message, header))
+      end
+
+      if #steps == 0 and #vim.fn.win_findbuf(buf) == 0 then
+        return show_when_a_window_shows(updated, buf)
       end
 
       if #steps == 0 then
