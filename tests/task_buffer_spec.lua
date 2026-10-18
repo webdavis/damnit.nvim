@@ -5,6 +5,7 @@ dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local harness = dofile(TESTS_DIR .. "/helpers/task_buffer.lua")
+local task_buffer = require("damnit.task_buffer")
 
 local OID = harness.OID
 
@@ -159,6 +160,24 @@ return {
       assert(harness.field_line(buf, "path") == "path: home/inbox/", harness.field_line(buf, "path"))
       assert(vim.bo[buf].modified == false, "a landed write leaves the buffer unmodified")
       assert(#harness.diagnostics(buf) == 0, vim.inspect(harness.diagnostics(buf)))
+    end)
+  end,
+
+  ["opening the same task twice focuses its one buffer and keeps the unsaved edit"] = function()
+    harness.with_task(function(buf, fake)
+      harness.set_field(buf, "subject", "buy the oat milk")
+      vim.cmd("new")
+      local empty = vim.api.nvim_get_current_buf()
+      local calls = #fake_dam.argv_log(fake)
+
+      local again = task_buffer.open(OID)
+
+      assert(again == buf, ("a second open made buffer %d beside %d"):format(again, buf))
+      assert(vim.api.nvim_get_current_buf() == buf, "the window already showing the task was not focused")
+      assert(#vim.api.nvim_list_wins() == 2, "a window was opened or closed")
+      assert(vim.api.nvim_win_get_buf(vim.fn.bufwinid(empty)) == empty, "the other window lost its buffer")
+      assert(harness.field_line(buf, "subject") == "subject: buy the oat milk", harness.field_line(buf, "subject"))
+      assert(#fake_dam.argv_log(fake) == calls, "the second open asked dam again")
     end)
   end,
 }

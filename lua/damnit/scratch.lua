@@ -30,4 +30,16 @@ function M.state(buf)
   return state_by_buf[buf]
 end
 
+function M.focus(buf)
+  local win = vim.fn.bufwinid(buf)
+
+  if win == -1 then
+    return false
+  end
+
+  vim.api.nvim_set_current_win(win)
+
+  return true
+end
+
 return M

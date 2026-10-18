@@ -87,4 +87,22 @@ return {
       assert(notifications[#notifications] == "damnit.nvim: nothing is staged to commit", notifications[#notifications])
     end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
   end,
+
+  ["cc twice keeps the one message buffer and what was typed in it"] = function()
+    status_window.with(function()
+      vim.api.nvim_feedkeys("cc", "x", false)
+      local buf = vim.api.nvim_get_current_buf()
+      vim.api.nvim_buf_set_lines(buf, 0, 1, false, { "buy the milk" })
+      vim.cmd("wincmd p")
+      local windows = #vim.api.nvim_list_wins()
+
+      vim.v.errmsg = ""
+      vim.api.nvim_feedkeys("cc", "x", false)
+
+      assert(vim.v.errmsg == "", vim.v.errmsg)
+      assert(vim.api.nvim_get_current_buf() == buf, "a second cc did not focus the message buffer")
+      assert(#vim.api.nvim_list_wins() == windows, "a second cc opened another window")
+      assert(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "buy the milk", "the typed message was lost")
+    end)
+  end,
 }
