@@ -1,5 +1,6 @@
 local M = {}
 
+local fixed_window = require("damnit.fixed_window")
 local scratch = require("damnit.scratch")
 local task_format = require("damnit.task_format")
 local verbs = require("damnit.dam.verbs")
@@ -127,7 +128,7 @@ function M.open(app, oid)
   end)
 
   if not scratch.focus(buf) then
-    require("damnit.sidebar").leave_fixed_window()
+    fixed_window.leave()
     vim.api.nvim_win_set_buf(0, buf)
     vim.wo[0][0].signcolumn = "yes:1"
   end

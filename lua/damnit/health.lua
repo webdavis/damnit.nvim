@@ -1,6 +1,8 @@
 local M = {}
 
+local dam = require("damnit.dam")
 local verbs = require("damnit.dam.verbs")
+local views = require("damnit.views")
 
 local DEADLINE_MS = 20000
 
@@ -35,7 +37,6 @@ local function nothing_to_speak_to(err)
 end
 
 local function report_version_and_store(app)
-  local dam = require("damnit.dam")
   local client = app.dam
   local finished, data, err = call(app, verbs.ls(nil, true))
 
@@ -167,15 +168,15 @@ local function report_conflicts(app)
 end
 
 local function report_views(app)
-  local views = app.options.views or {}
-  local declared = require("damnit.views").declared(app)
+  local queries = app.options.views or {}
+  local declared = views.declared(app)
 
   if #declared == 0 then
     return vim.health.ok("no view is declared in setup")
   end
 
   for _, name in ipairs(declared) do
-    local query = views[name]
+    local query = queries[name]
     local finished, _, err = call(app, verbs.ls(query, true))
 
     if not finished then

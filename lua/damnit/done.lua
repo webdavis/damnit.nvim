@@ -1,5 +1,6 @@
 local M = {}
 
+local list = require("damnit.list")
 local verbs = require("damnit.dam.verbs")
 
 local SHORT_OID_LENGTH = 7
@@ -73,7 +74,7 @@ function M.send(app, object, children)
       if not err then
         report_completion(app, object, report)
 
-        return require("damnit.list").refresh(app)
+        return list.refresh(app)
       end
 
       if not forcing_would_help(err, children) then
@@ -104,7 +105,7 @@ function M.send(app, object, children)
 end
 
 function M.complete(app)
-  local object = require("damnit.list").object_under_cursor(app)
+  local object = list.object_under_cursor(app)
 
   if object then
     M.send(app, object)

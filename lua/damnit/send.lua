@@ -1,6 +1,9 @@
 local M = {}
 
 local format = require("damnit.list_format")
+local list = require("damnit.list")
+local store = require("damnit.store")
+local timeout_seconds = require("damnit.process").timeout_seconds
 
 local BRACKETED_PASTE_START = "\27[200~"
 local BRACKETED_PASTE_END = "\27[201~"
@@ -23,7 +26,7 @@ function M.brief(app, object, note)
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
     "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
-    "store: " .. require("damnit.store").display(app.store),
+    "store: " .. store.display(app.store),
   }
 
   local path = text(object.path)
@@ -164,7 +167,7 @@ function M.host(app)
 
       local command = vim.list_extend({ binary }, args)
 
-      app.process.run(command, require("damnit.process").timeout_seconds(app.options), function(out)
+      app.process.run(command, timeout_seconds(app.options), function(out)
         if out.missing then
           return done("", ("%s: no such file or directory"):format(binary))
         end
@@ -187,7 +190,7 @@ function M.host(app)
 end
 
 function M.send(app)
-  local object = require("damnit.list").object_under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end

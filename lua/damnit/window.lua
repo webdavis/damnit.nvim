@@ -1,5 +1,6 @@
 local M = {}
 
+local diff = require("damnit.render.diff")
 local entries = require("damnit.window.entries")
 local folds = require("damnit.folds")
 local layout = require("damnit.window.layout")
@@ -147,7 +148,7 @@ local function draw(key, lines)
 
   redraw.keep_cursor(buf, oid_by_line(lines), function()
     render.draw(buf, lines)
-    require("damnit.render.diff").apply(buf, key, model_by_store[key])
+    diff.apply(buf, key, model_by_store[key])
   end)
 
   if win then
@@ -157,7 +158,7 @@ local function draw(key, lines)
 end
 
 function M.open_diffs(app, key)
-  return require("damnit.render.diff").open_set(key or app.store)
+  return diff.open_set(key or app.store)
 end
 
 local function header_state(app, key)
@@ -207,7 +208,7 @@ local function read_the_remote_list_until_cached(app, key)
 end
 
 local function status_args_full_while_a_diff_is_open(key)
-  if next(require("damnit.render.diff").open_set(key)) ~= nil then
+  if next(diff.open_set(key)) ~= nil then
     return verbs.status(true)
   end
 

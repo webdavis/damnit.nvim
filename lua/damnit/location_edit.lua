@@ -1,5 +1,7 @@
 local M = {}
 
+local fixed_window = require("damnit.fixed_window")
+
 local function repository_root(path)
   local root = vim.fs.root(path, ".git")
 
@@ -53,7 +55,7 @@ function M.jump(app, location)
     return refuse(app, ("there is no file at %s"):format(location.path))
   end
 
-  require("damnit.sidebar").leave_fixed_window()
+  fixed_window.leave()
   vim.cmd.edit(vim.fn.fnameescape(path))
 
   local last = vim.api.nvim_buf_line_count(0)

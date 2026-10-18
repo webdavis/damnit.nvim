@@ -1,5 +1,6 @@
 local M = {}
 
+local list = require("damnit.list")
 local tree = require("damnit.tree")
 local verbs = require("damnit.dam.verbs")
 
@@ -17,11 +18,11 @@ local function text(value)
 end
 
 local function under_cursor(app)
-  return require("damnit.list").object_under_cursor(app)
+  return list.object_under_cursor(app)
 end
 
 local function send(app, args, said)
-  require("damnit.list").write(app, args, args[1], said)
+  list.write(app, args, args[1], said)
 end
 
 function M.reopen(app)
@@ -33,7 +34,7 @@ function M.reopen(app)
 end
 
 function M.reopen_here(app)
-  local spec = require("damnit.list").current_spec()
+  local spec = list.current_spec()
 
   local showing_completed_history = spec and spec.flat
   if not showing_completed_history then
@@ -172,7 +173,7 @@ function M.paths_in_view()
 
   offer(TOP_LEVEL)
 
-  for _, object in ipairs(require("damnit.list").objects_in_view()) do
+  for _, object in ipairs(list.objects_in_view()) do
     local path = text(object.path)
 
     while path ~= TOP_LEVEL do
@@ -207,14 +208,14 @@ function M.move(app)
 end
 
 function M.add(app)
-  local path = require("damnit.list").path_under_cursor()
+  local path = list.path_under_cursor()
 
   vim.ui.input({ prompt = "New: " }, function(subject)
     if not subject or vim.trim(subject) == "" then
       return
     end
 
-    require("damnit.list").write(app, verbs.new(subject, path), "new", "added " .. vim.trim(subject))
+    list.write(app, verbs.new(subject, path), "new", "added " .. vim.trim(subject))
   end)
 end
 
@@ -232,7 +233,7 @@ function M.indent(app)
     return
   end
 
-  reparent(app, object, tree.indent_to(object, require("damnit.list").object_above_cursor()))
+  reparent(app, object, tree.indent_to(object, list.object_above_cursor()))
 end
 
 function M.promote(app)
@@ -241,7 +242,7 @@ function M.promote(app)
     return
   end
 
-  reparent(app, object, tree.promote_to(object, tree.index(require("damnit.list").objects_in_view())))
+  reparent(app, object, tree.promote_to(object, tree.index(list.objects_in_view())))
 end
 
 return M

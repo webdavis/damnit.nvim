@@ -1,8 +1,12 @@
 local M = {}
 
+local fixed_window = require("damnit.fixed_window")
 local format = require("damnit.list_format")
+local location_edit = require("damnit.location_edit")
+local task_buffer = require("damnit.task_buffer")
 local tree = require("damnit.tree")
 local view = require("damnit.list.view")
+local views = require("damnit.views")
 
 local NOTHING_DRAWN = { entry_by_line = {} }
 
@@ -43,7 +47,7 @@ function M.open_under_cursor(app)
   local object = M.object_under_cursor(app)
 
   if object then
-    require("damnit.task_buffer").open(app, object.oid)
+    task_buffer.open(app, object.oid)
   end
 end
 
@@ -54,7 +58,7 @@ function M.jump_to_location_under_cursor(app)
     return app.say.warn("no object on this line")
   end
 
-  require("damnit.location_edit").jump(app, entry.location)
+  location_edit.jump(app, entry.location)
 end
 
 local function view_on_screen_in_this_tabpage()
@@ -136,7 +140,7 @@ end
 
 function M.fetch(app, spec, callback)
   app.queue.submit({
-    args = require("damnit.views").query_args(spec),
+    args = views.query_args(spec),
     label = "ls",
     on_done = function(data, err)
       callback(data and data.objects or {}, err)
@@ -179,7 +183,7 @@ end
 function M.open(app, spec)
   local buf, shown = view.ensure(spec)
 
-  require("damnit.sidebar").leave_fixed_window()
+  fixed_window.leave()
   vim.api.nvim_win_set_buf(0, buf)
   load_into(app, buf, shown)
 

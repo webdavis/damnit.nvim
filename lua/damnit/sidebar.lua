@@ -1,5 +1,9 @@
 local M = {}
 
+local fixed_window = require("damnit.fixed_window")
+local list = require("damnit.list")
+local views = require("damnit.views")
+
 local SIDEBAR_WINDOW_FLAG = "damnit_sidebar"
 
 function M.window()
@@ -22,17 +26,13 @@ local function hold(win, width)
   vim.wo[win].signcolumn = "no"
 end
 
-local function split_full_height_at(side)
-  vim.cmd(side == "right" and "botright vsplit" or "topleft vsplit")
-end
-
 local function open_beside(app, spec, opts)
-  split_full_height_at(opts.side)
+  fixed_window.split_full_height_at(opts.side)
 
   local win = vim.api.nvim_get_current_win()
   vim.w[win][SIDEBAR_WINDOW_FLAG] = true
 
-  require("damnit.list").open(app, spec)
+  list.open(app, spec)
   hold(win, opts.width)
 
   return win
@@ -55,23 +55,9 @@ function M.open(app)
     return app.say.fail(("sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)))
   end
 
-  return require("damnit.views").resolve_then(app, opts.view, function(spec)
+  return views.resolve_then(app, opts.view, function(spec)
     return open_beside(app, spec, opts)
   end)
-end
-
-function M.leave_fixed_window()
-  if not vim.wo.winfixbuf then
-    return
-  end
-
-  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if not vim.wo[win].winfixbuf then
-      return vim.api.nvim_set_current_win(win)
-    end
-  end
-
-  split_full_height_at("right")
 end
 
 function M.close(app)

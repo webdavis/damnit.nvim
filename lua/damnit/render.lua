@@ -1,4 +1,5 @@
 local M = {}
+local keymaps = require("damnit.keymaps")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit")
 
@@ -180,7 +181,7 @@ end
 
 local function legend_line(width)
   local built = row()
-  built.add(require("damnit.keys").legend("damstatus", width), "DamLegend")
+  built.add(keymaps.legend("damstatus", width), "DamLegend")
 
   return built.line("header")
 end

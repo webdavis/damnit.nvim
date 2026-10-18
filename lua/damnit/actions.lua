@@ -1,10 +1,14 @@
 local M = {}
 
+local commit_buffer = require("damnit.commit_buffer")
+local open = require("damnit.open")
+local task_buffer = require("damnit.task_buffer")
 local verbs = require("damnit.dam.verbs")
+local window = require("damnit.window")
 
 function M.refresh(app)
-  require("damnit.window").forget_remotes(app)
-  require("damnit.window").refresh(app)
+  window.forget_remotes(app)
+  window.refresh(app)
 end
 
 function M.cancel(app)
@@ -23,8 +27,8 @@ function M.close(app)
   vim.api.nvim_win_close(0, false)
 end
 
-function M.jump_to_section(app, kind, heading, count)
-  local line = require("damnit.window").line_of(app, kind, count)
+function M.jump_to_section(app, kind, heading)
+  local line = window.line_of(app, kind, vim.v.count1)
 
   if not line then
     return app.say.warn(("no %s section"):format(heading))
@@ -89,7 +93,7 @@ function M.write(app, args, label)
         app.say.report(err)
       end
 
-      require("damnit.window").refresh(app)
+      window.refresh(app)
     end,
   })
 end
@@ -134,7 +138,7 @@ function M.toggle_stage(app)
 end
 
 function M.unstage_all(app)
-  local model = require("damnit.window").model(app)
+  local model = window.model(app)
   local anything_staged = false
 
   for _, section in ipairs((model or {}).sections or {}) do
@@ -149,7 +153,7 @@ function M.unstage_all(app)
 end
 
 function M.discard(app)
-  local found = require("damnit.window").entry_under_cursor(app)
+  local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
     return app.say.warn("nothing to discard on this line")
@@ -174,7 +178,6 @@ function M.discard(app)
 end
 
 function M.toggle_diff(app)
-  local window = require("damnit.window")
   local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
@@ -194,7 +197,6 @@ function M.toggle_diff(app)
 end
 
 function M.open_under_cursor(app)
-  local window = require("damnit.window")
   local found = window.entry_under_cursor(app)
 
   if not found then
@@ -202,7 +204,6 @@ function M.open_under_cursor(app)
   end
 
   local entry = found.entry
-  local open = require("damnit.open")
 
   if entry.kind == "conflict" then
     return open.conflict(app, entry)
@@ -224,11 +225,11 @@ function M.open_under_cursor(app)
     vim.cmd("split")
   end
 
-  require("damnit.task_buffer").open(app, entry.oid)
+  task_buffer.open(app, entry.oid)
 end
 
 function M.commit(app)
-  require("damnit.commit_buffer").open(app)
+  commit_buffer.open(app)
 end
 
 return M

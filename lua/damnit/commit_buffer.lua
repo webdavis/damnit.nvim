@@ -2,6 +2,7 @@ local M = {}
 
 local scratch = require("damnit.scratch")
 local verbs = require("damnit.dam.verbs")
+local window = require("damnit.window")
 
 function M.message(lines)
   local non_comment_lines = {}
@@ -37,13 +38,13 @@ function M.write(app, buf)
 
       vim.bo[buf].modified = false
       vim.api.nvim_buf_delete(buf, { force = true })
-      require("damnit.window").refresh(app)
+      window.refresh(app)
     end,
   })
 end
 
 local function staged(app, key)
-  local model = require("damnit.window").model(app, key)
+  local model = window.model(app, key)
 
   for _, section in ipairs((model or {}).sections or {}) do
     if section.kind == "staged" then

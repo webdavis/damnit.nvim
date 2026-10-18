@@ -1,9 +1,11 @@
 local M = {}
 
+local actions = require("damnit.actions")
 local verbs = require("damnit.dam.verbs")
+local window = require("damnit.window")
 
 function M.remote_under_cursor(app)
-  local found = require("damnit.window").entry_under_cursor(app)
+  local found = window.entry_under_cursor(app)
 
   if found and found.entry.kind == "remote" then
     return found.entry.remote
@@ -74,7 +76,6 @@ function M.sync(app, verb, remote)
         app.say.info(one_line(verb, report))
       end
 
-      local window = require("damnit.window")
       window.forget_remotes(app)
       window.refresh(app)
     end,
@@ -82,7 +83,7 @@ function M.sync(app, verb, remote)
 end
 
 function M.push(app)
-  local model = require("damnit.window").model(app)
+  local model = window.model(app)
   local any_remote_behind = false
 
   for _, remote in ipairs((model or {}).remotes or {}) do
@@ -101,13 +102,13 @@ function M.pull(app)
 end
 
 function M.resolve(app, side)
-  local found = require("damnit.window").entry_under_cursor(app)
+  local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "conflict" then
     return app.say.warn("no conflict on this line")
   end
 
-  require("damnit.actions").write(app, verbs.resolve(found.entry.oid, side), "resolve")
+  actions.write(app, verbs.resolve(found.entry.oid, side), "resolve")
 end
 
 return M

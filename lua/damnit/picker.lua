@@ -1,6 +1,10 @@
 local M = {}
 
+local done = require("damnit.done")
 local format = require("damnit.list_format")
+local list = require("damnit.list")
+local task_buffer = require("damnit.task_buffer")
+local views = require("damnit.views")
 
 local OID_DELIMITER = "\t"
 
@@ -37,11 +41,11 @@ function M.entries(objects)
 end
 
 function M.open_entry(app, entry)
-  require("damnit.task_buffer").open(app, entry.oid)
+  task_buffer.open(app, entry.oid)
 end
 
 function M.complete_entry(app, entry)
-  require("damnit.done").send(app, entry.object)
+  done.send(app, entry.object)
 end
 
 function M.chosen_oid(selected)
@@ -122,7 +126,6 @@ function M.show(app, entries, title)
 end
 
 local function search(app, spec)
-  local list = require("damnit.list")
   local title = format.title(spec)
 
   list.fetch(app, spec, function(objects, err)
@@ -140,13 +143,11 @@ local function search(app, spec)
 end
 
 function M.pick(app, name)
-  local list = require("damnit.list")
-
   if name == nil or name == "" then
-    return search(app, list.current_spec() or require("damnit.views").resolve(app, nil))
+    return search(app, list.current_spec() or views.resolve(app, nil))
   end
 
-  require("damnit.views").resolve_then(app, name, function(spec)
+  views.resolve_then(app, name, function(spec)
     search(app, spec)
   end)
 end

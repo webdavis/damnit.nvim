@@ -16,42 +16,36 @@ M.options = {
   },
 }
 
-local app
-
 local autocmds = require("damnit.autocmds")
+local dam = require("damnit.dam")
+local message = require("damnit.message")
+local process = require("damnit.process")
+local queue = require("damnit.queue")
+local store = require("damnit.store")
+local views = require("damnit.views")
+
+local app
 
 local tick_the_status_window_once_it_is_loaded = autocmds.once_loaded("damnit.window", function(window, key)
   window.tick(app, key)
 end)
 
-local function client_for(record)
-  return require("damnit.dam").new(record.options, record.process, record.say)
-end
-
 local function through_vim_notify(text, level)
   vim.notify(text, level)
 end
 
-app = {
-  options = M.options,
-  process = require("damnit.process"),
-  say = require("damnit.message").new(through_vim_notify),
-}
-app.store = require("damnit.store").of(app.options)
+local function client_for(record)
+  return dam.new(record.options, record.process, record.say)
+end
+
+app = { options = M.options, process = process, say = message.new(through_vim_notify) }
+app.store = store.of(app.options)
 app.dam = client_for(app)
-app.queue = require("damnit.queue").new(app, tick_the_status_window_once_it_is_loaded)
+app.queue = queue.new(app, tick_the_status_window_once_it_is_loaded)
 autocmds.setup(app)
 
 function M.app()
   return app
-end
-
-local function forget_dams_filters_read_from_the_old_store()
-  require("damnit.views").reset()
-end
-
-local function start_the_reader_reminders_ride_on()
-  require("damnit.poll").start(app)
 end
 
 function M.setup(opts, ports)
@@ -61,14 +55,14 @@ function M.setup(opts, ports)
   app.options = M.options
   app.process = ports and ports.process or app.process
   app.say = ports and ports.say or app.say
-  app.store = require("damnit.store").of(app.options)
+  app.store = store.of(app.options)
   app.dam = client_for(app)
   old_dam.close()
 
-  forget_dams_filters_read_from_the_old_store()
+  views.reset()
 
   if M.options.reminders then
-    start_the_reader_reminders_ride_on()
+    require("damnit.poll").start(app)
   end
 end
 
@@ -85,7 +79,7 @@ function M.toggle()
 end
 
 function M.completed()
-  return require("damnit.list").open(app, require("damnit.views").COMPLETED)
+  return require("damnit.list").open(app, views.COMPLETED)
 end
 
 function M.pick(name)
@@ -93,7 +87,7 @@ function M.pick(name)
 end
 
 function M.open(name)
-  return require("damnit.views").resolve_then(app, name, function(spec)
+  return views.resolve_then(app, name, function(spec)
     return require("damnit.list").open(app, spec)
   end)
 end
