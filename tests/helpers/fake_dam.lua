@@ -6,9 +6,14 @@ answer_an_interrupt_with_exit_3_like_dam() {
   exit 3
 }
 
+answer_a_terminate_with_exit_143_so_only_an_interrupt_reads_as_cancelled() {
+  kill $sleeper 2>/dev/null
+  exit 143
+}
+
 trap_interrupts_before_the_first_write_a_caller_may_wait_on() {
   trap answer_an_interrupt_with_exit_3_like_dam INT
-  trap answer_an_interrupt_with_exit_3_like_dam TERM
+  trap answer_a_terminate_with_exit_143_so_only_an_interrupt_reads_as_cancelled TERM
 }
 
 record_argv() {

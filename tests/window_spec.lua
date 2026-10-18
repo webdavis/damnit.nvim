@@ -89,7 +89,7 @@ return {
     end)
   end,
 
-  ["shows a running call in the header after queue.reset without a tick by hand"] = function()
+  ["shows a running call in the header after setup, without a tick by hand"] = function()
     with_window(function(fake)
       require("damnit").setup({})
       local buf = window.buffer(app)
@@ -105,7 +105,7 @@ return {
         vim.wait(2000, function()
           return row_3():find("Running: push fake", 1, true) ~= nil
         end, 50),
-        "reset dropped the header's tick listener: " .. row_3()
+        "setup cut the queue off from the header: " .. row_3()
       )
 
       fake.release()
