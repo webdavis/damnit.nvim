@@ -1,5 +1,6 @@
 local highlights = require("damnit.render.highlights")
 local render = require("damnit.render")
+local scratch = require("damnit.scratch")
 local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
 
@@ -116,29 +117,18 @@ return {
     assert(change.oid == "badb4903b653809e591c31118004e07de7c8183c", tostring(change.oid))
   end,
 
-  ["records every line's kind, oid and section, with no hole for a line that has none"] = function()
+  ["records every drawn row's kind, oid and section"] = function()
     local lines = lines_of(fixture("full/status.json"))
     local buf = vim.api.nvim_create_buf(false, true)
     render.draw(buf, lines)
 
-    local kinds = vim.b[buf].damnit_kinds
-    local oids = vim.b[buf].damnit_oids
-    local sections = vim.b[buf].damnit_sections
-
-    local a_hole_reads_back_as_truthy_nil_or_drops_off_the_end = "%d %s for %d lines"
-    assert(#oids == #lines, a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#oids, "oids", #lines))
-    assert(
-      #sections == #lines,
-      a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#sections, "sections", #lines)
-    )
+    assert(#scratch.rows(buf) == #lines, ("%d rows for %d lines"):format(#scratch.rows(buf), #lines))
 
     for index, line in ipairs(lines) do
-      assert(kinds[index] == line.kind, ("line %d kind %s"):format(index, tostring(kinds[index])))
-      assert(oids[index] == (line.oid or false), ("line %d oid %s"):format(index, tostring(oids[index])))
-      assert(
-        sections[index] == (line.section or false),
-        ("line %d section %s"):format(index, tostring(sections[index]))
-      )
+      local row = scratch.row(buf, index)
+      assert(row.kind == line.kind, ("line %d kind %s"):format(index, tostring(row.kind)))
+      assert(row.oid == line.oid, ("line %d oid %s"):format(index, tostring(row.oid)))
+      assert(row.section == line.section, ("line %d section %s"):format(index, tostring(row.section)))
     end
 
     vim.api.nvim_buf_delete(buf, { force = true })

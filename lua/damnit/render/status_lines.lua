@@ -146,9 +146,11 @@ function M.lines(model, state)
     heading.section = section.kind
     lines[#lines + 1] = heading
 
-    for _, entry in ipairs(section.entries) do
+    for nth, entry in ipairs(section.entries) do
       local line = ENTRY_LINES[entry.kind](entry)
       line.section = section.kind
+      line.entry = entry
+      line.nth = nth
       lines[#lines + 1] = line
     end
 

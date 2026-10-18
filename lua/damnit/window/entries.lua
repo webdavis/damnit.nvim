@@ -1,54 +1,43 @@
 local M = {}
 
-local function is_entry_of(sections, kinds, index, section_kind)
-  return sections[index] == section_kind and kinds[index] ~= "section"
-end
+local scratch = require("damnit.scratch")
 
 function M.line_of(buf, section_kind, nth)
-  local sections = vim.b[buf].damnit_sections or {}
-  local kinds = vim.b[buf].damnit_kinds or {}
-  local seen = 0
+  local last = nil
 
-  for index in ipairs(sections) do
-    if is_entry_of(sections, kinds, index, section_kind) then
-      seen = seen + 1
-
-      if seen == nth then
-        return index
+  for lnum, row in ipairs(scratch.rows(buf)) do
+    if row.section == section_kind and row.nth then
+      if row.nth == nth then
+        return lnum
       end
+
+      last = lnum
     end
   end
 
-  local count_past_the_end_lands_on_the_last = seen > 0
-  if count_past_the_end_lands_on_the_last then
-    return M.line_of(buf, section_kind, seen)
+  return last
+end
+
+function M.place(buf, lnum)
+  local row = scratch.row(buf, lnum)
+
+  if not row or not row.nth then
+    return nil
   end
 
-  return nil
+  return { section = row.section, nth = row.nth }
 end
 
 function M.at_line(buf, lnum, model)
-  local kinds = vim.b[buf].damnit_kinds or {}
-  local sections = vim.b[buf].damnit_sections or {}
+  local row = scratch.row(buf, lnum)
 
-  if not model or kinds[lnum] == "section" or not sections[lnum] then
+  if not model or not row or not row.entry then
     return nil
   end
 
   for _, section in ipairs(model.sections) do
-    if section.kind == sections[lnum] then
-      local nth = 0
-
-      for index = 1, lnum do
-        if is_entry_of(sections, kinds, index, section.kind) then
-          nth = nth + 1
-        end
-      end
-
-      local entry = section.entries[nth]
-      if entry then
-        return { entry = entry, section = section }
-      end
+    if section.kind == row.section then
+      return { entry = row.entry, section = section }
     end
   end
 

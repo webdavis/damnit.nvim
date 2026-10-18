@@ -2,6 +2,7 @@ local M = {}
 
 local render = require("damnit.render")
 local dam_object = require("damnit.object")
+local scratch = require("damnit.scratch")
 
 local open_diffs_by_store = {}
 
@@ -103,8 +104,8 @@ function M.apply(buf, key, model)
 
   local changes = changes_of(model)
 
-  for index, oid in ipairs(vim.b[buf].damnit_oids or {}) do
-    local entry = oid and wanted[oid] and changes[oid]
+  for index, row in ipairs(scratch.rows(buf)) do
+    local entry = row.oid and wanted[row.oid] and changes[row.oid]
 
     if entry then
       vim.api.nvim_buf_set_extmark(buf, render.NAMESPACE, index - 1, 0, {

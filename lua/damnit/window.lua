@@ -7,6 +7,7 @@ local highlights = require("damnit.render.highlights")
 local layout = require("damnit.window.layout")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
+local scratch = require("damnit.scratch")
 local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
 local store = require("damnit.store")
@@ -102,34 +103,9 @@ function M.entry_under_cursor(app)
   return entries.at_line(buf, vim.api.nvim_win_get_cursor(0)[1], M.model(app))
 end
 
-local function oid_by_line(lines)
-  local oids = {}
-
-  for index, line in ipairs(lines) do
-    oids[index] = line.oid or false
-  end
-
-  return oids
-end
-
-local function entry_place(buf, lnum)
-  local kinds, sections = vim.b[buf].damnit_kinds or {}, vim.b[buf].damnit_sections or {}
-  if kinds[lnum] == "section" or not sections[lnum] then
-    return nil
-  end
-
-  local nth = 0
-  for index = 1, lnum do
-    if sections[index] == sections[lnum] and kinds[index] ~= "section" then
-      nth = nth + 1
-    end
-  end
-
-  return { section = sections[lnum], nth = nth }
-end
-
 local function keep_the_cursor_in_its_section(buf, win, place)
-  if not place or vim.b[buf].damnit_sections[vim.api.nvim_win_get_cursor(win)[1]] == place.section then
+  local row = scratch.row(buf, vim.api.nvim_win_get_cursor(win)[1])
+  if not place or (row and row.section) == place.section then
     return
   end
 
@@ -142,13 +118,13 @@ end
 local function draw(key, lines)
   local buf = buffer_by_store[key]
   local win = window_for(buf)
-  local place = win and entry_place(buf, vim.api.nvim_win_get_cursor(win)[1])
+  local place = win and entries.place(buf, vim.api.nvim_win_get_cursor(win)[1])
 
   if win then
     folds.remember(key, win)
   end
 
-  redraw.keep_cursor(buf, oid_by_line(lines), function()
+  redraw.keep_cursor(buf, function()
     render.draw(buf, lines)
     diff.apply(buf, key, model_by_store[key])
   end)
