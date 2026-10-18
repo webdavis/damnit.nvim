@@ -17,16 +17,12 @@ local function text(value)
   return tostring(value)
 end
 
-local function under_cursor(app)
-  return list.object_under_cursor(app)
-end
-
 local function send(app, args, said)
   list.write(app, args, args[1], said)
 end
 
 function M.reopen(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
 
   if object then
     send(app, verbs.reopen(object.oid), "reopened " .. text(object.subject))
@@ -45,7 +41,7 @@ function M.reopen_here(app)
 end
 
 function M.delete(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -72,7 +68,7 @@ function M.cycled(priority)
 end
 
 function M.cycle_priority(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -83,7 +79,7 @@ function M.cycle_priority(app)
 end
 
 function M.schedule(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -121,7 +117,7 @@ function M.label_choices(on, categories)
 end
 
 function M.labels(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -188,7 +184,7 @@ function M.paths_in_view()
 end
 
 function M.move(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -228,7 +224,7 @@ local function reparent(app, object, destination, refusal)
 end
 
 function M.indent(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -237,7 +233,7 @@ function M.indent(app)
 end
 
 function M.promote(app)
-  local object = under_cursor(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end

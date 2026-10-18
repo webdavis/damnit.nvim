@@ -1,9 +1,6 @@
 local app = require("damnit").app()
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
-local function queue()
-  return require("damnit").app().queue
-end
 local render = require("damnit.render")
 local window = require("damnit.window")
 
@@ -48,7 +45,7 @@ return {
       local buf = window.buffer(app)
       local before = #fake_process.argv_log(fake)
 
-      queue().submit({ args = { "ls", "--json" }, label = "ls", background = true })
+      app.queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
       tick_twice_by_hand_full_redraw_then_header_only()
 
@@ -61,7 +58,7 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
@@ -71,7 +68,7 @@ return {
       local buf = window.buffer(app)
       local before = #fake_process.argv_log(fake)
 
-      queue().submit({ args = { "status", "--json" }, label = "push fake" })
+      app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
       tick_twice_by_hand_full_redraw_then_header_only()
 
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
@@ -84,7 +81,7 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
@@ -96,7 +93,7 @@ return {
       local before = #fake_process.argv_log(fake)
       fake.hold = true
 
-      queue().submit({ args = { "status", "--json" }, label = "push fake" })
+      app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
 
       local function row_3()
         return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
@@ -110,7 +107,7 @@ return {
 
       fake.release()
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
@@ -124,7 +121,7 @@ return {
 
       vim.api.nvim_feedkeys("-", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
+        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
       end)
 
       local landed = vim.api.nvim_win_get_cursor(0)[1]
@@ -162,7 +159,7 @@ return {
       local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
 
       local moved = heading_of("staged")
@@ -226,7 +223,7 @@ return {
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
+        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
       end)
 
       local log = fake_process.argv_log(fake)

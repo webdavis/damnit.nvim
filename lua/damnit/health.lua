@@ -37,7 +37,6 @@ local function nothing_to_speak_to(err)
 end
 
 local function report_version_and_store(app)
-  local client = app.dam
   local finished, data, err = call(app, verbs.ls(nil, true))
 
   if not finished then
@@ -54,9 +53,9 @@ local function report_version_and_store(app)
 
   local range = ("the supported range is >=%s <%s"):format(dam.MIN_VERSION, dam.MAX_VERSION)
 
-  if client.version then
+  if app.dam.version then
     local first_dam_on_path = vim.fn.exepath("dam")
-    vim.health.ok(("dam %s at %s, and %s"):format(client.version, first_dam_on_path, range))
+    vim.health.ok(("dam %s at %s, and %s"):format(app.dam.version, first_dam_on_path, range))
   else
     vim.health.warn(("dam --version printed something that is not a version, and %s"):format(range))
   end
@@ -72,10 +71,8 @@ local function report_version_and_store(app)
 end
 
 local function report_paths(app)
-  local options = app.options
-
   for _, flag in ipairs({ "store", "config" }) do
-    local named = options[flag]
+    local named = app.options[flag]
     local variable = "DAM_" .. flag:upper()
     local from_env = vim.env[variable]
 
@@ -190,9 +187,8 @@ local function report_views(app)
 end
 
 function M.check()
-  vim.health.start("damnit.nvim")
-
   local app = require("damnit").app()
+  vim.health.start("damnit.nvim")
 
   if not report_version_and_store(app) then
     return
