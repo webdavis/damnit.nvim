@@ -90,8 +90,9 @@ function M.object_line(object, indent, folded, today)
 end
 
 function M.title(spec)
-  if spec.query and spec.query ~= spec.title then
-    return ("dam: %s  (%s)"):format(spec.title, spec.query)
+  local query = spec.expands_to or spec.query
+  if query and query ~= spec.title then
+    return ("dam: %s  (%s)"):format(spec.title, query)
   end
 
   return "dam: " .. spec.title
