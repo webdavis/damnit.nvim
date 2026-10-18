@@ -1,6 +1,7 @@
 local M = {}
 
 local format = require("damnit.list_format")
+local highlights = require("damnit.render.highlights")
 local keymaps = require("damnit.keymaps")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
@@ -30,7 +31,7 @@ local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
-  render.define()
+  highlights.define()
 
   vim.api.nvim_create_autocmd("BufWinEnter", {
     buffer = buf,
@@ -55,14 +56,14 @@ function M.belong_to(shown, store)
   end
 end
 
-local function oid_by_line(lines, line_entries)
-  local oids = {}
+local function rows_of(lines, line_entries)
+  local rows = {}
 
-  for index = 1, #lines do
-    oids[index] = line_entries[index] and line_entries[index].object.oid or false
+  for index, line in ipairs(lines) do
+    rows[index] = { text = line, oid = line_entries[index] and line_entries[index].object.oid }
   end
 
-  return oids
+  return rows
 end
 
 local function colour_the_badges(buf, line_entries)
@@ -82,10 +83,8 @@ end
 function M.draw(buf, shown, lines, line_entries, objects)
   line_entries = line_entries or {}
 
-  redraw.keep_cursor(buf, oid_by_line(lines, line_entries), function()
-    vim.bo[buf].modifiable = true
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    vim.bo[buf].modifiable = false
+  redraw.keep_cursor(buf, function()
+    scratch.draw(buf, rows_of(lines, line_entries))
   end)
   colour_the_badges(buf, line_entries)
 

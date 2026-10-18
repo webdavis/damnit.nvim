@@ -2,6 +2,8 @@ local M = {}
 
 local commit_buffer = require("damnit.commit_buffer")
 local open = require("damnit.open")
+local scratch = require("damnit.scratch")
+local status_selection = require("damnit.status_selection")
 local task_buffer = require("damnit.task_buffer")
 local verbs = require("damnit.dam.verbs")
 local window = require("damnit.window")
@@ -39,11 +41,6 @@ function M.jump_to_section(app, kind, heading)
 end
 
 function M.targets()
-  local buf = vim.api.nvim_get_current_buf()
-  local kinds = vim.b[buf].damnit_kinds or {}
-  local sections = vim.b[buf].damnit_sections or {}
-  local oids = vim.b[buf].damnit_oids or {}
-
   local first = vim.api.nvim_win_get_cursor(0)[1]
   local last = first
 
@@ -56,33 +53,7 @@ function M.targets()
     end
   end
 
-  local picked, seen, section = {}, {}, nil
-
-  local function take_if_change(index)
-    local oid = oids[index]
-
-    if oid and kinds[index] == "change" and not seen[oid] then
-      seen[oid] = true
-      picked[#picked + 1] = oid
-      section = section or sections[index]
-    end
-  end
-
-  for lnum = first, last do
-    if kinds[lnum] == "section" then
-      section = section or sections[lnum]
-
-      for index, owner in ipairs(sections) do
-        if owner == sections[lnum] then
-          take_if_change(index)
-        end
-      end
-    else
-      take_if_change(lnum)
-    end
-  end
-
-  return { oids = picked, section = section }
+  return status_selection.targets(scratch.rows(vim.api.nvim_get_current_buf()), first, last)
 end
 
 function M.write(app, args, label)

@@ -4,6 +4,7 @@ local app = require("damnit").app()
 local fake_process = require("helpers.fake_process")
 local status_window = require("helpers.status_window")
 local render = require("damnit.render")
+local scratch = require("damnit.scratch")
 local window = require("damnit.window")
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
@@ -136,16 +137,13 @@ return {
       local buf = window.buffer(app)
 
       local function heading_of(kind)
-        local sections = vim.b[buf].damnit_sections
-        local kinds = vim.b[buf].damnit_kinds
-
-        for index = 1, #kinds do
-          if kinds[index] == "section" and sections[index] == kind then
+        for index, row in ipairs(scratch.rows(buf)) do
+          if row.kind == "section" and row.section == kind then
             return index
           end
         end
 
-        error("no " .. kind .. " heading: " .. vim.inspect(sections))
+        error("no " .. kind .. " heading")
       end
 
       local heading = heading_of("staged")
@@ -234,15 +232,16 @@ return {
   ["gu, gs and gc jump to a section, and a count picks the entry"] = function()
     with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("gu", "x", false)
+      local buf = vim.api.nvim_get_current_buf()
       local unstaged = vim.api.nvim_win_get_cursor(0)[1]
-      assert(vim.b[0].damnit_sections[unstaged] == "working", vim.inspect(vim.b[0].damnit_sections))
+      assert(scratch.row(buf, unstaged).section == "working", "gu lands in Working")
 
       vim.api.nvim_feedkeys("2gu", "x", false)
       assert(vim.api.nvim_win_get_cursor(0)[1] == unstaged + 1, "a count picks the second entry")
 
       vim.api.nvim_feedkeys("gc", "x", false)
       local conflict = vim.api.nvim_win_get_cursor(0)[1]
-      assert(vim.b[0].damnit_sections[conflict] == "conflicts", tostring(vim.b[0].damnit_sections[conflict]))
+      assert(scratch.row(buf, conflict).section == "conflicts", "gc lands in Conflicts")
     end)
   end,
 

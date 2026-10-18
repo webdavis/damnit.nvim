@@ -1,4 +1,7 @@
+local highlights = require("damnit.render.highlights")
 local render = require("damnit.render")
+local scratch = require("damnit.scratch")
+local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
 
 local TESTS_DIR = require("helpers.paths").TESTS
@@ -56,7 +59,7 @@ local function golden(name, lines)
 end
 
 local function lines_of(status, state)
-  return render.lines(status_model.build(status, fixture("full/remote.json")), state or STATE)
+  return status_lines.lines(status_model.build(status, fixture("full/remote.json")), state or STATE)
 end
 
 return {
@@ -114,29 +117,18 @@ return {
     assert(change.oid == "badb4903b653809e591c31118004e07de7c8183c", tostring(change.oid))
   end,
 
-  ["records every line's kind, oid and section, with no hole for a line that has none"] = function()
+  ["records every drawn row's kind, oid and section"] = function()
     local lines = lines_of(fixture("full/status.json"))
     local buf = vim.api.nvim_create_buf(false, true)
     render.draw(buf, lines)
 
-    local kinds = vim.b[buf].damnit_kinds
-    local oids = vim.b[buf].damnit_oids
-    local sections = vim.b[buf].damnit_sections
-
-    local a_hole_reads_back_as_truthy_nil_or_drops_off_the_end = "%d %s for %d lines"
-    assert(#oids == #lines, a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#oids, "oids", #lines))
-    assert(
-      #sections == #lines,
-      a_hole_reads_back_as_truthy_nil_or_drops_off_the_end:format(#sections, "sections", #lines)
-    )
+    assert(#scratch.rows(buf) == #lines, ("%d rows for %d lines"):format(#scratch.rows(buf), #lines))
 
     for index, line in ipairs(lines) do
-      assert(kinds[index] == line.kind, ("line %d kind %s"):format(index, tostring(kinds[index])))
-      assert(oids[index] == (line.oid or false), ("line %d oid %s"):format(index, tostring(oids[index])))
-      assert(
-        sections[index] == (line.section or false),
-        ("line %d section %s"):format(index, tostring(sections[index]))
-      )
+      local row = scratch.row(buf, index)
+      assert(row.kind == line.kind, ("line %d kind %s"):format(index, tostring(row.kind)))
+      assert(row.oid == line.oid, ("line %d oid %s"):format(index, tostring(row.oid)))
+      assert(row.section == line.section, ("line %d section %s"):format(index, tostring(row.section)))
     end
 
     vim.api.nvim_buf_delete(buf, { force = true })
@@ -194,8 +186,11 @@ return {
     local unread = status_model.build(fixture("default/status.json"), nil)
     local none = status_model.build(fixture("default/status.json"), { remotes = {} })
 
-    assert(render.lines(unread, STATE)[2].text == "Remotes: unknown", render.lines(unread, STATE)[2].text)
-    assert(render.lines(none, STATE)[2].text == "Remotes: none configured", render.lines(none, STATE)[2].text)
+    assert(status_lines.lines(unread, STATE)[2].text == "Remotes: unknown", status_lines.lines(unread, STATE)[2].text)
+    assert(
+      status_lines.lines(none, STATE)[2].text == "Remotes: none configured",
+      status_lines.lines(none, STATE)[2].text
+    )
   end,
 
   ["says how long ago each remote pulled, against the clock in state"] = function()
@@ -218,18 +213,18 @@ return {
 
     for last_pull, expected in pairs(ages) do
       local model = status_model.build({}, { remotes = { { name = "r", last_pull = last_pull } } })
-      local text = render.lines(model, STATE)[2].text
+      local text = status_lines.lines(model, STATE)[2].text
 
       assert(text == ("Remotes: r (clean, %s)"):format(expected), last_pull .. ": " .. text)
     end
   end,
 
   ["links every group to a standard one and writes no colour"] = function()
-    for group, target in pairs(render.HIGHLIGHTS) do
+    for group, target in pairs(highlights.HIGHLIGHTS) do
       assert(type(target) == "string" and target ~= "", group)
     end
 
-    render.define()
+    highlights.define()
 
     local defined = vim.api.nvim_get_hl(0, { name = "DamOverdue", link = true })
     assert(defined.link == "ErrorMsg", vim.inspect(defined))
