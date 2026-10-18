@@ -12,7 +12,7 @@
 [No Name]                                                     0,0-1          All
 Store:   dam's default
 Remotes: fake (1 unpushed, pulled 4m ago)  flaky (7 unpushed, never pulled)
-Help:    g?
+g? help  - stage  cc commit  P push  p pull  R re-read
 
 Conflicts (1)
 ! f378432           shared shopping list (our edit) fake

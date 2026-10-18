@@ -1,3 +1,4 @@
+g? help  <CR> open  x done  p priority  s due  a add
 dam: all open tasks
 
 - water the plants  inbox/
@@ -8,7 +9,6 @@ dam: all open tasks
 - write the quarterly report
 - call the landlord about the leaking radiator in the back bedroom before winter
 - sort the photos
-~
 ~
 ~
 ~

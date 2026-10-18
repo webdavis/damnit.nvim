@@ -33,43 +33,6 @@ function M.jump_to_section(kind, heading, count)
   vim.api.nvim_win_set_cursor(0, { line, 0 })
 end
 
-function M.help(filetype)
-  local rows = {}
-  for _, map in ipairs(require("damnit.keys").MAPS[filetype] or {}) do
-    rows[#rows + 1] = ("  %-8s %s"):format(map[2], map[4])
-  end
-
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, rows)
-  vim.bo[buf].modifiable = false
-
-  local width = 0
-  for _, row in ipairs(rows) do
-    width = math.max(width, #row)
-  end
-
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    row = math.floor((vim.o.lines - #rows) / 2),
-    col = math.floor((vim.o.columns - width) / 2),
-    width = width + 2,
-    height = #rows,
-    style = "minimal",
-    border = "rounded",
-  })
-
-  vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_win_close(win, true)
-  end, { buffer = buf, nowait = true })
-  vim.api.nvim_create_autocmd("BufLeave", {
-    buffer = buf,
-    once = true,
-    callback = function()
-      pcall(vim.api.nvim_win_close, win, true)
-    end,
-  })
-end
-
 function M.targets()
   local buf = vim.api.nvim_get_current_buf()
   local kinds = vim.b[buf].damnit_kinds or {}

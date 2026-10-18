@@ -23,40 +23,76 @@ function M.due_of(object)
   return text(type(object.task) == "table" and object.task.due or nil)
 end
 
-function M.append_badges(parts, object)
+local PRIORITY_GROUPS = { "DamPriority1", "DamPriority2", "DamPriority3" }
+
+local BADGE_GAP = "  "
+
+local function is_before(due, today)
+  return today ~= nil and due:sub(1, #today) < today
+end
+
+function M.badges(object, today)
+  local badges = {}
+
   local due = M.due_of(object)
   if due ~= "" then
-    parts[#parts + 1] = "(" .. due .. ")"
+    badges[#badges + 1] = { text = "(" .. due .. ")", group = is_before(due, today) and "DamOverdue" or "DamDue" }
   end
 
   local priority = tonumber(type(object.task) == "table" and object.task.priority or nil)
   if priority and priority < DEFAULT_LEAST_URGENT_PRIORITY then
-    parts[#parts + 1] = "p" .. priority
+    badges[#badges + 1] = { text = "p" .. priority, group = PRIORITY_GROUPS[priority] }
   end
 
   for _, label in ipairs(M.labels_of(object)) do
-    parts[#parts + 1] = "@" .. text(label)
+    badges[#badges + 1] = { text = "@" .. text(label), group = "DamLabel" }
+  end
+
+  return badges
+end
+
+function M.append_badges(parts, object)
+  for _, badge in ipairs(M.badges(object)) do
+    parts[#parts + 1] = badge.text
   end
 end
 
-function M.object_line(object, indent, folded)
-  local parts = { indent .. "- " .. text(object.subject) }
-  M.append_badges(parts, object)
+function M.object_line(object, indent, folded, today)
+  local parts, marks, col = {}, {}, 0
+
+  local function add(part, group)
+    if #parts > 0 then
+      col = col + #BADGE_GAP
+    end
+
+    if group then
+      marks[#marks + 1] = { col = col, length = #part, group = group }
+    end
+
+    parts[#parts + 1] = part
+    col = col + #part
+  end
+
+  add(indent .. "- " .. text(object.subject))
+
+  for _, badge in ipairs(M.badges(object, today)) do
+    add(badge.text, badge.group)
+  end
 
   if location.parse(object.body) then
-    parts[#parts + 1] = location.ICON
+    add(location.ICON)
   end
 
   local path = text(object.path)
   if path ~= "" then
-    parts[#parts + 1] = path
+    add(path)
   end
 
   if folded and folded > 0 then
-    parts[#parts + 1] = ("(+%d)"):format(folded)
+    add(("(+%d)"):format(folded))
   end
 
-  return table.concat(parts, "  ")
+  return table.concat(parts, BADGE_GAP), marks
 end
 
 function M.title(spec)
@@ -97,7 +133,7 @@ function M.by_completion(objects)
   return ordered
 end
 
-function M.render(spec, objects, collapsed)
+function M.render(spec, objects, collapsed, today)
   local folds = collapsed or {}
   local index = tree.index(objects or {})
 
@@ -109,8 +145,9 @@ function M.render(spec, objects, collapsed)
     local path = text(object.path)
     local hidden = folds[path] and tree.descendant_count(index, path) or 0
 
-    lines[#lines + 1] = M.object_line(object, INDENT_PER_LEVEL:rep(depth), hidden)
-    entries[#lines] = { object = object, location = location.parse(object.body) }
+    local line, marks = M.object_line(object, INDENT_PER_LEVEL:rep(depth), hidden, today)
+    lines[#lines + 1] = line
+    entries[#lines] = { object = object, location = location.parse(object.body), marks = marks }
     drawn = drawn + 1
   end
 

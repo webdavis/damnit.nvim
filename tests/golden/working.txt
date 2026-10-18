@@ -1,6 +1,6 @@
 Store:   ~/.local/share/dam/dam.db
 Remotes: fake (clean, pulled 4m ago)  flaky (clean, never pulled)
-Help:    g?
+g? help  - stage  cc commit  P push  p pull  R re-read
 
 Working (2)
 - changed  badb490  buy soy milk                (subject, priority)     inbox/

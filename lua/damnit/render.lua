@@ -20,13 +20,13 @@ M.HIGHLIGHTS = {
   DamPriority1 = "ErrorMsg",
   DamPriority2 = "WarningMsg",
   DamPriority3 = "MoreMsg",
-  DamPriority4 = "Comment",
   DamRemote = "Special",
   DamNotice = "WarningMsg",
   DamConflict = "ErrorMsg",
   DamDiffOld = "DiffDelete",
   DamDiffNew = "DiffAdd",
   DamRunning = "MoreMsg",
+  DamLegend = "Comment",
 }
 
 local OP_GROUPS = { create = "DamOpNew", update = "DamOpChanged", delete = "DamOpRemoved" }
@@ -110,8 +110,7 @@ end
 
 local MINUTE, HOUR, DAY = 60, 3600, 86400
 
--- Howard Hinnant's days_from_civil, so a UTC timestamp needs no local time zone to read.
-local function utc_epoch(timestamp)
+local function utc_epoch_by_hinnants_days_from_civil(timestamp)
   local y, m, d, hh, mm, ss = timestamp:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
   if not y then
     return nil
@@ -126,9 +125,8 @@ local function utc_epoch(timestamp)
   return days * DAY + tonumber(hh) * HOUR + tonumber(mm) * MINUTE + tonumber(ss)
 end
 
--- The same wording and units as `dam remote list`.
-local function pulled_ago(last_pull, now)
-  local at = last_pull and utc_epoch(last_pull)
+local function pulled_ago_in_the_words_of_dam_remote_list(last_pull, now)
+  local at = last_pull and utc_epoch_by_hinnants_days_from_civil(last_pull)
   if not at then
     return last_pull and "pulled" or "never pulled"
   end
@@ -160,7 +158,7 @@ local function remotes_line(remotes, list_was_read, now)
 
     built.add(remote.remote, "DamRemote")
     local commits = remote.commits > 0 and ("%d unpushed"):format(remote.commits) or "clean"
-    built.add((" (%s, %s)"):format(commits, pulled_ago(remote.last_pull, now)))
+    built.add((" (%s, %s)"):format(commits, pulled_ago_in_the_words_of_dam_remote_list(remote.last_pull, now)))
   end
 
   return built.line("header")
@@ -176,6 +174,13 @@ local function running_line(running)
   end
 
   built.add("     [C-c to cancel]")
+
+  return built.line("header")
+end
+
+local function legend_line(width)
+  local built = row()
+  built.add(require("damnit.keys").legend("damstatus", width), "DamLegend")
 
   return built.line("header")
 end
@@ -247,7 +252,7 @@ function M.lines(model, state)
   local lines = {
     header_line("Store:", state.store),
     remotes_line(model.remotes, model.remotes_known, state.now),
-    state.running and running_line(state.running) or header_line("Help:", "g?"),
+    state.running and running_line(state.running) or legend_line(state.width),
     blank(),
   }
 

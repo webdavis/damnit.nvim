@@ -12,19 +12,27 @@ function M.of(buf)
   return vim.bo[buf].filetype == "damlist" and scratch.state(buf) or nil
 end
 
-local function bar_the_current_row_and_cut_long_rows_in_this_window_only()
+function M.winbar()
+  local legend = require("damnit.keys").legend("damlist", vim.api.nvim_win_get_width(vim.g.statusline_winid))
+
+  return "%#DamLegend#" .. legend:gsub("%%", "%%%%")
+end
+
+local function bar_the_current_row_cut_long_rows_and_show_the_legend_in_this_window_only()
   vim.wo[0][0].cursorline = true
   vim.wo[0][0].wrap = false
+  vim.wo[0][0].winbar = "%!v:lua.require'damnit.list.view'.winbar()"
 end
 
 local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
+  require("damnit.render").define()
 
   vim.api.nvim_create_autocmd("BufWinEnter", {
     buffer = buf,
-    callback = bar_the_current_row_and_cut_long_rows_in_this_window_only,
+    callback = bar_the_current_row_cut_long_rows_and_show_the_legend_in_this_window_only,
   })
 
   require("damnit.keys").attach(buf, "damlist")
@@ -50,6 +58,20 @@ local function oid_by_line(lines, line_entries)
   return oids
 end
 
+local function colour_the_badges(buf, line_entries)
+  local namespace = require("damnit.render").NAMESPACE
+  vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
+
+  for line, entry in pairs(line_entries) do
+    for _, mark in ipairs(entry.marks or {}) do
+      vim.api.nvim_buf_set_extmark(buf, namespace, line - 1, mark.col, {
+        end_col = mark.col + mark.length,
+        hl_group = mark.group,
+      })
+    end
+  end
+end
+
 function M.draw(buf, shown, lines, line_entries, objects)
   line_entries = line_entries or {}
 
@@ -58,13 +80,14 @@ function M.draw(buf, shown, lines, line_entries, objects)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
     vim.bo[buf].modifiable = false
   end)
+  colour_the_badges(buf, line_entries)
 
   shown.entry_by_line = line_entries
   shown.objects = objects
 end
 
 function M.render(buf, shown, objects)
-  local lines, line_entries = format.render(shown.spec, objects, shown.collapsed)
+  local lines, line_entries = format.render(shown.spec, objects, shown.collapsed, os.date("%Y-%m-%d", os.time()))
   M.draw(buf, shown, lines, line_entries, objects)
 end
 
