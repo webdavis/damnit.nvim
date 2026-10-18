@@ -2,6 +2,7 @@ local M = {}
 
 local answer = require("damnit.answer")
 local message = require("damnit.message")
+local process = require("damnit.process")
 
 M.MIN_VERSION = "0.2.0"
 M.MAX_VERSION = "0.3.0"
@@ -60,35 +61,12 @@ function M.supported(text)
   return compare(parts, parts_of(M.MIN_VERSION)) >= 0 and compare(parts, parts_of(M.MAX_VERSION)) < 0
 end
 
-function M.timeout_seconds()
-  return math.max(tonumber(require("damnit").options.timeout) or 120, 1)
-end
-
-local function answer_on_the_main_loop(on_exit)
-  return function(out)
-    vim.schedule(function()
-      on_exit(out)
-    end)
-  end
-end
-
-function M.spawn(argv, seconds, on_exit)
-  local binary_found, handle =
-    pcall(vim.system, argv, { text = true, timeout = seconds * 1000 }, answer_on_the_main_loop(on_exit))
-
-  if not binary_found then
-    vim.schedule(function()
-      on_exit({ code = -1, stdout = "", stderr = "", missing = true })
-    end)
-
-    return nil
-  end
-
-  return handle
+local function timeout_seconds()
+  return process.timeout_seconds(require("damnit").options)
 end
 
 local function spawn(args, seconds, on_exit)
-  return M.spawn(M.argv(args), seconds, on_exit)
+  return process.run(M.argv(args), seconds, on_exit)
 end
 
 local function settle_handshake(err)
@@ -116,7 +94,7 @@ local function handshake(callback)
 
   local generation_at_start = options_generation
 
-  spawn({ "--version" }, M.timeout_seconds(), function(out)
+  spawn({ "--version" }, timeout_seconds(), function(out)
     local began_under_old_options = generation_at_start ~= options_generation
     if began_under_old_options then
       return
@@ -179,7 +157,7 @@ function M.call(args, opts, callback)
       return callback(nil, err)
     end
 
-    local seconds = M.timeout_seconds()
+    local seconds = timeout_seconds()
 
     local handle = spawn(args, seconds, function(out)
       callback(answer.interpret(out, opts.label, seconds))
