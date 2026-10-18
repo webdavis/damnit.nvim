@@ -3,8 +3,8 @@
 The [`dam`](https://github.com/webdavis/damnit) task store from inside Neovim.
 
 `dam` stages and commits tasks like git and pushes them to a remote. This plugin drives the `dam`
-command line and nothing else. It holds no credential; `dam` resolves its own. Every `dam` call runs
-in the background, so the editor never waits on one.
+command line and nothing else. Every `dam` call runs in the background, so the editor never waits
+on one.
 
 ## Requirements
 
@@ -48,7 +48,7 @@ return {
 | `:Dam toggle` | Open or close the sidebar. |
 | `:Dam capture` | Make a task from the line or selection in front of you. |
 | `:Dam cancel` | Cancel the running `dam` call. |
-| `:Dam messages` | Show every message in full. |
+| `:Dam messages` | Show the last 200 messages in full. |
 
 Each message is one line starting `damnit.nvim:`, cut to fit; `:Dam messages` keeps the full text.
 
@@ -62,7 +62,7 @@ Working, Staged, Unpushed and Notices, each only when it holds something.
 | `-` | Stage or unstage this object. On a heading, the whole section. Takes a visual range. |
 | `s` `u` | Stage, or unstage, this object. Takes a visual range. |
 | `U` | Unstage everything. |
-| `cc` | Commit what is staged, in a message buffer. |
+| `cc` | Commit what is staged, in a message buffer; `:w` makes the commit. |
 | `X` | Discard this working change, after a confirm. |
 | `=` | Show or hide which fields this change touches. |
 | `<CR>` | Open what the cursor is on. |
@@ -111,7 +111,7 @@ line is the subject, then the due date, priority, labels, `⌖` if captured from
 | Key | What it does |
 | --- | --- |
 | `<CR>` | Open this object. |
-| `x` | Complete this object. With open children, offers to keep or move them. |
+| `x` | Complete this object. If it waits on an open task, offers to complete it anyway. |
 | `X` | Reopen this object. |
 | `u` | Reopen this object, in the completed history. |
 | `dd` | Remove this object, after a confirm. |
@@ -183,8 +183,6 @@ With `reminders = true`, a task with a time of day raises one notification when 
 nvim --headless --clean -l tests/run.lua
 stylua --check . && luacheck .
 ```
-
-Every spec runs against a fake `dam`, so no test reaches a real store or the network.
 
 ## License
 
