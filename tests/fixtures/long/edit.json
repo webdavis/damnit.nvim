@@ -1,0 +1,17 @@
+{
+  "oid": "badb4903b653809e591c31118004e07de7c8183c",
+  "kind": "task",
+  "subject": "buy the oat milk",
+  "body": "",
+  "path": "inbox/",
+  "labels": [
+    "errand"
+  ],
+  "depends": [],
+  "reminders": [],
+  "task": {
+    "done": false,
+    "priority": 3,
+    "due": "2026-09-25"
+  }
+}

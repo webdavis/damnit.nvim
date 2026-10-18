@@ -8,6 +8,15 @@ local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
 
 local TEN_AM_UTC_ON_THE_TWENTIETH = 1789898400
 
+local EIGHT_OBJECTS = TESTS_DIR .. "/fixtures/long"
+
+local function dam_list_in_a_window_that_wraps()
+  vim.wo.wrap = true
+  vim.cmd("Dam list")
+
+  return vim.api.nvim_get_current_buf()
+end
+
 local function with_the_clock_at(epoch, body)
   local real = os.time
   rawset(os, "time", function(date)
@@ -38,6 +47,14 @@ return {
         return vim.api.nvim_get_current_buf()
       end,
     })
+  end,
+
+  [":Dam list at 80 columns cuts a long row at the edge and bars the current row"] = function()
+    list_buffer.with(function()
+      screen.matches_golden("list_long")
+      assert(vim.wo.cursorline, "the current row carries no bar")
+      assert(not vim.wo.wrap, "the list wraps")
+    end, { fixtures = EIGHT_OBJECTS, open = dam_list_in_a_window_that_wraps })
   end,
 
   ["the sidebar open on a view draws this screen at 80x24"] = function()

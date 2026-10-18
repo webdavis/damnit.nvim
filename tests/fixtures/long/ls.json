@@ -1,0 +1,116 @@
+{
+  "objects": [
+    {
+      "oid": "b6294947f014e0289b8a02bfcd0f087e652ed0f2",
+      "kind": "task",
+      "subject": "water the plants",
+      "body": "",
+      "path": "inbox/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "55a73e6a8cfd4725b54a4ef69e1554bc1e2d6f98",
+      "kind": "task",
+      "subject": "renew the passport",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "a723f9ade114e20c575fa14cd45e0f0c3f2d8771",
+      "kind": "task",
+      "subject": "book the dentist",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "88cb5770fb010d2edbb2bb227a5a42e1b271321a",
+      "kind": "task",
+      "subject": "fix the bike brakes",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "063d55c39c0c7117fe9831a2eb3a1e0dfa4adc31",
+      "kind": "task",
+      "subject": "reply to the accountant",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "63a0f6f30166dc46f4b06c01f131bbf9c06298f9",
+      "kind": "task",
+      "subject": "write the quarterly report",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "71cfdd4043e6b0499f66f69ea28549be7848d221",
+      "kind": "task",
+      "subject": "call the landlord about the leaking radiator in the back bedroom before winter",
+      "body": "",
+      "path": "home/garage/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "9be7cf56cc6d4f7e7d7be4fe58ceb9bcaee594cb",
+      "kind": "task",
+      "subject": "sort the photos",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    }
+  ]
+}

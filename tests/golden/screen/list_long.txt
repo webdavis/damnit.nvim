@@ -1,0 +1,24 @@
+dam: all open tasks
+
+- water the plants  inbox/
+- renew the passport
+- book the dentist
+- fix the bike brakes
+- reply to the accountant
+- write the quarterly report
+- call the landlord about the leaking radiator in the back bedroom before winter
+- sort the photos
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+damnit://list/all open tasks [-]                              1,1            All
+

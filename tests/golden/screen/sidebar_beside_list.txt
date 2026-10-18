@@ -4,8 +4,8 @@ dam: today  (due:today | overdue) │dam: all open tasks
 - parent  work/parent/            │- parent  work/parent/
   - child  work/parent/child/     │  - child  work/parent/child/
 - buy oat milk  (2026-09-25)  p1  │- buy oat milk  (2026-09-25)  p1  @errand  @h
-- hold the sidebar width  ⌖       │ome  inbox/
-~                                 │- hold the sidebar width  ⌖
+- hold the sidebar width  ⌖       │- hold the sidebar width  ⌖
+~                                 │~
 ~                                 │~
 ~                                 │~
 ~                                 │~
