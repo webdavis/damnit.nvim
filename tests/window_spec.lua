@@ -111,6 +111,26 @@ return {
     end)
   end,
 
+  ["- on the first of two Working entries leaves the cursor on the second"] = function()
+    with_window(function(fake)
+      vim.api.nvim_feedkeys("gu", "x", false)
+      local line = vim.api.nvim_win_get_cursor(0)[1]
+      vim.env.DAMNIT_TEST_FIXTURES = TESTS_DIR .. "/fixtures/staged_first"
+      local before = #fake_dam.argv_log(fake)
+
+      vim.api.nvim_feedkeys("-", "x", false)
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+      end)
+
+      local landed = vim.api.nvim_win_get_cursor(0)[1]
+      assert(landed == line, ("the cursor left line %d for line %d"):format(line, landed))
+      local found = window.entry_under_cursor()
+      assert(found and found.section.kind == "working", vim.inspect(found and found.section.kind))
+      assert(found.entry.oid:sub(1, 7) == "e648ce0", found.entry.oid)
+    end)
+  end,
+
   ["keeps a section the user folded closed when the re-read moves its heading"] = function()
     with_window(function(fake)
       local buf = window.buffer()

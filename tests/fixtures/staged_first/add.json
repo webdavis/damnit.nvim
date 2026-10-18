@@ -1,0 +1,21 @@
+{
+  "staged": [
+    {
+      "oid": "badb4903b653809e591c31118004e07de7c8183c",
+      "op": "update",
+      "fields": [
+        "subject",
+        "priority"
+      ],
+      "kind": "task",
+      "subject": "buy soy milk",
+      "path": "inbox/",
+      "labels": [
+        "errand"
+      ],
+      "done": false,
+      "priority": 3,
+      "due": "2026-09-25"
+    }
+  ]
+}

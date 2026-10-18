@@ -118,9 +118,37 @@ local function oid_by_line(lines)
   return oids
 end
 
+local function entry_place(buf, lnum)
+  local kinds, sections = vim.b[buf].damnit_kinds or {}, vim.b[buf].damnit_sections or {}
+  if kinds[lnum] == "section" or not sections[lnum] then
+    return nil
+  end
+
+  local nth = 0
+  for index = 1, lnum do
+    if sections[index] == sections[lnum] and kinds[index] ~= "section" then
+      nth = nth + 1
+    end
+  end
+
+  return { section = sections[lnum], nth = nth }
+end
+
+local function keep_the_cursor_in_its_section(buf, win, place)
+  if not place or vim.b[buf].damnit_sections[vim.api.nvim_win_get_cursor(win)[1]] == place.section then
+    return
+  end
+
+  local line = entries.line_of(buf, place.section, place.nth)
+  if line then
+    vim.api.nvim_win_set_cursor(win, { line, 0 })
+  end
+end
+
 local function draw(key, lines)
   local buf = buffer_by_store[key]
   local win = window_for(buf)
+  local place = win and entry_place(buf, vim.api.nvim_win_get_cursor(win)[1])
 
   if win then
     folds.remember(key, win)
@@ -132,6 +160,7 @@ local function draw(key, lines)
   end)
 
   if win then
+    keep_the_cursor_in_its_section(buf, win, place)
     folds.apply(key, win)
   end
 end
