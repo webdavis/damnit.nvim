@@ -110,8 +110,7 @@ end
 
 local MINUTE, HOUR, DAY = 60, 3600, 86400
 
--- Howard Hinnant's days_from_civil, so a UTC timestamp needs no local time zone to read.
-local function utc_epoch(timestamp)
+local function utc_epoch_by_hinnants_days_from_civil(timestamp)
   local y, m, d, hh, mm, ss = timestamp:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
   if not y then
     return nil
@@ -126,9 +125,8 @@ local function utc_epoch(timestamp)
   return days * DAY + tonumber(hh) * HOUR + tonumber(mm) * MINUTE + tonumber(ss)
 end
 
--- The same wording and units as `dam remote list`.
-local function pulled_ago(last_pull, now)
-  local at = last_pull and utc_epoch(last_pull)
+local function pulled_ago_in_the_words_of_dam_remote_list(last_pull, now)
+  local at = last_pull and utc_epoch_by_hinnants_days_from_civil(last_pull)
   if not at then
     return last_pull and "pulled" or "never pulled"
   end
@@ -160,7 +158,7 @@ local function remotes_line(remotes, list_was_read, now)
 
     built.add(remote.remote, "DamRemote")
     local commits = remote.commits > 0 and ("%d unpushed"):format(remote.commits) or "clean"
-    built.add((" (%s, %s)"):format(commits, pulled_ago(remote.last_pull, now)))
+    built.add((" (%s, %s)"):format(commits, pulled_ago_in_the_words_of_dam_remote_list(remote.last_pull, now)))
   end
 
   return built.line("header")
