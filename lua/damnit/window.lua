@@ -170,7 +170,14 @@ function M.open_diffs(key)
 end
 
 local function header_state(key)
-  return { store = M.store_display(key), running = queue.foreground(key), now = os.time() }
+  local win = window_for(buffer_by_store[key])
+
+  return {
+    store = M.store_display(key),
+    running = queue.foreground(key),
+    now = os.time(),
+    width = win and vim.api.nvim_win_get_width(win) or nil,
+  }
 end
 
 function M.redraw_current(key)
@@ -262,6 +269,16 @@ function M.tick(key)
 end
 
 queue.on_tick(M.tick)
+
+vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+  group = vim.api.nvim_create_augroup("damnit", { clear = false }),
+  desc = "dam: the legend keeps whole entries when the status window narrows",
+  callback = function()
+    for key in pairs(buffer_by_store) do
+      M.tick(key)
+    end
+  end,
+})
 
 vim.api.nvim_create_autocmd("BufReadCmd", {
   group = vim.api.nvim_create_augroup("damnit", { clear = false }),

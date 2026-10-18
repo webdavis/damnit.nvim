@@ -178,9 +178,9 @@ local function running_line(running)
   return built.line("header")
 end
 
-local function legend_line()
+local function legend_line(width)
   local built = row()
-  built.add(require("damnit.keys").legend("damstatus"), "DamLegend")
+  built.add(require("damnit.keys").legend("damstatus", width), "DamLegend")
 
   return built.line("header")
 end
@@ -252,7 +252,7 @@ function M.lines(model, state)
   local lines = {
     header_line("Store:", state.store),
     remotes_line(model.remotes, model.remotes_known, state.now),
-    state.running and running_line(state.running) or legend_line(),
+    state.running and running_line(state.running) or legend_line(state.width),
     blank(),
   }
 

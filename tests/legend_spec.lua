@@ -61,6 +61,19 @@ return {
     end)
   end,
 
+  ["a 50-column staging window drops whole legend entries and cuts none"] = function()
+    status_window.with(function()
+      local win = vim.api.nvim_get_current_win()
+      vim.cmd("vnew")
+      vim.api.nvim_win_set_width(win, 50)
+      vim.api.nvim_set_current_win(win)
+      vim.api.nvim_exec_autocmds("WinResized", {})
+
+      local row = vim.api.nvim_buf_get_lines(0, 2, 3, false)[1]
+      assert(row == "g? help  - stage  cc commit  P push  p pull", row)
+    end)
+  end,
+
   ["a list window carries the legend faint in its winbar, cut to the window's width"] = function()
     list_buffer.with(function()
       local win = vim.api.nvim_get_current_win()
