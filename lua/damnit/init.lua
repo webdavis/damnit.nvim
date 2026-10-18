@@ -20,6 +20,10 @@ local function forget_the_handshake_made_under_old_options()
   require("damnit.dam").forget()
 end
 
+local function forget_dams_filters_read_from_the_old_store()
+  require("damnit.views").reset()
+end
+
 local function start_the_reader_reminders_ride_on()
   require("damnit.poll").start()
 end
@@ -28,6 +32,7 @@ function M.setup(opts)
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 
   forget_the_handshake_made_under_old_options()
+  forget_dams_filters_read_from_the_old_store()
 
   if M.options.reminders then
     start_the_reader_reminders_ride_on()

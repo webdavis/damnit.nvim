@@ -83,6 +83,20 @@ return {
     end)
   end,
 
+  ["reads dam's saved filters again once setup points at another store"] = function()
+    with_views({}, function(_, fake)
+      resolved("inbox")
+      damnit.setup({ store = "/store/other.db" })
+      resolved("inbox")
+      damnit.options.store = nil
+
+      local filter_lists = vim.tbl_filter(function(line)
+        return vim.endswith(line, "filter list --json")
+      end, fake_dam.argv_log(fake))
+      assert(#filter_lists == 2, vim.inspect(fake_dam.argv_log(fake)))
+    end)
+  end,
+
   ["refuses a name in neither source before any ls, naming both sources"] = function()
     with_views({ work = "path:work/" }, function(notifications, fake)
       assert(resolved("tomorrow") == nil, "a name in neither source is refused")
