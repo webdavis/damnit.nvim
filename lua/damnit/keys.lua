@@ -27,9 +27,7 @@ M.MAPS = {
     {
       mode = "n",
       lhs = "g?",
-      run = function()
-        require("damnit.actions").help("damstatus")
-      end,
+      run = call("damnit.help", "open", "damstatus"),
       desc = "show this help",
       legend = "help",
     },
@@ -70,9 +68,7 @@ M.MAPS = {
     {
       mode = "n",
       lhs = "g?",
-      run = function()
-        require("damnit.actions").help("damlist")
-      end,
+      run = call("damnit.help", "open", "damlist"),
       desc = "show this help",
       legend = "help",
     },
