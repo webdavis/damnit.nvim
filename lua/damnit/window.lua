@@ -7,6 +7,7 @@ local message = require("damnit.message")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
+local store = require("damnit.store")
 local verbs = require("damnit.dam.verbs")
 
 local buffer_by_store = {}
@@ -16,14 +17,6 @@ local model_by_store = {}
 local remote_list_by_store = {}
 
 local window_dam_was_opened_from = nil
-
-function M.store_display(key)
-  if key == "default" then
-    return "dam's default"
-  end
-
-  return vim.fn.fnamemodify(key, ":~")
-end
 
 local function window_for(buf)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -36,7 +29,7 @@ local function window_for(buf)
 end
 
 function M.buffer(app, key)
-  key = key or app.queue.key()
+  key = key or app.store
 
   local existing = buffer_by_store[key]
   if existing and vim.api.nvim_buf_is_valid(existing) then
@@ -59,7 +52,7 @@ function M.buffer(app, key)
 end
 
 function M.open(app)
-  local key = app.queue.key()
+  local key = app.store
   render.define()
 
   local buf = M.buffer(app, key)
@@ -87,11 +80,11 @@ function M.origin()
 end
 
 function M.model(app, key)
-  return model_by_store[key or app.queue.key()]
+  return model_by_store[key or app.store]
 end
 
 function M.line_of(app, section_kind, nth)
-  local buf = buffer_by_store[app.queue.key()]
+  local buf = buffer_by_store[app.store]
   if not buf then
     return nil
   end
@@ -166,14 +159,14 @@ local function draw(key, lines)
 end
 
 function M.open_diffs(app, key)
-  return require("damnit.render.diff").open_set(key or app.queue.key())
+  return require("damnit.render.diff").open_set(key or app.store)
 end
 
 local function header_state(app, key)
   local win = window_for(buffer_by_store[key])
 
   return {
-    store = M.store_display(key),
+    store = store.display(key),
     running = app.queue.foreground(key),
     now = os.time(),
     width = win and vim.api.nvim_win_get_width(win) or nil,
@@ -181,7 +174,7 @@ local function header_state(app, key)
 end
 
 function M.redraw_current(app, key)
-  key = key or app.queue.key()
+  key = key or app.store
 
   if not model_by_store[key] then
     return
@@ -224,7 +217,7 @@ local function status_args_full_while_a_diff_is_open(key)
 end
 
 function M.refresh(app, key)
-  key = key or app.queue.key()
+  key = key or app.store
 
   read_the_remote_list_until_cached(app, key)
 
@@ -242,7 +235,7 @@ function M.refresh(app, key)
 end
 
 function M.forget_remotes(app, key)
-  remote_list_by_store[key or app.queue.key()] = nil
+  remote_list_by_store[key or app.store] = nil
 end
 
 function M.tick(app, key)

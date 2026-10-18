@@ -11,8 +11,8 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
-  window.tick(app, queue().key())
-  window.tick(app, queue().key())
+  window.tick(app, app.store)
+  window.tick(app, app.store)
 end
 
 return {

@@ -79,7 +79,7 @@ function M.open(app, key)
     return nil
   end
 
-  local buf, created = scratch.named(("damnit://commit/%s"):format(key or app.queue.key()), function(new)
+  local buf, created = scratch.named(("damnit://commit/%s"):format(key or app.store), function(new)
     configure(app, new)
   end)
 

@@ -146,7 +146,7 @@ function M.fetch(app, spec, callback)
 end
 
 local function load_into(app, buf, shown)
-  view.belong_to(shown, app.queue.key())
+  view.belong_to(shown, app.store)
 
   if view.nothing_drawn_yet(buf) then
     view.draw(buf, shown, { format.title(shown.spec), "", "Loading..." })

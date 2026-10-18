@@ -89,11 +89,15 @@ return {
   end,
 
   ["keeps a second store's lane independent of the first"] = function()
-    with_fake(function()
-      damnit.options.store = "/store/one.db"
+    with_fake(function(fake)
+      damnit.setup({ store = "/store/one.db" })
+      queue().submit(entry({ "status", "--json" }))
+      fake_process.drain()
+
+      fake.hold = true
       queue().submit(entry({ "status", "--json" }))
 
-      damnit.options.store = "/store/two.db"
+      damnit.setup({ store = "/store/two.db" })
       queue().submit(entry({ "status", "--json" }))
 
       assert(queue().running("/store/one.db") ~= nil, "the first store is still running")

@@ -2,20 +2,6 @@ local M = {}
 
 local message = require("damnit.message")
 
-local function store_key(options)
-  local store = options.store
-  if type(store) == "string" and store ~= "" then
-    return store
-  end
-
-  local env = vim.env.DAM_STORE
-  if type(env) == "string" and env ~= "" then
-    return env
-  end
-
-  return "default"
-end
-
 local function network_entry(lane)
   if lane.running and lane.running.network then
     return lane.running
@@ -49,10 +35,6 @@ function M.new(app, on_tick)
   local queue = { TICK_MS = 250, GRACE_MS = 2000 }
 
   local lanes_by_store = {}
-
-  function queue.key()
-    return store_key(app.options)
-  end
 
   local function lane_for(key)
     lanes_by_store[key] = lanes_by_store[key] or { pending = {} }
@@ -127,7 +109,7 @@ function M.new(app, on_tick)
   end
 
   function queue.submit(entry)
-    local key = queue.key()
+    local key = app.store
     local lane = lane_for(key)
 
     if entry.network and refuse_a_second_network_call(lane, entry) then
@@ -141,7 +123,7 @@ function M.new(app, on_tick)
   end
 
   function queue.running(key)
-    local lane = lanes_by_store[key or queue.key()]
+    local lane = lanes_by_store[key or app.store]
     if not lane or not lane.running then
       return nil
     end
@@ -190,7 +172,7 @@ function M.new(app, on_tick)
   end
 
   function queue.cancel(key)
-    key = key or queue.key()
+    key = key or app.store
     local lane = lanes_by_store[key]
 
     if not lane or not lane.running then

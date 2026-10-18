@@ -27,6 +27,7 @@ local function client_for(record)
 end
 
 app = { options = M.options, process = require("damnit.process") }
+app.store = require("damnit.store").of(app.options)
 app.dam = client_for(app)
 app.queue = require("damnit.queue").new(app, tick_the_status_window)
 
@@ -48,6 +49,7 @@ function M.setup(opts, ports)
   local old_dam = app.dam
   app.options = M.options
   app.process = ports and ports.process or app.process
+  app.store = require("damnit.store").of(app.options)
   app.dam = client_for(app)
   old_dam.close()
 

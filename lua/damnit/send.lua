@@ -21,11 +21,10 @@ local function text(value)
 end
 
 function M.brief(app, object, note)
-  local window = require("damnit.window")
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
     "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
-    "store: " .. window.store_display(app.queue.key()),
+    "store: " .. require("damnit.store").display(app.store),
   }
 
   local path = text(object.path)
