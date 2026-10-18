@@ -1,4 +1,6 @@
+local highlights = require("damnit.render.highlights")
 local render = require("damnit.render")
+local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
 
 local TESTS_DIR = require("helpers.paths").TESTS
@@ -56,7 +58,7 @@ local function golden(name, lines)
 end
 
 local function lines_of(status, state)
-  return render.lines(status_model.build(status, fixture("full/remote.json")), state or STATE)
+  return status_lines.lines(status_model.build(status, fixture("full/remote.json")), state or STATE)
 end
 
 return {
@@ -194,8 +196,11 @@ return {
     local unread = status_model.build(fixture("default/status.json"), nil)
     local none = status_model.build(fixture("default/status.json"), { remotes = {} })
 
-    assert(render.lines(unread, STATE)[2].text == "Remotes: unknown", render.lines(unread, STATE)[2].text)
-    assert(render.lines(none, STATE)[2].text == "Remotes: none configured", render.lines(none, STATE)[2].text)
+    assert(status_lines.lines(unread, STATE)[2].text == "Remotes: unknown", status_lines.lines(unread, STATE)[2].text)
+    assert(
+      status_lines.lines(none, STATE)[2].text == "Remotes: none configured",
+      status_lines.lines(none, STATE)[2].text
+    )
   end,
 
   ["says how long ago each remote pulled, against the clock in state"] = function()
@@ -218,18 +223,18 @@ return {
 
     for last_pull, expected in pairs(ages) do
       local model = status_model.build({}, { remotes = { { name = "r", last_pull = last_pull } } })
-      local text = render.lines(model, STATE)[2].text
+      local text = status_lines.lines(model, STATE)[2].text
 
       assert(text == ("Remotes: r (clean, %s)"):format(expected), last_pull .. ": " .. text)
     end
   end,
 
   ["links every group to a standard one and writes no colour"] = function()
-    for group, target in pairs(render.HIGHLIGHTS) do
+    for group, target in pairs(highlights.HIGHLIGHTS) do
       assert(type(target) == "string" and target ~= "", group)
     end
 
-    render.define()
+    highlights.define()
 
     local defined = vim.api.nvim_get_hl(0, { name = "DamOverdue", link = true })
     assert(defined.link == "ErrorMsg", vim.inspect(defined))

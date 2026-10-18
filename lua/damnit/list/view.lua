@@ -1,6 +1,7 @@
 local M = {}
 
 local format = require("damnit.list_format")
+local highlights = require("damnit.render.highlights")
 local keymaps = require("damnit.keymaps")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
@@ -30,7 +31,7 @@ local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
-  render.define()
+  highlights.define()
 
   vim.api.nvim_create_autocmd("BufWinEnter", {
     buffer = buf,

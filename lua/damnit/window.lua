@@ -3,9 +3,11 @@ local M = {}
 local diff = require("damnit.render.diff")
 local entries = require("damnit.window.entries")
 local folds = require("damnit.folds")
+local highlights = require("damnit.render.highlights")
 local layout = require("damnit.window.layout")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
+local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
 local store = require("damnit.store")
 local verbs = require("damnit.dam.verbs")
@@ -52,7 +54,7 @@ end
 
 function M.open(app)
   local key = app.store
-  render.define()
+  highlights.define()
 
   local buf = M.buffer(app, key)
   local win = window_for(buf)
@@ -179,7 +181,7 @@ function M.redraw_current(app, key)
     return
   end
 
-  draw(key, render.lines(model_by_store[key], header_state(app, key)))
+  draw(key, status_lines.lines(model_by_store[key], header_state(app, key)))
 end
 
 function M.redraw(app, key, status)
@@ -190,7 +192,7 @@ function M.redraw(app, key, status)
 
   model_by_store[key] = status_model.build(status, remote_list_by_store[key])
 
-  draw(key, render.lines(model_by_store[key], header_state(app, key)))
+  draw(key, status_lines.lines(model_by_store[key], header_state(app, key)))
 end
 
 local function read_the_remote_list_until_cached(app, key)
@@ -243,7 +245,7 @@ function M.tick(app, key)
     return
   end
 
-  local lines = render.lines(model_by_store[key], header_state(app, key))
+  local lines = status_lines.lines(model_by_store[key], header_state(app, key))
 
   local head, text = {}, {}
   for index, line in ipairs(lines) do

@@ -3,6 +3,7 @@ package.path = ("%s/lua/?.lua;%s/lua/?/init.lua;%s"):format(root, root, package.
 
 local status_model = require("damnit.status_model")
 local render = require("damnit.render")
+local status_lines = require("damnit.render.status_lines")
 
 local SAMPLES = 5
 
@@ -63,11 +64,11 @@ median_inside("modelling the document", 1, function()
 end)
 
 median_inside("rendering lines and marks", 60, function()
-  lines = render.lines(model, state)
+  lines = status_lines.lines(model, state)
 end)
 
 median_inside("a re-render after a write", 70, function()
-  render.draw(buf, render.lines(status_model.build(status, nil), state))
+  render.draw(buf, status_lines.lines(status_model.build(status, nil), state))
 end)
 
 median_inside("status() on a redraw", 0.05, function()
