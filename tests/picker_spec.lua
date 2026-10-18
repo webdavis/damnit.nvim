@@ -64,7 +64,7 @@ return {
         picker.pick(nil)
         wait_until_the_answer_was_read_and_offered(offered, 2)
 
-        assert(fake_dam.argv_log(fake)[alone + 1] == "ls --json", vim.inspect(fake_dam.argv_log(fake)))
+        assert(fake_dam.argv_log(fake)[alone + 1] == "ls !done --json", vim.inspect(fake_dam.argv_log(fake)))
       end)
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,

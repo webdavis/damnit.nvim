@@ -52,12 +52,12 @@ local function times_sent(fake, argv)
 end
 
 return {
-  ["means every open task when it is given no name"] = function()
+  ["means every open task when it is given no name, and asks dam for no finished one"] = function()
     local spec = views.resolve(nil)
 
     assert(spec.title == "all open tasks", spec.title)
     assert(spec.query == nil, tostring(spec.query))
-    assert(vim.deep_equal(views.query_args(spec), { "ls", "--json" }), vim.inspect(views.query_args(spec)))
+    assert(vim.deep_equal(views.query_args(spec), { "ls", "!done", "--json" }), vim.inspect(views.query_args(spec)))
   end,
 
   ["sends the declared query rather than the name, and asks dam nothing first"] = function()

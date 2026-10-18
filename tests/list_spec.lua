@@ -10,13 +10,24 @@ end
 return {
   ["asks dam for every open object and draws one line each"] = function()
     list_buffer.with(function(buf, fake)
-      assert(vim.tbl_contains(fake_dam.argv_log(fake), "ls --json"), vim.inspect(fake_dam.argv_log(fake)))
+      assert(vim.tbl_contains(fake_dam.argv_log(fake), "ls !done --json"), vim.inspect(fake_dam.argv_log(fake)))
 
       local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
       assert(body:find("parent", 1, true), body)
       assert(body:find("child", 1, true), body)
       assert(body:find("buy oat milk", 1, true), body)
     end)
+  end,
+
+  ["leaves a finished object out of the list that calls itself all open tasks"] = function()
+    list_buffer.with(function(buf)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      local body = table.concat(lines, "\n")
+
+      assert(lines[1] == "dam: all open tasks", lines[1])
+      assert(body:find("buy oat milk", 1, true), body)
+      assert(not body:find("took out the bins", 1, true), body)
+    end, { fixtures = TESTS_DIR .. "/fixtures/open_and_done" })
   end,
 
   ["indents a child under the object whose path it extends"] = function()
@@ -69,7 +80,7 @@ return {
       fake_dam.settle(function()
         return #fake_dam.argv_log(fake) > before
       end)
-      assert(fake_dam.argv_log(fake)[before + 1] == "ls --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_dam.argv_log(fake)[before + 1] == "ls !done --json", vim.inspect(fake_dam.argv_log(fake)))
 
       fake_dam.settle(function()
         return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):find("- child", 1, true) ~= nil

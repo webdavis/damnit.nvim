@@ -120,7 +120,7 @@ end
 
 function M.query_args(spec)
   if spec.query == nil or spec.query == "" then
-    return { "ls", "--json" }
+    return { "ls", "!done", "--json" }
   end
 
   return { "ls", spec.query, "--json" }
