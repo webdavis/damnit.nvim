@@ -146,6 +146,8 @@ function M.fetch(spec, callback)
 end
 
 local function load_into(buf, shown)
+  view.belong_to(shown, require("damnit").app().queue.key())
+
   if view.nothing_drawn_yet(buf) then
     view.draw(buf, shown, { format.title(shown.spec), "", "Loading..." })
   end

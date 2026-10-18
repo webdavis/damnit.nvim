@@ -48,6 +48,13 @@ function M.ensure(spec)
   return buf, shown
 end
 
+function M.belong_to(shown, store)
+  if shown.store ~= store then
+    shown.collapsed = {}
+    shown.store = store
+  end
+end
+
 local function oid_by_line(lines, line_entries)
   local oids = {}
 
