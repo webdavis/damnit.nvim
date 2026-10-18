@@ -1,0 +1,24 @@
+  ---
+  subject: buy soy milk
+  path: inbox/
+  done: false
+E priority: 9     ■ `priority` is 9: it has to be 1, 2, 3 or 4, where 1 is the m
+  due: 2026-09-25
+  deadline:
+  labels: errand
+  depends:
+  recurrence:
+  # reminders:
+  # priority: 1 is highest
+  ---
+
+~
+~
+~
+~
+~
+~
+~
+~
+<mnit://task/badb4903b653809e591c31118004e07de7c8183c [+] E:1 1,1            All
+

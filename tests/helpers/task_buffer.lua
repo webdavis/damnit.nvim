@@ -46,12 +46,18 @@ function M.set_field(buf, key, value)
   error("no " .. key .. " line in the buffer")
 end
 
-function M.field_line(buf, key)
-  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+function M.field_index(buf, key)
+  for index, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
     if vim.startswith(line, key .. ":") then
-      return line
+      return index
     end
   end
+end
+
+function M.field_line(buf, key)
+  local index = M.field_index(buf, key)
+
+  return index and vim.api.nvim_buf_get_lines(buf, index - 1, index, false)[1]
 end
 
 function M.diagnostics(buf)

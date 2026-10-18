@@ -9,7 +9,7 @@ M.EVENT_KEYS = { "subject", "path", "start", "end", "location", "labels", "depen
 
 local CANNOT_BE_CLEARED = false
 
-local FLAGS = {
+M.FLAGS = {
   subject = { set = "--subject", clear = CANNOT_BE_CLEARED },
   priority = { set = "-p", clear = CANNOT_BE_CLEARED },
   due = { set = "--due", clear = "--no-due" },
@@ -204,7 +204,7 @@ local function append_flags(object, key, entry, edit)
   end
 
   if entry.value == "" then
-    local clear = FLAGS[key].clear
+    local clear = M.FLAGS[key].clear
 
     if not clear then
       return refuse(("`%s` cannot be cleared"):format(key), entry)
@@ -215,7 +215,7 @@ local function append_flags(object, key, entry, edit)
     return nil
   end
 
-  vim.list_extend(edit, { FLAGS[key].set, entry.value })
+  vim.list_extend(edit, { M.FLAGS[key].set, entry.value })
 
   return nil
 end

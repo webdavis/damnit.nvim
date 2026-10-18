@@ -5,6 +5,7 @@ dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local harness = dofile(TESTS_DIR .. "/helpers/task_buffer.lua")
+local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
 local task_buffer = require("damnit.task_buffer")
 
 local OID = harness.OID
@@ -91,6 +92,18 @@ return {
     end)
   end,
 
+  ["keeps a sign column from the start, and draws this screen at 80x24 after priority: 9 is written"] = function()
+    harness.with_task(function(buf, fake)
+      assert(vim.wo[vim.fn.bufwinid(buf)].signcolumn == "yes:1", vim.wo[vim.fn.bufwinid(buf)].signcolumn)
+      assert(vim.diagnostic.config(nil, task_buffer.NAMESPACE).virtual_text == true)
+      screen.fix_size()
+      harness.set_field(buf, "priority", "9")
+      assert(harness.argv_the_write_sent_or_nil(fake) == nil, "a local refusal costs no call")
+
+      screen.matches_golden("task_refusal")
+    end)
+  end,
+
   ["puts a local refusal on the line it is about, and sends nothing"] = function()
     harness.with_task(function(buf, fake)
       harness.set_field(buf, "priority", "9")
@@ -123,7 +136,7 @@ return {
     end)
   end,
 
-  ["a refused edit stops before the move and leaves the text as typed"] = function()
+  ["a refused edit stops before the move, leaves the text as typed, and marks the line dam names"] = function()
     harness.with_task(function(buf, fake)
       local sent = harness.write_a_new_subject_and_path_then_settle(buf, fake)
 
@@ -134,6 +147,7 @@ return {
       local found = harness.diagnostics(buf)
       assert(#found == 1, vim.inspect(found))
       assert(found[1].message == '--due: cannot read "whenever-ish" as a date', found[1].message)
+      assert(found[1].lnum == harness.field_index(buf, "due") - 1, tostring(found[1].lnum))
     end, { fail = { edit = { exit = 2, stderr = REFUSAL_FOR_A_DUE_THAT_IS_NOT_A_DATE } } })
   end,
 
