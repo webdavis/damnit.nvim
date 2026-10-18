@@ -1,0 +1,26 @@
+{
+  "objects": [
+    {
+      "oid": "c30414962aa4332b6e5dfc2e0360e2b328735efe",
+      "kind": "task",
+      "subject": "buy oat milk",
+      "body": "",
+      "path": "inbox/",
+      "labels": ["errand"],
+      "depends": [],
+      "reminders": [],
+      "task": { "done": false, "priority": 1, "due": "2026-09-25" }
+    },
+    {
+      "oid": "5cf398f699045d551091eccc347f6b70f41f9bcf",
+      "kind": "task",
+      "subject": "renew the passport",
+      "body": "",
+      "path": "",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": { "done": false, "priority": 4, "due": "2026-10-20" }
+    }
+  ]
+}

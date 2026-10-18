@@ -20,7 +20,6 @@ M.HIGHLIGHTS = {
   DamPriority1 = "ErrorMsg",
   DamPriority2 = "WarningMsg",
   DamPriority3 = "MoreMsg",
-  DamPriority4 = "Comment",
   DamRemote = "Special",
   DamNotice = "WarningMsg",
   DamConflict = "ErrorMsg",
