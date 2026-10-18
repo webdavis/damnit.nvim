@@ -65,7 +65,7 @@ return {
     end)
 
     warn_rather_than_fail_when_the_median_is_over("status() on a redraw", 0.05, function()
-      require("damnit.poll").status()
+      require("damnit.poll").status(require("damnit").app())
     end)
 
     require("damnit.poll").stop()

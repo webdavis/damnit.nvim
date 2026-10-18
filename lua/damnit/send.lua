@@ -1,7 +1,9 @@
 local M = {}
 
 local format = require("damnit.list_format")
-local message = require("damnit.message")
+local list = require("damnit.list")
+local store = require("damnit.store")
+local timeout_seconds = require("damnit.process").timeout_seconds
 
 local BRACKETED_PASTE_START = "\27[200~"
 local BRACKETED_PASTE_END = "\27[201~"
@@ -20,12 +22,11 @@ local function text(value)
   return tostring(value)
 end
 
-function M.brief(object, note)
-  local window = require("damnit.window")
+function M.brief(app, object, note)
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
     "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
-    "store: " .. window.store_display(require("damnit").app().queue.key()),
+    "store: " .. store.display(app.store),
   }
 
   local path = text(object.path)
@@ -107,59 +108,58 @@ function M.agent_in(listing, workspace, me)
   return nil, "no agent pane in this workspace"
 end
 
-local function copy(host, brief, because)
+local function copy(app, host, brief, because)
   local reached_system_clipboard = host.copy(brief)
   local reason = because and (because .. "; ") or ""
   local where = reached_system_clipboard and "the clipboard" or "the unnamed register, no clipboard provider"
   local said = ("%scopied the brief to %s, %s"):format(reason, where, NO_RECORD)
 
   if because then
-    return message.warn(said)
+    return app.say.warn(said)
   end
 
-  message.say(said)
+  app.say.info(said)
 end
 
 local function focus_as_a_convenience(host, pane)
   host.run({ "agent", "focus", pane }, function() end)
 end
 
-function M.hand_off(object, note, host)
-  local brief = M.brief(object, note)
+function M.hand_off(app, object, note, host)
+  local brief = M.brief(app, object, note)
 
   if not host.in_herdr then
-    return copy(host, brief)
+    return copy(app, host, brief)
   end
 
   host.run({ "agent", "list" }, function(listing, err)
     if err then
-      return copy(host, brief, err)
+      return copy(app, host, brief, err)
     end
 
     local agent, why = M.agent_in(listing, host.workspace, host.me)
     if not agent then
-      return copy(host, brief, why)
+      return copy(app, host, brief, why)
     end
 
     host.run({ "pane", "send-text", agent.pane, M.pasted(brief) }, function(_, refusal)
       if refusal then
-        return copy(host, brief, ("herdr refused the send to %s"):format(agent.pane))
+        return copy(app, host, brief, ("herdr refused the send to %s"):format(agent.pane))
       end
 
       focus_as_a_convenience(host, agent.pane)
 
-      message.say(("sent to %s, %s"):format(agent.name, NO_RECORD))
+      app.say.info(("sent to %s, %s"):format(agent.name, NO_RECORD))
     end)
   end)
 end
 
-function M.host()
+function M.host(app)
   return {
     in_herdr = text(vim.env.HERDR_ENV) ~= "",
     workspace = vim.env.HERDR_WORKSPACE_ID,
     me = vim.env.HERDR_PANE_ID,
     run = function(args, done)
-      local process = require("damnit.process")
       local binary = vim.env.HERDR_BIN_PATH
       if text(binary) == "" then
         binary = "herdr"
@@ -167,7 +167,7 @@ function M.host()
 
       local command = vim.list_extend({ binary }, args)
 
-      process.run(command, process.timeout_seconds(require("damnit").options), function(out)
+      app.process.run(command, timeout_seconds(app.options), function(out)
         if out.missing then
           return done("", ("%s: no such file or directory"):format(binary))
         end
@@ -189,8 +189,8 @@ function M.host()
   }
 end
 
-function M.send()
-  local object = require("damnit.list").object_under_cursor()
+function M.send(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -201,7 +201,7 @@ function M.send()
       return
     end
 
-    M.hand_off(object, note, M.host())
+    M.hand_off(app, object, note, M.host(app))
   end)
 end
 

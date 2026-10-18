@@ -1,15 +1,13 @@
 local M = {}
 
+local diff = require("damnit.render.diff")
 local entries = require("damnit.window.entries")
 local folds = require("damnit.folds")
 local layout = require("damnit.window.layout")
-local message = require("damnit.message")
-local function queue()
-  return require("damnit").app().queue
-end
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
+local store = require("damnit.store")
 local verbs = require("damnit.dam.verbs")
 
 local buffer_by_store = {}
@@ -19,14 +17,6 @@ local model_by_store = {}
 local remote_list_by_store = {}
 
 local window_dam_was_opened_from = nil
-
-function M.store_display(key)
-  if key == "default" then
-    return "dam's default"
-  end
-
-  return vim.fn.fnamemodify(key, ":~")
-end
 
 local function window_for(buf)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -38,8 +28,8 @@ local function window_for(buf)
   return nil
 end
 
-function M.buffer(key)
-  key = key or queue().key()
+function M.buffer(app, key)
+  key = key or app.store
 
   local existing = buffer_by_store[key]
   if existing and vim.api.nvim_buf_is_valid(existing) then
@@ -55,17 +45,16 @@ function M.buffer(key)
   vim.bo[buf].buflisted = false
   vim.bo[buf].modifiable = false
 
-  require("damnit.keys").attach(buf, "damstatus")
   buffer_by_store[key] = buf
 
   return buf
 end
 
-function M.open()
-  local key = queue().key()
+function M.open(app)
+  local key = app.store
   render.define()
 
-  local buf = M.buffer(key)
+  local buf = M.buffer(app, key)
   local win = window_for(buf)
 
   if win then
@@ -73,10 +62,10 @@ function M.open()
   else
     window_dam_was_opened_from = vim.api.nvim_get_current_win()
 
-    layout.open(buf, require("damnit").options.window.float)
+    layout.open(buf, app.options.window.float)
   end
 
-  M.refresh(key)
+  M.refresh(app, key)
 
   return buf
 end
@@ -89,12 +78,12 @@ function M.origin()
   return nil
 end
 
-function M.model(key)
-  return model_by_store[key or queue().key()]
+function M.model(app, key)
+  return model_by_store[key or app.store]
 end
 
-function M.line_of(section_kind, nth)
-  local buf = buffer_by_store[queue().key()]
+function M.line_of(app, section_kind, nth)
+  local buf = buffer_by_store[app.store]
   if not buf then
     return nil
   end
@@ -102,13 +91,13 @@ function M.line_of(section_kind, nth)
   return entries.line_of(buf, section_kind, nth)
 end
 
-function M.entry_under_cursor()
+function M.entry_under_cursor(app)
   local buf = vim.api.nvim_get_current_buf()
   if vim.bo[buf].filetype ~= "damstatus" then
     return nil
   end
 
-  return entries.at_line(buf, vim.api.nvim_win_get_cursor(0)[1], M.model())
+  return entries.at_line(buf, vim.api.nvim_win_get_cursor(0)[1], M.model(app))
 end
 
 local function oid_by_line(lines)
@@ -159,7 +148,7 @@ local function draw(key, lines)
 
   redraw.keep_cursor(buf, oid_by_line(lines), function()
     render.draw(buf, lines)
-    require("damnit.render.diff").apply(buf, key, model_by_store[key])
+    diff.apply(buf, key, model_by_store[key])
   end)
 
   if win then
@@ -168,32 +157,32 @@ local function draw(key, lines)
   end
 end
 
-function M.open_diffs(key)
-  return require("damnit.render.diff").open_set(key or queue().key())
+function M.open_diffs(app, key)
+  return diff.open_set(key or app.store)
 end
 
-local function header_state(key)
+local function header_state(app, key)
   local win = window_for(buffer_by_store[key])
 
   return {
-    store = M.store_display(key),
-    running = queue().foreground(key),
+    store = store.display(key),
+    running = app.queue.foreground(key),
     now = os.time(),
     width = win and vim.api.nvim_win_get_width(win) or nil,
   }
 end
 
-function M.redraw_current(key)
-  key = key or queue().key()
+function M.redraw_current(app, key)
+  key = key or app.store
 
   if not model_by_store[key] then
     return
   end
 
-  draw(key, render.lines(model_by_store[key], header_state(key)))
+  draw(key, render.lines(model_by_store[key], header_state(app, key)))
 end
 
-function M.redraw(key, status)
+function M.redraw(app, key, status)
   local buf = buffer_by_store[key]
   if not buf or not vim.api.nvim_buf_is_loaded(buf) then
     return
@@ -201,15 +190,15 @@ function M.redraw(key, status)
 
   model_by_store[key] = status_model.build(status, remote_list_by_store[key])
 
-  draw(key, render.lines(model_by_store[key], header_state(key)))
+  draw(key, render.lines(model_by_store[key], header_state(app, key)))
 end
 
-local function read_the_remote_list_until_cached(key)
+local function read_the_remote_list_until_cached(app, key)
   if remote_list_by_store[key] ~= nil then
     return
   end
 
-  queue().submit({
+  app.queue.submit({
     args = verbs.remote_list(),
     label = "remote list",
     on_done = function(data)
@@ -219,42 +208,42 @@ local function read_the_remote_list_until_cached(key)
 end
 
 local function status_args_full_while_a_diff_is_open(key)
-  if next(require("damnit.render.diff").open_set(key)) ~= nil then
+  if next(diff.open_set(key)) ~= nil then
     return verbs.status(true)
   end
 
   return verbs.status()
 end
 
-function M.refresh(key)
-  key = key or queue().key()
+function M.refresh(app, key)
+  key = key or app.store
 
-  read_the_remote_list_until_cached(key)
+  read_the_remote_list_until_cached(app, key)
 
-  queue().submit({
+  app.queue.submit({
     args = status_args_full_while_a_diff_is_open(key),
     label = "status",
     on_done = function(status, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
-      M.redraw(key, status)
+      M.redraw(app, key, status)
     end,
   })
 end
 
-function M.forget_remotes(key)
-  remote_list_by_store[key or queue().key()] = nil
+function M.forget_remotes(app, key)
+  remote_list_by_store[key or app.store] = nil
 end
 
-function M.tick(key)
+function M.tick(app, key)
   local buf = buffer_by_store[key]
   if not buf or not vim.api.nvim_buf_is_loaded(buf) or not model_by_store[key] then
     return
   end
 
-  local lines = render.lines(model_by_store[key], header_state(key))
+  local lines = render.lines(model_by_store[key], header_state(app, key))
 
   local head, text = {}, {}
   for index, line in ipairs(lines) do
@@ -271,23 +260,10 @@ function M.tick(key)
   render.mark(buf, head, 0)
 end
 
-vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
-  group = vim.api.nvim_create_augroup("damnit", { clear = false }),
-  desc = "dam: the legend keeps whole entries when the status window narrows",
-  callback = function()
-    for key in pairs(buffer_by_store) do
-      M.tick(key)
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("BufReadCmd", {
-  group = vim.api.nvim_create_augroup("damnit", { clear = false }),
-  pattern = "damnit://status/*",
-  desc = "dam: :e re-reads the status",
-  callback = function()
-    M.refresh()
-  end,
-})
+function M.tick_every_store(app)
+  for key in pairs(buffer_by_store) do
+    M.tick(app, key)
+  end
+end
 
 return M

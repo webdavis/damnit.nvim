@@ -30,11 +30,7 @@ function M.with(run, opts)
   forget_the_refused_view_names()
   damnit.options.views = opts.views or {}
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local buf = opts.open and opts.open() or damnit.open(opts.name)
   fake_process.settle(function()
@@ -45,7 +41,6 @@ function M.with(run, opts)
 
   fake_process.drain()
 
-  vim.notify = real
   damnit.options.views = {}
   vim.cmd("silent! %bwipeout!")
   views.reset()

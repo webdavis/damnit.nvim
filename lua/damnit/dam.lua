@@ -1,7 +1,6 @@
 local M = {}
 
 local answer = require("damnit.answer")
-local message = require("damnit.message")
 local timeout_seconds = require("damnit.process").timeout_seconds
 local verbs = require("damnit.dam.verbs")
 
@@ -60,7 +59,7 @@ local CANCELLED_BY_SETUP = {
   message = "the dam call was dropped when the options changed",
 }
 
-function M.new(options, process)
+function M.new(options, process, say)
   local client = { version = nil }
 
   local handshake = { state = "unknown", refusal = nil, waiting = {} }
@@ -102,7 +101,7 @@ function M.new(options, process)
       handshake.state, handshake.refusal = "refused", refusal_for(nil)
     elseif not version then
       handshake.state = "ok"
-      message.warn(("dam --version printed %q, which is not a version; going on anyway"):format(banner))
+      say.warn(("dam --version printed %q, which is not a version; going on anyway"):format(banner))
     elseif not M.supported(version) then
       handshake.state, handshake.refusal = "refused", refusal_for(version)
     else

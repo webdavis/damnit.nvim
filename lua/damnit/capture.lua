@@ -1,6 +1,7 @@
 local M = {}
 
-local message = require("damnit.message")
+local describe = require("damnit.location").describe
+local location_edit = require("damnit.location_edit")
 local verbs = require("damnit.dam.verbs")
 
 local INBOX = "inbox/"
@@ -54,38 +55,38 @@ function M.content(lines)
 end
 
 function M.args(content, location)
-  return verbs.new(content, INBOX, location and require("damnit.location").describe(location))
+  return verbs.new(content, INBOX, location and describe(location))
 end
 
-function M.create(content, where)
+function M.create(app, content, where)
   if content == "" then
-    return message.warn("there is nothing to capture here")
+    return app.say.warn("there is nothing to capture here")
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = M.args(content, where),
     label = "new",
     on_done = function(object, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       if type(object) ~= "table" or not object.oid then
-        return message.warn("dam answered without an object")
+        return app.say.warn("dam answered without an object")
       end
 
-      message.say("captured " .. content)
+      app.say.info("captured " .. content)
     end,
   })
 end
 
-function M.capture(range)
+function M.capture(app, range)
   local buf = vim.api.nvim_get_current_buf()
   local first = range and range.line1 or vim.api.nvim_win_get_cursor(0)[1]
-  local where = require("damnit.location_edit").of_buffer(buf, first)
+  local where = location_edit.of_buffer(buf, first)
 
   if range then
-    return M.create(M.content(vim.api.nvim_buf_get_lines(buf, range.line1 - 1, range.line2, false)), where)
+    return M.create(app, M.content(vim.api.nvim_buf_get_lines(buf, range.line1 - 1, range.line2, false)), where)
   end
 
   local line = vim.api.nvim_buf_get_lines(buf, first - 1, first, false)[1] or ""
@@ -94,10 +95,10 @@ function M.capture(range)
 
   vim.ui.input({ prompt = "dam task: ", default = current_line_words }, function(answer)
     if answer == nil or vim.trim(answer) == "" then
-      return message.warn("nothing captured")
+      return app.say.warn("nothing captured")
     end
 
-    M.create(vim.trim(answer), where)
+    M.create(app, vim.trim(answer), where)
   end)
 end
 

@@ -1,7 +1,6 @@
 local M = {}
 
 local diff = require("damnit.render.diff")
-local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local status_model = require("damnit.status_model")
 local verbs = require("damnit.dam.verbs")
@@ -16,7 +15,7 @@ local function set_field_lines(object)
   return lines
 end
 
-function M.conflict(entry)
+function M.conflict(_, entry)
   local short = entry.oid:sub(1, 7)
 
   scratch.read_only(("damnit://conflict/%s/ours"):format(short), set_field_lines(entry.ours), "vsplit")
@@ -49,17 +48,17 @@ local function newest(commits, count)
   return vim.list_slice(commits, 1, count)
 end
 
-function M.unpushed(entry)
+function M.unpushed(app, entry)
   if (entry.commits or 0) == 0 then
-    return message.warn("this remote has no commit on this line")
+    return app.say.warn("this remote has no commit on this line")
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = verbs.log(),
     label = "log",
     on_done = function(data, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       local lines = {

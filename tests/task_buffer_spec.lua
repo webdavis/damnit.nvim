@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
@@ -184,7 +185,7 @@ return {
       local empty = vim.api.nvim_get_current_buf()
       local calls = #fake_process.argv_log(fake)
 
-      local again = task_buffer.open(OID)
+      local again = task_buffer.open(app, OID)
 
       assert(again == buf, ("a second open made buffer %d beside %d"):format(again, buf))
       assert(vim.api.nvim_get_current_buf() == buf, "the window already showing the task was not focused")

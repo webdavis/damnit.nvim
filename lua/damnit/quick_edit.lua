@@ -1,6 +1,6 @@
 local M = {}
 
-local message = require("damnit.message")
+local list = require("damnit.list")
 local tree = require("damnit.tree")
 local verbs = require("damnit.dam.verbs")
 
@@ -17,35 +17,31 @@ local function text(value)
   return tostring(value)
 end
 
-local function under_cursor()
-  return require("damnit.list").object_under_cursor()
+local function send(app, args, said)
+  list.write(app, args, args[1], said)
 end
 
-local function send(args, said)
-  require("damnit.list").write(args, args[1], said)
-end
-
-function M.reopen()
-  local object = under_cursor()
+function M.reopen(app)
+  local object = list.object_under_cursor(app)
 
   if object then
-    send(verbs.reopen(object.oid), "reopened " .. text(object.subject))
+    send(app, verbs.reopen(object.oid), "reopened " .. text(object.subject))
   end
 end
 
-function M.reopen_here()
-  local spec = require("damnit.list").current_spec()
+function M.reopen_here(app)
+  local spec = list.current_spec()
 
   local showing_completed_history = spec and spec.flat
   if not showing_completed_history then
-    return message.warn("u reopens in the completed history; X reopens an object here")
+    return app.say.warn("u reopens in the completed history; X reopens an object here")
   end
 
-  M.reopen()
+  M.reopen(app)
 end
 
-function M.delete()
-  local object = under_cursor()
+function M.delete(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -57,7 +53,7 @@ function M.delete()
       return
     end
 
-    send(verbs.rm(object.oid), "removed " .. subject)
+    send(app, verbs.rm(object.oid), "removed " .. subject)
   end)
 end
 
@@ -71,19 +67,19 @@ function M.cycled(priority)
   return current - 1
 end
 
-function M.cycle_priority()
-  local object = under_cursor()
+function M.cycle_priority(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
 
   local next_priority = M.cycled(type(object.task) == "table" and object.task.priority or nil)
 
-  send(verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
+  send(app, verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
 end
 
-function M.schedule()
-  local object = under_cursor()
+function M.schedule(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -93,7 +89,7 @@ function M.schedule()
       return
     end
 
-    send(verbs.due(object.oid, due), "due " .. due)
+    send(app, verbs.due(object.oid, due), "due " .. due)
   end)
 end
 
@@ -120,25 +116,25 @@ function M.label_choices(on, categories)
   return choices
 end
 
-function M.labels()
-  local object = under_cursor()
+function M.labels(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = verbs.category_list(),
     label = "category list",
     on_done = function(data, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       local on = type(object.labels) == "table" and object.labels or {}
       local choices = M.label_choices(on, data and data.categories)
 
       if #choices == 0 then
-        return message.say("dam's config declares no label categories")
+        return app.say.info("dam's config declares no label categories")
       end
 
       vim.ui.select(choices, {
@@ -152,6 +148,7 @@ function M.labels()
         end
 
         send(
+          app,
           (choice.on and verbs.unlabel or verbs.label)(object.oid, choice.name),
           ("@%s %s"):format(choice.name, choice.on and "off" or "on")
         )
@@ -172,7 +169,7 @@ function M.paths_in_view()
 
   offer(TOP_LEVEL)
 
-  for _, object in ipairs(require("damnit.list").objects_in_view()) do
+  for _, object in ipairs(list.objects_in_view()) do
     local path = text(object.path)
 
     while path ~= TOP_LEVEL do
@@ -186,8 +183,8 @@ function M.paths_in_view()
   return paths
 end
 
-function M.move()
-  local object = under_cursor()
+function M.move(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
@@ -202,46 +199,46 @@ function M.move()
       return
     end
 
-    send(verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
+    send(app, verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
   end)
 end
 
-function M.add()
-  local path = require("damnit.list").path_under_cursor()
+function M.add(app)
+  local path = list.path_under_cursor()
 
   vim.ui.input({ prompt = "New: " }, function(subject)
     if not subject or vim.trim(subject) == "" then
       return
     end
 
-    require("damnit.list").write(verbs.new(subject, path), "new", "added " .. vim.trim(subject))
+    list.write(app, verbs.new(subject, path), "new", "added " .. vim.trim(subject))
   end)
 end
 
-local function reparent(object, destination, refusal)
+local function reparent(app, object, destination, refusal)
   if not destination then
-    return message.warn(refusal)
+    return app.say.warn(refusal)
   end
 
-  send(verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
+  send(app, verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
 end
 
-function M.indent()
-  local object = under_cursor()
+function M.indent(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
 
-  reparent(object, tree.indent_to(object, require("damnit.list").object_above_cursor()))
+  reparent(app, object, tree.indent_to(object, list.object_above_cursor()))
 end
 
-function M.promote()
-  local object = under_cursor()
+function M.promote(app)
+  local object = list.object_under_cursor(app)
   if not object then
     return
   end
 
-  reparent(object, tree.promote_to(object, tree.index(require("damnit.list").objects_in_view())))
+  reparent(app, object, tree.promote_to(object, tree.index(list.objects_in_view())))
 end
 
 return M

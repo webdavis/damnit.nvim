@@ -1,9 +1,34 @@
+local SHARED_BY_EVERY_DOFILE = "damnit.tests.said"
+
+if package.loaded[SHARED_BY_EVERY_DOFILE] then
+  return package.loaded[SHARED_BY_EVERY_DOFILE]
+end
+
 local M = {}
+package.loaded[SHARED_BY_EVERY_DOFILE] = M
 
 local ELLIPSIS = "…"
 
+local recorders = {}
+
 local function kept()
-  return require("damnit.message").kept()
+  local whole = {}
+  for _, say in ipairs(recorders) do
+    vim.list_extend(whole, say.kept())
+  end
+
+  return whole
+end
+
+function M.recorder()
+  local lines, levels = {}, {}
+  local say = require("damnit.message").new(function(text, level)
+    lines[#lines + 1] = text
+    levels[#lines] = level
+  end)
+  recorders[#recorders + 1] = say
+
+  return say, lines, levels
 end
 
 function M.whole_text(notification)

@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
@@ -85,7 +86,7 @@ return {
   ["the sidebar open on a view draws this screen at 80x24"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
       screen.fix_size()
-      sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle())
+      sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle(app))
       screen.matches_golden("sidebar")
     end)
   end,
@@ -93,7 +94,7 @@ return {
   ["the sidebar keeps its view beside :Dam list and then :Dam done in the main window"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
       screen.fix_size()
-      sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle())
+      sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle(app))
       vim.cmd("wincmd p")
 
       vim.cmd("Dam list")

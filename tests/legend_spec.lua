@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local keys = require("damnit.keys")
+local keymaps = require("damnit.keymaps")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local render = require("damnit.render")
 local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
@@ -37,17 +37,17 @@ return {
   end,
 
   ["the staging legend names the six most-used keys from the key table"] = function()
-    assert(keys.legend("damstatus") == STAGING_LEGEND, keys.legend("damstatus"))
+    assert(keymaps.legend("damstatus") == STAGING_LEGEND, keymaps.legend("damstatus"))
   end,
 
   ["the list legend names the six most-used keys from the key table"] = function()
-    assert(keys.legend("damlist") == LIST_LEGEND, keys.legend("damlist"))
+    assert(keymaps.legend("damlist") == LIST_LEGEND, keymaps.legend("damlist"))
   end,
 
   ["a narrow legend drops whole entries from the end rather than cutting one"] = function()
-    assert(keys.legend("damlist", 26) == "g? help  <CR> open  x done", keys.legend("damlist", 26))
-    assert(keys.legend("damlist", 25) == "g? help  <CR> open", keys.legend("damlist", 25))
-    assert(keys.legend("damlist", 3) == "", keys.legend("damlist", 3))
+    assert(keymaps.legend("damlist", 26) == "g? help  <CR> open  x done", keymaps.legend("damlist", 26))
+    assert(keymaps.legend("damlist", 25) == "g? help  <CR> open", keymaps.legend("damlist", 25))
+    assert(keymaps.legend("damlist", 3) == "", keymaps.legend("damlist", 3))
   end,
 
   ["the staging window's third row is the legend, drawn faint"] = function()

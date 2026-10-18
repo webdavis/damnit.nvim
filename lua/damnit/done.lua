@@ -1,6 +1,6 @@
 local M = {}
 
-local message = require("damnit.message")
+local list = require("damnit.list")
 local verbs = require("damnit.dam.verbs")
 
 local SHORT_OID_LENGTH = 7
@@ -42,43 +42,43 @@ local function recurring_roll_forward(report)
   end
 end
 
-local function report_completion(object, report)
+local function report_completion(app, object, report)
   local rolled_forward = recurring_roll_forward(report)
 
   if rolled_forward then
-    return message.say(rolled_forward)
+    return app.say.info(rolled_forward)
   end
 
-  message.say("completed " .. text(object.subject))
+  app.say.info("completed " .. text(object.subject))
 end
 
 local function forcing_would_help(err, already_forced)
   return err.rule == "blocked" and not already_forced
 end
 
-local function ask_for_the_group_then_send(object)
+local function ask_for_the_group_then_send(app, object)
   vim.ui.input({ prompt = "Name of the group to move the children into: " }, function(name)
     name = vim.trim(name or "")
 
     if name ~= "" then
-      M.send(object, "into:" .. name)
+      M.send(app, object, "into:" .. name)
     end
   end)
 end
 
-function M.send(object, children)
-  require("damnit").app().queue.submit({
+function M.send(app, object, children)
+  app.queue.submit({
     args = verbs.done(object.oid, children),
     label = "done",
     on_done = function(report, err)
       if not err then
-        report_completion(object, report)
+        report_completion(app, object, report)
 
-        return require("damnit.list").refresh()
+        return list.refresh(app)
       end
 
       if not forcing_would_help(err, children) then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       vim.ui.select(DISPOSITIONS, {
@@ -95,20 +95,20 @@ function M.send(object, children)
         end
 
         if choice.children == "into" then
-          return ask_for_the_group_then_send(object)
+          return ask_for_the_group_then_send(app, object)
         end
 
-        M.send(object, choice.children)
+        M.send(app, object, choice.children)
       end)
     end,
   })
 end
 
-function M.complete()
-  local object = require("damnit.list").object_under_cursor()
+function M.complete(app)
+  local object = list.object_under_cursor(app)
 
   if object then
-    M.send(object)
+    M.send(app, object)
   end
 end
 

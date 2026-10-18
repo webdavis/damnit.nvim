@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 dofile(TESTS_DIR .. "/../plugin/damnit.lua")
@@ -15,17 +16,12 @@ local function with_views(declared, run)
   views.reset()
   damnit.options.views = declared
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local ok, err = pcall(run, notifications, fake)
 
   fake_process.drain()
 
-  vim.notify = real
   damnit.options.views = {}
   views.reset()
   fake_process.remove(fake)
@@ -36,7 +32,7 @@ end
 local function resolved(name)
   local spec, answered = nil, false
 
-  views.resolve_then(name, function(found)
+  views.resolve_then(app, name, function(found)
     spec, answered = found, true
   end)
   fake_process.settle(function()
@@ -54,7 +50,7 @@ end
 
 return {
   ["means every open task when it is given no name, and asks dam for no finished one"] = function()
-    local spec = views.resolve(nil)
+    local spec = views.resolve(app, nil)
 
     assert(spec.title == "all open tasks", spec.title)
     assert(spec.query == nil, tostring(spec.query))
@@ -73,7 +69,7 @@ return {
 
   ["reads dam's saved filters once per session and hands one of them to dam by name"] = function()
     with_views({}, function(_, fake)
-      views.load()
+      views.load(app)
       local spec = resolved("inbox")
 
       assert(spec and spec.title == "inbox" and spec.query == "inbox", vim.inspect(spec))
@@ -149,7 +145,7 @@ return {
     with_views({ today = "due:today", work = "path:work/" }, function()
       resolved("inbox")
 
-      assert(vim.deep_equal(views.known(), { "inbox", "today", "work" }), vim.inspect(views.known()))
+      assert(vim.deep_equal(views.known(app), { "inbox", "today", "work" }), vim.inspect(views.known(app)))
       assert(resolved("today").query == "due:today", "the declared view wins a collision")
     end)
   end,

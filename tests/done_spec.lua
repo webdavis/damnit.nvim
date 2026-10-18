@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
@@ -28,17 +29,12 @@ local function with_dam(run, opts)
     stderr = opts.stderr,
   })
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local ok, err = pcall(run, fake, notifications)
 
   fake_process.drain()
 
-  vim.notify = real
   fake_process.remove(fake)
 
   assert(ok, err)
@@ -69,7 +65,7 @@ return {
         on_choice(items[1], 1)
       end
 
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.drain()
       vim.ui.select = real
 
@@ -93,7 +89,7 @@ return {
         on_choice(items[2], 2)
       end
 
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.drain()
       vim.ui.select = real
 
@@ -114,7 +110,7 @@ return {
         on_answer("leftovers")
       end
 
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.drain()
       vim.ui.select, vim.ui.input = real_select, real_input
 
@@ -133,7 +129,7 @@ return {
         on_answer("  ")
       end
 
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.drain()
       vim.ui.select, vim.ui.input = real_select, real_input
 
@@ -148,7 +144,7 @@ return {
         on_choice(items[#items], #items)
       end
 
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.drain()
       vim.ui.select = real
 
@@ -165,7 +161,7 @@ return {
         on_choice(items[1], 1)
       end
 
-      done.send(STANDUP)
+      done.send(app, STANDUP)
       fake_process.settle(function()
         return #notifications > 0
       end)
@@ -182,7 +178,7 @@ return {
 
   ["says what it completed"] = function()
     with_dam(function(_, notifications)
-      done.send(TAXES)
+      done.send(app, TAXES)
       fake_process.settle(function()
         return #notifications > 0
       end)
@@ -193,7 +189,7 @@ return {
 
   ["reports a recurring task as rolled forward rather than as done"] = function()
     with_dam(function(_, notifications)
-      done.send({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" })
+      done.send(app, { oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" })
       fake_process.settle(function()
         return #notifications > 0
       end)

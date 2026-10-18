@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
@@ -8,7 +9,7 @@ local sidebar = require("damnit.sidebar")
 return {
   ["another buffer cannot be opened into the sidebar"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
 
@@ -21,13 +22,13 @@ return {
 
   ["opening an object from the sidebar lands beside it, not inside it"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
 
       sidebar_tab.cursor_to(win, "buy oat milk")
       vim.api.nvim_set_current_win(win)
-      list.open_under_cursor()
+      list.open_under_cursor(app)
 
       assert(vim.api.nvim_get_current_win() ~= win, "the object opened into the sidebar")
       assert(sidebar.window() == win, "the sidebar window is gone")
@@ -37,7 +38,7 @@ return {
 
   ["opening an object with the sidebar alone in the tabpage splits rather than erroring"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
       sidebar_tab.cursor_to(win, "buy oat milk")
@@ -45,7 +46,7 @@ return {
       vim.cmd("only")
 
       local before = sidebar_tab.windows_in_this_tabpage()
-      local ok, err = pcall(list.open_under_cursor)
+      local ok, err = pcall(list.open_under_cursor, app)
 
       assert(ok, "opening an object with the sidebar alone raised: " .. tostring(err))
       assert(
@@ -64,7 +65,7 @@ return {
       handle:write("one\ntwo\nthree\n")
       handle:close()
 
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
 
@@ -73,7 +74,7 @@ return {
       vim.cmd.tcd(vim.fn.fnameescape(root))
 
       local the_fixture_location_rewritten_for_this_tabpage_directory = { path = "lua/list.lua", line = 2 }
-      local jumped = location_edit.jump(the_fixture_location_rewritten_for_this_tabpage_directory)
+      local jumped = location_edit.jump(app, the_fixture_location_rewritten_for_this_tabpage_directory)
 
       assert(jumped, "the jump was refused")
       assert(vim.api.nvim_get_current_win() ~= win, "the file opened into the sidebar")
@@ -84,7 +85,7 @@ return {
 
   [":Dam list from inside the sidebar opens the view beside it and leaves the sidebar's own"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
 

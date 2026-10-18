@@ -1,9 +1,12 @@
 local M = {}
 
+local fixed_window = require("damnit.fixed_window")
 local format = require("damnit.list_format")
-local message = require("damnit.message")
+local location_edit = require("damnit.location_edit")
+local task_buffer = require("damnit.task_buffer")
 local tree = require("damnit.tree")
 local view = require("damnit.list.view")
+local views = require("damnit.views")
 
 local NOTHING_DRAWN = { entry_by_line = {} }
 
@@ -15,11 +18,11 @@ local function entry_under_cursor()
   return shown_here().entry_by_line[vim.api.nvim_win_get_cursor(0)[1]]
 end
 
-function M.object_under_cursor()
+function M.object_under_cursor(app)
   local entry = entry_under_cursor()
 
   if not entry then
-    message.warn("no object on this line")
+    app.say.warn("no object on this line")
 
     return nil
   end
@@ -40,22 +43,22 @@ function M.object_above_cursor()
   return nil
 end
 
-function M.open_under_cursor()
-  local object = M.object_under_cursor()
+function M.open_under_cursor(app)
+  local object = M.object_under_cursor(app)
 
   if object then
-    require("damnit.task_buffer").open(object.oid)
+    task_buffer.open(app, object.oid)
   end
 end
 
-function M.jump_to_location_under_cursor()
+function M.jump_to_location_under_cursor(app)
   local entry = entry_under_cursor()
 
   if not entry then
-    return message.warn("no object on this line")
+    return app.say.warn("no object on this line")
   end
 
-  require("damnit.location_edit").jump(entry.location)
+  location_edit.jump(app, entry.location)
 end
 
 local function view_on_screen_in_this_tabpage()
@@ -103,15 +106,15 @@ function M.children_of(path)
   return forest().children[tostring(path)] or {}
 end
 
-function M.toggle_fold()
-  local object = M.object_under_cursor()
+function M.toggle_fold(app)
+  local object = M.object_under_cursor(app)
   if not object then
     return
   end
 
   local path = tostring(object.path or "")
   if #M.children_of(path) == 0 then
-    return message.say("nothing is nested here")
+    return app.say.info("nothing is nested here")
   end
 
   local collapsed = shown_here().collapsed
@@ -119,25 +122,25 @@ function M.toggle_fold()
   redraw_without_asking_dam()
 end
 
-function M.write(args, label, said)
-  require("damnit").app().queue.submit({
+function M.write(app, args, label, said)
+  app.queue.submit({
     args = args,
     label = label,
     on_done = function(_, err)
       if err then
-        message.report(err)
+        app.say.report(err)
       elseif said then
-        message.say(said)
+        app.say.info(said)
       end
 
-      M.refresh()
+      M.refresh(app)
     end,
   })
 end
 
-function M.fetch(spec, callback)
-  require("damnit").app().queue.submit({
-    args = require("damnit.views").query_args(spec),
+function M.fetch(app, spec, callback)
+  app.queue.submit({
+    args = views.query_args(spec),
     label = "ls",
     on_done = function(data, err)
       callback(data and data.objects or {}, err)
@@ -145,18 +148,20 @@ function M.fetch(spec, callback)
   })
 end
 
-local function load_into(buf, shown)
+local function load_into(app, buf, shown)
+  view.belong_to(shown, app.store)
+
   if view.nothing_drawn_yet(buf) then
     view.draw(buf, shown, { format.title(shown.spec), "", "Loading..." })
   end
 
-  M.fetch(shown.spec, function(objects, err)
+  M.fetch(app, shown.spec, function(objects, err)
     if not vim.api.nvim_buf_is_valid(buf) then
       return
     end
 
     if err then
-      message.report(err)
+      app.say.report(err)
 
       return view.draw(buf, shown, format.refusal(shown.spec, err))
     end
@@ -165,22 +170,22 @@ local function load_into(buf, shown)
   end)
 end
 
-function M.refresh()
+function M.refresh(app)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     local shown = view.of(buf)
 
     if shown and #vim.fn.win_findbuf(buf) > 0 then
-      load_into(buf, shown)
+      load_into(app, buf, shown)
     end
   end
 end
 
-function M.open(spec)
+function M.open(app, spec)
   local buf, shown = view.ensure(spec)
 
-  require("damnit.sidebar").leave_fixed_window()
+  fixed_window.leave()
   vim.api.nvim_win_set_buf(0, buf)
-  load_into(buf, shown)
+  load_into(app, buf, shown)
 
   return buf
 end

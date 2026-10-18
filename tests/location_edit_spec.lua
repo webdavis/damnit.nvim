@@ -1,3 +1,4 @@
+local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 local location_edit = require("damnit.location_edit")
 
 local function load_what_a_jump_reaches_while_the_relative_package_path_still_resolves()
@@ -28,23 +29,19 @@ local function same_file_through_the_macos_temporary_directory_symlink(opened, p
 end
 
 local function jump_from_a_tabpage_of_its_own_in(root, parsed)
-  local real_notify, cwd = vim.notify, vim.uv.cwd()
-  local said = {}
-  vim.notify = function(message)
-    table.insert(said, message)
-  end
+  local cwd = vim.uv.cwd()
+  local say, said = recording.recorder()
 
   vim.cmd("tabnew")
   vim.cmd.tcd(vim.fn.fnameescape(root))
 
-  local ok, jumped = pcall(location_edit.jump, parsed)
+  local ok, jumped = pcall(location_edit.jump, { say = say }, parsed)
 
   local opened = vim.fs.normalize(vim.api.nvim_buf_get_name(0))
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   vim.cmd("tabclose")
   vim.cmd.tcd(vim.fn.fnameescape(cwd))
-  vim.notify = real_notify
 
   assert(ok, jumped)
 

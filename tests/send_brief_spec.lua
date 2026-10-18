@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
@@ -5,7 +6,7 @@ local send = require("damnit.send")
 
 return {
   ["writes dam's own fields, and leaves out what the object has none of"] = function()
-    local brief = send.brief(hand_off.FULL, "start with the receipts")
+    local brief = send.brief(app, hand_off.FULL, "start with the receipts")
 
     assert(brief:find("dam task: file taxes", 1, true), brief)
     assert(brief:find("oid: 78b8950", 1, true), "seven characters, which is what an agent types")
@@ -19,7 +20,7 @@ return {
   end,
 
   ["leaves out a field the object has nothing for"] = function()
-    local brief = send.brief({ oid = hand_off.OID, subject = "x", path = "inbox/" }, nil)
+    local brief = send.brief(app, { oid = hand_off.OID, subject = "x", path = "inbox/" }, nil)
 
     assert(not brief:find("due:", 1, true), brief)
     assert(not brief:find("labels:", 1, true), brief)
@@ -28,14 +29,14 @@ return {
   end,
 
   ["leaves the priority off an object at dam's least urgent"] = function()
-    local brief = send.brief({ oid = hand_off.OID, subject = "x", path = "inbox/", task = { priority = 4 } }, nil)
+    local brief = send.brief(app, { oid = hand_off.OID, subject = "x", path = "inbox/", task = { priority = 4 } }, nil)
 
     assert(not brief:find("priority:", 1, true), brief)
   end,
 
   ["names the store the window's header names"] = function()
-    local brief = send.brief({ oid = hand_off.OID, subject = "x", path = "inbox/" }, nil)
-    local store = require("damnit.window").store_display(require("damnit").app().queue.key())
+    local brief = send.brief(app, { oid = hand_off.OID, subject = "x", path = "inbox/" }, nil)
+    local store = require("damnit.store").display(app.store)
 
     assert(brief:find("store: " .. store, 1, true), brief)
   end,

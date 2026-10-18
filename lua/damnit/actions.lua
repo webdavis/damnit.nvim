@@ -1,34 +1,37 @@
 local M = {}
 
-local message = require("damnit.message")
+local commit_buffer = require("damnit.commit_buffer")
+local open = require("damnit.open")
+local task_buffer = require("damnit.task_buffer")
 local verbs = require("damnit.dam.verbs")
+local window = require("damnit.window")
 
-function M.refresh()
-  require("damnit.window").forget_remotes()
-  require("damnit.window").refresh()
+function M.refresh(app)
+  window.forget_remotes(app)
+  window.refresh(app)
 end
 
-function M.cancel()
-  require("damnit").app().queue.cancel()
+function M.cancel(app)
+  app.queue.cancel()
 end
 
 local function is_the_only_window_left()
   return #vim.api.nvim_list_tabpages() == 1 and #vim.api.nvim_tabpage_list_wins(0) == 1
 end
 
-function M.close()
+function M.close(app)
   if is_the_only_window_left() then
-    return message.warn("the status window is the only window open")
+    return app.say.warn("the status window is the only window open")
   end
 
   vim.api.nvim_win_close(0, false)
 end
 
-function M.jump_to_section(kind, heading, count)
-  local line = require("damnit.window").line_of(kind, count)
+function M.jump_to_section(app, kind, heading)
+  local line = window.line_of(app, kind, vim.v.count1)
 
   if not line then
-    return message.warn(("no %s section"):format(heading))
+    return app.say.warn(("no %s section"):format(heading))
   end
 
   vim.api.nvim_win_set_cursor(0, { line, 0 })
@@ -81,61 +84,61 @@ function M.targets()
   return { oids = picked, section = section }
 end
 
-function M.write(args, label)
-  require("damnit").app().queue.submit({
+function M.write(app, args, label)
+  app.queue.submit({
     args = args,
     label = label,
     on_done = function(_, err)
       if err then
-        message.report(err)
+        app.say.report(err)
       end
 
-      require("damnit.window").refresh()
+      window.refresh(app)
     end,
   })
 end
 
-function M.stage()
+function M.stage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   if picked.section == "staged" then
-    return message.warn("already staged")
+    return app.say.warn("already staged")
   end
 
-  M.write(verbs.add(picked.oids), "add")
+  M.write(app, verbs.add(picked.oids), "add")
 end
 
-function M.unstage()
+function M.unstage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   if picked.section ~= "staged" then
-    return message.warn("not staged")
+    return app.say.warn("not staged")
   end
 
-  M.write(verbs.reset(picked.oids), "reset")
+  M.write(app, verbs.reset(picked.oids), "reset")
 end
 
-function M.toggle_stage()
+function M.toggle_stage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   local verb = picked.section == "staged" and "reset" or "add"
-  M.write(verbs[verb](picked.oids), verb)
+  M.write(app, verbs[verb](picked.oids), verb)
 end
 
-function M.unstage_all()
-  local model = require("damnit.window").model()
+function M.unstage_all(app)
+  local model = window.model(app)
   local anything_staged = false
 
   for _, section in ipairs((model or {}).sections or {}) do
@@ -143,17 +146,17 @@ function M.unstage_all()
   end
 
   if not anything_staged then
-    return message.warn("nothing is staged")
+    return app.say.warn("nothing is staged")
   end
 
-  M.write(verbs.reset(), "reset")
+  M.write(app, verbs.reset(), "reset")
 end
 
-function M.discard()
-  local found = require("damnit.window").entry_under_cursor()
+function M.discard(app)
+  local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
-    return message.warn("nothing to discard on this line")
+    return app.say.warn("nothing to discard on this line")
   end
 
   local entry = found.entry
@@ -167,50 +170,47 @@ function M.discard()
     end
 
     if never_committed then
-      return M.write(verbs.rm(entry.oid), "rm")
+      return M.write(app, verbs.rm(entry.oid), "rm")
     end
 
-    M.write(verbs.restore(entry.oid), "restore")
+    M.write(app, verbs.restore(entry.oid), "restore")
   end)
 end
 
-function M.toggle_diff()
-  local window = require("damnit.window")
-  local found = window.entry_under_cursor()
+function M.toggle_diff(app)
+  local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
-    return message.warn("nothing to show on this line")
+    return app.say.warn("nothing to show on this line")
   end
 
   local entry = found.entry
-  local open_diffs = window.open_diffs()
+  local open_diffs = window.open_diffs(app)
   open_diffs[entry.oid] = not open_diffs[entry.oid] or nil
 
   local drawn_status_has_no_objects_to_compare = not (entry.before or entry.after)
   if open_diffs[entry.oid] and drawn_status_has_no_objects_to_compare then
-    return window.refresh()
+    return window.refresh(app)
   end
 
-  window.redraw_current()
+  window.redraw_current(app)
 end
 
-function M.open_under_cursor()
-  local window = require("damnit.window")
-  local found = window.entry_under_cursor()
+function M.open_under_cursor(app)
+  local found = window.entry_under_cursor(app)
 
   if not found then
     return
   end
 
   local entry = found.entry
-  local open = require("damnit.open")
 
   if entry.kind == "conflict" then
-    return open.conflict(entry)
+    return open.conflict(app, entry)
   end
 
   if entry.kind == "remote" then
-    return open.unpushed(entry)
+    return open.unpushed(app, entry)
   end
 
   if entry.kind ~= "change" then
@@ -225,11 +225,11 @@ function M.open_under_cursor()
     vim.cmd("split")
   end
 
-  require("damnit.task_buffer").open(entry.oid)
+  task_buffer.open(app, entry.oid)
 end
 
-function M.commit()
-  require("damnit.commit_buffer").open()
+function M.commit(app)
+  commit_buffer.open(app)
 end
 
 return M

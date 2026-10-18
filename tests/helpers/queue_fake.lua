@@ -7,15 +7,10 @@ local damnit = require("damnit")
 local function with_fake(run, opts)
   local fake = fake_process.install(opts)
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local ok, err = pcall(run, fake, notifications)
 
-  vim.notify = real
   fake_process.remove(fake)
   damnit.options.store = nil
 

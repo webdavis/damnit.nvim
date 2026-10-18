@@ -1,7 +1,9 @@
 local M = {}
 
 local format = require("damnit.list_format")
+local keymaps = require("damnit.keymaps")
 local redraw = require("damnit.redraw")
+local render = require("damnit.render")
 local scratch = require("damnit.scratch")
 
 local function buffer_name(spec)
@@ -13,7 +15,7 @@ function M.of(buf)
 end
 
 function M.winbar()
-  local legend = require("damnit.keys").legend("damlist", vim.api.nvim_win_get_width(vim.g.statusline_winid))
+  local legend = keymaps.legend("damlist", vim.api.nvim_win_get_width(vim.g.statusline_winid))
 
   return "%#DamLegend#" .. legend:gsub("%%", "%%%%")
 end
@@ -28,14 +30,12 @@ local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
-  require("damnit.render").define()
+  render.define()
 
   vim.api.nvim_create_autocmd("BufWinEnter", {
     buffer = buf,
     callback = bar_the_current_row_cut_long_rows_and_show_the_legend_in_this_window_only,
   })
-
-  require("damnit.keys").attach(buf, "damlist")
 end
 
 function M.ensure(spec)
@@ -46,6 +46,13 @@ function M.ensure(spec)
   shown.collapsed = shown.collapsed or {}
 
   return buf, shown
+end
+
+function M.belong_to(shown, store)
+  if shown.store ~= store then
+    shown.collapsed = {}
+    shown.store = store
+  end
 end
 
 local function oid_by_line(lines, line_entries)
@@ -59,7 +66,7 @@ local function oid_by_line(lines, line_entries)
 end
 
 local function colour_the_badges(buf, line_entries)
-  local namespace = require("damnit.render").NAMESPACE
+  local namespace = render.NAMESPACE
   vim.api.nvim_buf_clear_namespace(buf, namespace, 0, -1)
 
   for line, entry in pairs(line_entries) do

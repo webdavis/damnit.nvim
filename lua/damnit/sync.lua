@@ -1,10 +1,11 @@
 local M = {}
 
-local message = require("damnit.message")
+local actions = require("damnit.actions")
 local verbs = require("damnit.dam.verbs")
+local window = require("damnit.window")
 
-function M.remote_under_cursor()
-  local found = require("damnit.window").entry_under_cursor()
+function M.remote_under_cursor(app)
+  local found = window.entry_under_cursor(app)
 
   if found and found.entry.kind == "remote" then
     return found.entry.remote
@@ -60,30 +61,29 @@ local function one_line(verb, report)
   return table.concat(lines, "; ")
 end
 
-function M.sync(verb, remote)
-  require("damnit").app().queue.submit({
+function M.sync(app, verb, remote)
+  app.queue.submit({
     args = verbs[verb](remote),
     label = remote and ("%s %s"):format(verb, remote) or verb,
     verb = verb,
     network = true,
     on_done = function(report, err)
       if err and err.kind == "credential" then
-        message.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
+        app.say.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
       elseif err then
-        message.report(err)
+        app.say.report(err)
       else
-        message.say(one_line(verb, report))
+        app.say.info(one_line(verb, report))
       end
 
-      local window = require("damnit.window")
-      window.forget_remotes()
-      window.refresh()
+      window.forget_remotes(app)
+      window.refresh(app)
     end,
   })
 end
 
-function M.push()
-  local model = require("damnit.window").model()
+function M.push(app)
+  local model = window.model(app)
   local any_remote_behind = false
 
   for _, remote in ipairs((model or {}).remotes or {}) do
@@ -91,24 +91,24 @@ function M.push()
   end
 
   if not any_remote_behind then
-    return message.say("nothing to push")
+    return app.say.info("nothing to push")
   end
 
-  M.sync("push", M.remote_under_cursor())
+  M.sync(app, "push", M.remote_under_cursor(app))
 end
 
-function M.pull()
-  M.sync("pull", M.remote_under_cursor())
+function M.pull(app)
+  M.sync(app, "pull", M.remote_under_cursor(app))
 end
 
-function M.resolve(side)
-  local found = require("damnit.window").entry_under_cursor()
+function M.resolve(app, side)
+  local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "conflict" then
-    return message.warn("no conflict on this line")
+    return app.say.warn("no conflict on this line")
   end
 
-  require("damnit.actions").write(verbs.resolve(found.entry.oid, side), "resolve")
+  actions.write(app, verbs.resolve(found.entry.oid, side), "resolve")
 end
 
 return M

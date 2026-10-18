@@ -1,27 +1,28 @@
 local M = {}
 
-local message = require("damnit.message")
+M.COMPLETED = { title = "completed", query = "done", flat = true }
+
 local verbs = require("damnit.dam.verbs")
 
 local dam_filters_this_session = nil
 local waiting_on_the_list = nil
 
-local function declared_views()
-  return require("damnit").options.views or {}
+local function declared_views(app)
+  return app.options.views or {}
 end
 
-function M.declared()
-  local names = vim.tbl_keys(declared_views())
+function M.declared(app)
+  local names = vim.tbl_keys(declared_views(app))
   table.sort(names)
 
   return names
 end
 
-function M.known()
-  local names = M.declared()
+function M.known(app)
+  local names = M.declared(app)
 
   for _, name in ipairs(dam_filters_this_session or {}) do
-    if not declared_views()[name] then
+    if not declared_views(app)[name] then
       names[#names + 1] = name
     end
   end
@@ -30,7 +31,7 @@ function M.known()
   return names
 end
 
-function M.load(on_loaded)
+function M.load(app, on_loaded)
   on_loaded = on_loaded or function() end
 
   if dam_filters_this_session then
@@ -43,7 +44,7 @@ function M.load(on_loaded)
   end
 
   waiting_on_the_list = { on_loaded }
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = verbs.filter_list(),
     label = "filter list",
     on_done = function(data, err)
@@ -51,7 +52,7 @@ function M.load(on_loaded)
       waiting_on_the_list = nil
 
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       dam_filters_this_session = {}
@@ -66,8 +67,8 @@ function M.load(on_loaded)
   })
 end
 
-local function refuse(name)
-  local declared = M.declared()
+local function refuse(app, name)
+  local declared = M.declared(app)
   local known = #declared > 0 and ("declared views are " .. table.concat(declared, ", "))
     or "no views are declared in setup"
 
@@ -75,15 +76,15 @@ local function refuse(name)
     known = known .. "; dam's saved filters are " .. table.concat(dam_filters_this_session, ", ")
   end
 
-  message.fail(("there is no view named %q; %s"):format(name, known))
+  app.say.fail(("there is no view named %q; %s"):format(name, known))
 end
 
-function M.resolve(name)
+function M.resolve(app, name)
   if name == nil or name == "" then
     return { title = "all open tasks" }
   end
 
-  local query = declared_views()[name]
+  local query = declared_views(app)[name]
   if type(query) == "string" then
     return { title = name, query = query }
   end
@@ -92,18 +93,18 @@ function M.resolve(name)
     return { title = name, query = name }
   end
 
-  refuse(name)
+  refuse(app, name)
 end
 
-function M.resolve_then(name, on_spec)
-  local needs_dams_list = name ~= nil and name ~= "" and type(declared_views()[name]) ~= "string"
+function M.resolve_then(app, name, on_spec)
+  local needs_dams_list = name ~= nil and name ~= "" and type(declared_views(app)[name]) ~= "string"
 
   if not needs_dams_list then
-    return on_spec(M.resolve(name))
+    return on_spec(M.resolve(app, name))
   end
 
-  M.load(function()
-    local spec = M.resolve(name)
+  M.load(app, function()
+    local spec = M.resolve(app, name)
 
     if spec then
       on_spec(spec)

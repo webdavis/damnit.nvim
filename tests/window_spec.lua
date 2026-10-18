@@ -1,8 +1,6 @@
+local app = require("damnit").app()
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
-local function queue()
-  return require("damnit").app().queue
-end
 local render = require("damnit.render")
 local window = require("damnit.window")
 
@@ -10,16 +8,16 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
-  window.tick(queue().key())
-  window.tick(queue().key())
+  window.tick(app, app.store)
+  window.tick(app, app.store)
 end
 
 return {
   ["opens one buffer per store and focuses it rather than opening a second"] = function()
     with_window(function()
-      local first = window.buffer()
+      local first = window.buffer(app)
       vim.cmd("wincmd p")
-      local second = window.open()
+      local second = window.open(app)
 
       assert(first == second, "a second :Dam focuses the buffer the first opened")
 
@@ -35,7 +33,7 @@ return {
 
   ["says how long ago each remote pulled, against the real clock"] = function()
     with_window(function()
-      local remotes = vim.api.nvim_buf_get_lines(window.buffer(), 1, 2, false)[1]
+      local remotes = vim.api.nvim_buf_get_lines(window.buffer(app), 1, 2, false)[1]
 
       assert(remotes:find("fake %(1 unpushed, pulled %d+d ago%)"), remotes)
       assert(remotes:find("flaky (7 unpushed, never pulled)", 1, true), remotes)
@@ -44,10 +42,10 @@ return {
 
   ["leaves the poller's own read out of the header"] = function()
     with_window(function(fake)
-      local buf = window.buffer()
+      local buf = window.buffer(app)
       local before = #fake_process.argv_log(fake)
 
-      queue().submit({ args = { "ls", "--json" }, label = "ls", background = true })
+      app.queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
       tick_twice_by_hand_full_redraw_then_header_only()
 
@@ -60,17 +58,17 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
 
   ["writes the running operation into the header on a tick"] = function()
     with_window(function(fake)
-      local buf = window.buffer()
+      local buf = window.buffer(app)
       local before = #fake_process.argv_log(fake)
 
-      queue().submit({ args = { "status", "--json" }, label = "push fake" })
+      app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
       tick_twice_by_hand_full_redraw_then_header_only()
 
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
@@ -83,19 +81,19 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
 
-  ["shows a running call in the header after queue.reset without a tick by hand"] = function()
+  ["shows a running call in the header after setup, without a tick by hand"] = function()
     with_window(function(fake)
       require("damnit").setup({})
-      local buf = window.buffer()
+      local buf = window.buffer(app)
       local before = #fake_process.argv_log(fake)
       fake.hold = true
 
-      queue().submit({ args = { "status", "--json" }, label = "push fake" })
+      app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
 
       local function row_3()
         return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
@@ -104,12 +102,12 @@ return {
         vim.wait(2000, function()
           return row_3():find("Running: push fake", 1, true) ~= nil
         end, 50),
-        "reset dropped the header's tick listener: " .. row_3()
+        "setup cut the queue off from the header: " .. row_3()
       )
 
       fake.release()
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
     end)
   end,
@@ -123,12 +121,12 @@ return {
 
       vim.api.nvim_feedkeys("-", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
+        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
       end)
 
       local landed = vim.api.nvim_win_get_cursor(0)[1]
       assert(landed == line, ("the cursor left line %d for line %d"):format(line, landed))
-      local found = window.entry_under_cursor()
+      local found = window.entry_under_cursor(app)
       assert(found and found.section.kind == "working", vim.inspect(found and found.section.kind))
       assert(found.entry.oid:sub(1, 7) == "e648ce0", found.entry.oid)
     end)
@@ -136,7 +134,7 @@ return {
 
   ["keeps a section the user folded closed when the re-read moves its heading"] = function()
     with_window(function(fake)
-      local buf = window.buffer()
+      local buf = window.buffer(app)
 
       local function heading_of(kind)
         local sections = vim.b[buf].damnit_sections
@@ -161,7 +159,7 @@ return {
       local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and queue().running() == nil
+        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
       end)
 
       local moved = heading_of("staged")
@@ -173,7 +171,7 @@ return {
 
   ["makes the buffer unmodifiable, unlisted and scratch"] = function()
     with_window(function()
-      local buf = window.buffer()
+      local buf = window.buffer(app)
 
       assert(vim.bo[buf].filetype == "damstatus", vim.bo[buf].filetype)
       assert(vim.bo[buf].buftype == "nofile", vim.bo[buf].buftype)
@@ -198,7 +196,7 @@ return {
   ["says so rather than raising E444 when the window is the only one"] = function()
     with_window(function(_, notifications)
       vim.cmd("only")
-      local buf = window.buffer()
+      local buf = window.buffer(app)
       vim.api.nvim_feedkeys("q", "x", false)
 
       assert(vim.api.nvim_win_get_buf(0) == buf, "the status window is still open")
@@ -225,7 +223,7 @@ return {
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
+        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
       end)
 
       local log = fake_process.argv_log(fake)
@@ -272,7 +270,7 @@ return {
 
   ["q hides the window and keeps the buffer"] = function()
     with_window(function()
-      local buf = window.buffer()
+      local buf = window.buffer(app)
       vim.api.nvim_feedkeys("q", "x", false)
 
       assert(vim.api.nvim_buf_is_valid(buf), "the buffer survives, so a re-open is instant")

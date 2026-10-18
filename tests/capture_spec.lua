@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
@@ -50,16 +51,11 @@ return {
   ["an empty subject is refused rather than sent"] = function()
     local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    local said = fake.said
 
-    capture.create("", nil)
+    capture.create(app, "", nil)
     fake_process.drain()
 
-    vim.notify = real
     local log = fake_process.argv_log(fake)
 
     fake_process.remove(fake)
@@ -71,11 +67,7 @@ return {
   [":Dam capture over a range sends that argv and says what it captured"] = function()
     local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    local said = fake.said
 
     local prompts_opened = 0
     local real_input = vim.ui.input
@@ -92,7 +84,6 @@ return {
       return queue().running() == nil and #said > 0
     end)
 
-    vim.notify = real
     vim.ui.input = real_input
     local log = fake_process.argv_log(fake)
 

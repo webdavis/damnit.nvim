@@ -1,6 +1,6 @@
-local message = require("damnit.message")
-
 local M = {}
+
+local fixed_window = require("damnit.fixed_window")
 
 local function repository_root(path)
   local root = vim.fs.root(path, ".git")
@@ -31,15 +31,15 @@ function M.of_buffer(buf, line)
   return { path = vim.fs.basename(path), line = line }
 end
 
-local function refuse(text)
-  message.warn(text)
+local function refuse(app, text)
+  app.say.warn(text)
 
   return false
 end
 
-function M.jump(location)
+function M.jump(app, location)
   if not location then
-    return refuse("this task has no location in its body")
+    return refuse(app, "this task has no location in its body")
   end
 
   local cwd = vim.fs.normalize(vim.uv.cwd() or ".")
@@ -47,15 +47,15 @@ function M.jump(location)
   local here = vim.fs.basename(open_root)
 
   if location.repo and location.repo ~= here then
-    return refuse(("this task points into %s, and %s is what is open here"):format(location.repo, here))
+    return refuse(app, ("this task points into %s, and %s is what is open here"):format(location.repo, here))
   end
 
   local path = vim.fs.joinpath(open_root, location.path)
   if vim.fn.filereadable(path) == 0 then
-    return refuse(("there is no file at %s"):format(location.path))
+    return refuse(app, ("there is no file at %s"):format(location.path))
   end
 
-  require("damnit.sidebar").leave_fixed_window()
+  fixed_window.leave()
   vim.cmd.edit(vim.fn.fnameescape(path))
 
   local last = vim.api.nvim_buf_line_count(0)
@@ -64,7 +64,7 @@ function M.jump(location)
 
   local file_shrank_under_the_task = line ~= location.line
   if file_shrank_under_the_task then
-    message.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
+    app.say.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
   end
 
   return true

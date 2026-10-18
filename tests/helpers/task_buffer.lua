@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
@@ -10,13 +11,11 @@ M.OID = "badb4903b653809e591c31118004e07de7c8183c"
 function M.with_task(run, opts)
   local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full", fail = (opts or {}).fail })
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
-  local open = (opts or {}).open or task_buffer.open
+  local open = (opts or {}).open or function(oid)
+    return task_buffer.open(app, oid)
+  end
   local buf = open(M.OID) or vim.api.nvim_get_current_buf()
   fake_process.settle(function()
     return vim.api.nvim_buf_line_count(buf) > 1
@@ -24,7 +23,6 @@ function M.with_task(run, opts)
 
   local ok, err = pcall(run, buf, fake, notifications)
 
-  vim.notify = real
   vim.cmd("silent! %bwipeout!")
   fake_process.remove(fake)
 

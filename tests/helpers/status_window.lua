@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
@@ -14,11 +15,11 @@ local window = require("damnit.window")
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
 
 local function forget_the_remote_list_cached_per_store()
-  window.forget_remotes()
+  window.forget_remotes(app)
 end
 
 local function forget_the_diffs_remembered_for_the_session()
-  local diffs = window.open_diffs()
+  local diffs = window.open_diffs(app)
   for oid in pairs(diffs) do
     diffs[oid] = nil
   end
@@ -30,13 +31,9 @@ function M.with(run, fixtures)
   forget_the_remote_list_cached_per_store()
   forget_the_diffs_remembered_for_the_session()
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
-  local buf = window.open()
+  local buf = window.open(app)
   fake_process.settle(function()
     return queue().running() == nil and vim.api.nvim_buf_line_count(buf) > 1
   end)
@@ -44,7 +41,6 @@ function M.with(run, fixtures)
   local ok, err = pcall(run, fake, notifications)
 
   fake_process.drain()
-  vim.notify = real
   vim.cmd("silent! %bwipeout!")
   fake_process.remove(fake)
 

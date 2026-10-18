@@ -1,7 +1,6 @@
 local M = {}
 
 local due = require("damnit.due")
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 M.QUERY = "!done & (due:today | overdue)"
@@ -19,8 +18,6 @@ local timer = nil
 local DEFAULT_REFRESH_SECONDS = 60
 
 local MIN_REFRESH_SECONDS = 5
-
-local stop_on_exit_registered = false
 
 local function task_of(object)
   local task = object.task
@@ -60,8 +57,8 @@ local function instant_key(object, stamp)
   return tostring(object.oid) .. "@" .. stamp
 end
 
-local function announce(clock)
-  if not require("damnit").options.reminders then
+local function announce(app, clock)
+  if not app.options.reminders then
     return
   end
 
@@ -76,7 +73,7 @@ local function announce(clock)
       instants_still_overdue[key] = true
 
       if not announced_instants[key] and past_first_fetch then
-        message.say(("due now: %s"):format(tostring(object.subject)))
+        app.say.info(("due now: %s"):format(tostring(object.subject)))
       end
     end
   end
@@ -85,7 +82,7 @@ local function announce(clock)
   past_first_fetch = true
 end
 
-function M.apply(fetched, err)
+function M.apply(app, fetched, err)
   if err then
     last_fetched_objects = {}
     built_status = "dam !"
@@ -96,11 +93,11 @@ function M.apply(fetched, err)
   last_fetched_objects = fetched or {}
   built_status = render(M.counts())
 
-  announce(due.clock())
+  announce(app, due.clock())
 end
 
-function M.refresh()
-  local queue = require("damnit").app().queue
+function M.refresh(app)
+  local queue = app.queue
 
   local another_call_holds_the_store = queue.running()
   if another_call_holds_the_store then
@@ -112,12 +109,12 @@ function M.refresh()
     label = "ls",
     background = true,
     on_done = function(data, err)
-      M.apply(data and data.objects, err)
+      M.apply(app, data and data.objects, err)
     end,
   })
 end
 
-function M.start()
+function M.start(app)
   local editor_is_exiting = vim.v.exiting ~= vim.NIL
   if editor_is_exiting then
     return
@@ -127,17 +124,17 @@ function M.start()
     return
   end
 
-  local seconds =
-    math.max(tonumber(require("damnit").options.refresh_interval) or DEFAULT_REFRESH_SECONDS, MIN_REFRESH_SECONDS)
+  local seconds = math.max(tonumber(app.options.refresh_interval) or DEFAULT_REFRESH_SECONDS, MIN_REFRESH_SECONDS)
   local interval = seconds * 1000
 
   timer = vim.uv.new_timer()
-  timer:start(0, interval, vim.schedule_wrap(M.refresh))
-
-  if not stop_on_exit_registered then
-    vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "dam: stop the refresh timer" })
-    stop_on_exit_registered = true
-  end
+  timer:start(
+    0,
+    interval,
+    vim.schedule_wrap(function()
+      M.refresh(app)
+    end)
+  )
 end
 
 function M.stop()
@@ -157,10 +154,10 @@ function M.running()
   return timer ~= nil
 end
 
-function M.status()
-  M.start()
+function M.status(app)
+  M.start(app)
 
-  local running = require("damnit").app().queue.foreground()
+  local running = app.queue.foreground()
   if running then
     return ("dam: %s %.1fs"):format(running.label, running.elapsed)
   end
