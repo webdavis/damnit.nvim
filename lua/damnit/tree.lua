@@ -11,10 +11,6 @@ function M.parent_path(path)
   return parent and (parent .. "/") or ROOT
 end
 
-function M.own_segment(path)
-  return (text(path):gsub("/$", ""):match("([^/]*)$")) or ""
-end
-
 function M.index(objects)
   local index = { by_path = {}, children = {} }
 

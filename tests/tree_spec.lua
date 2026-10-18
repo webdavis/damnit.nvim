@@ -36,8 +36,6 @@ return {
     assert(tree.parent_path("work/parent/child/") == "work/parent/", tree.parent_path("work/parent/child/"))
     assert(tree.parent_path("work/") == "", tree.parent_path("work/"))
     assert(tree.parent_path("") == "", tree.parent_path(""))
-    assert(tree.own_segment("work/parent/child/") == "child", tree.own_segment("work/parent/child/"))
-    assert(tree.own_segment("") == "", tree.own_segment(""))
   end,
 
   ["indexes children under the object whose path they extend"] = function()
