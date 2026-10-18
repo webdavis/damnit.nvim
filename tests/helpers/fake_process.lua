@@ -166,6 +166,7 @@ end
 
 function M.drain()
   local fake = installed()
+  fake.release()
 
   repeat
     local delivered = fake.delivered
