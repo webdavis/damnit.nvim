@@ -86,6 +86,31 @@ return {
     end)
   end,
 
+  ["shows a running call in the header after queue.reset without a tick by hand"] = function()
+    with_window(function(fake)
+      queue.reset()
+      local buf = window.buffer()
+      local before = #fake_dam.argv_log(fake)
+      vim.env.DAMNIT_TEST_SLEEP = "1"
+
+      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+
+      local function row_3()
+        return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
+      end
+      assert(
+        vim.wait(2000, function()
+          return row_3():find("Running: push fake", 1, true) ~= nil
+        end, 50),
+        "reset dropped the header's tick listener: " .. row_3()
+      )
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      end)
+    end)
+  end,
+
   ["keeps a section the user folded closed when the re-read moves its heading"] = function()
     with_window(function(fake)
       local buf = window.buffer()
