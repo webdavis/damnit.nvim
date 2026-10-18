@@ -1,4 +1,4 @@
- [No Name]  2 d//list                                                          X
+ [No Name]  2 d//l/today                                                       X
 dam: today  (due:today | overdue) │
                                   │~
 - parent  work/parent/            │~
@@ -20,5 +20,5 @@ dam: today  (due:today | overdue) │
 ~                                 │~
 ~                                 │~
 ~                                 │~
-<nit://list [-] 1,1            All [No Name]                  0,0-1          All
+<list/today [-] 1,1            All [No Name]                  0,0-1          All
 

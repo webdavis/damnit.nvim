@@ -2,30 +2,25 @@ local M = {}
 
 local format = require("damnit.list_format")
 local message = require("damnit.message")
+local scratch = require("damnit.scratch")
 local tree = require("damnit.tree")
 
-local BUFFER_NAME = "damnit://list"
+local NOTHING_DRAWN = { entry_by_line = {} }
 
-local entry_by_line = {}
+local function buffer_name(spec)
+  return "damnit://list/" .. spec.title
+end
 
-local shown_spec = nil
+local function view_of(buf)
+  return vim.bo[buf].filetype == "damlist" and scratch.state(buf) or nil
+end
 
-local objects_on_screen = nil
-
-local collapsed_paths_this_session = {}
-
-local function find_buffer()
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_name(buf) == BUFFER_NAME then
-      return buf
-    end
-  end
-
-  return -1
+local function view()
+  return view_of(vim.api.nvim_get_current_buf()) or NOTHING_DRAWN
 end
 
 local function entry_under_cursor()
-  return entry_by_line[vim.api.nvim_win_get_cursor(0)[1]]
+  return view().entry_by_line[vim.api.nvim_win_get_cursor(0)[1]]
 end
 
 function M.object_under_cursor()
@@ -41,6 +36,7 @@ function M.object_under_cursor()
 end
 
 function M.object_above_cursor()
+  local entry_by_line = view().entry_by_line
   local line = vim.api.nvim_win_get_cursor(0)[1]
 
   for above = line - 1, 1, -1 do
@@ -70,76 +66,71 @@ function M.jump_to_location_under_cursor()
   require("damnit.location_edit").jump(entry.location)
 end
 
-local function on_screen_in_this_tabpage(buf)
+local function view_on_screen_in_this_tabpage()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if vim.api.nvim_win_get_buf(win) == buf then
-      return true
+    local shown = view_of(vim.api.nvim_win_get_buf(win))
+
+    if shown then
+      return shown
     end
-  end
-
-  return false
-end
-
-function M.current_spec()
-  local buf = find_buffer()
-  if buf == -1 or not shown_spec then
-    return nil
-  end
-
-  if on_screen_in_this_tabpage(buf) then
-    return shown_spec
   end
 
   return nil
 end
 
-local function ensure_buffer()
-  local buf = find_buffer()
-  if buf ~= -1 then
-    return buf
-  end
+function M.current_spec()
+  local shown = view_of(vim.api.nvim_get_current_buf()) or view_on_screen_in_this_tabpage()
 
-  buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(buf, BUFFER_NAME)
+  return shown and shown.spec
+end
 
+local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
 
   require("damnit.keys").attach(buf, "damlist")
-
-  return buf
 end
 
-local function draw(buf, lines, line_entries, objects)
+local function ensure_buffer(spec)
+  local buf = scratch.named(buffer_name(spec), configure)
+  local shown = scratch.state(buf)
+
+  shown.spec = spec
+  shown.collapsed = shown.collapsed or {}
+
+  return buf, shown
+end
+
+local function draw(buf, shown, lines, line_entries, objects)
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
 
-  entry_by_line = line_entries or {}
-
-  objects_on_screen = objects
+  shown.entry_by_line = line_entries or {}
+  shown.objects = objects
 end
 
-local function render_into(buf, spec, objects)
-  local lines, line_entries = format.render(spec, objects, collapsed_paths_this_session)
-  draw(buf, lines, line_entries, objects)
+local function render_into(buf, shown, objects)
+  local lines, line_entries = format.render(shown.spec, objects, shown.collapsed)
+  draw(buf, shown, lines, line_entries, objects)
 end
 
 local function redraw_without_asking_dam()
-  local buf = find_buffer()
+  local buf = vim.api.nvim_get_current_buf()
+  local shown = view_of(buf)
 
-  if buf ~= -1 and shown_spec and objects_on_screen then
-    render_into(buf, shown_spec, objects_on_screen)
+  if shown and shown.objects then
+    render_into(buf, shown, shown.objects)
   end
 end
 
 local function forest()
-  return tree.index(objects_on_screen or {})
+  return tree.index(M.objects_in_view())
 end
 
 function M.objects_in_view()
-  return objects_on_screen or {}
+  return view().objects or {}
 end
 
 function M.path_under_cursor()
@@ -163,12 +154,9 @@ function M.toggle_fold()
     return message.say("nothing is nested here")
   end
 
-  collapsed_paths_this_session[path] = not collapsed_paths_this_session[path] or nil
+  local collapsed = view().collapsed
+  collapsed[path] = not collapsed[path] or nil
   redraw_without_asking_dam()
-end
-
-function M.forget_folds()
-  collapsed_paths_this_session = {}
 end
 
 function M.write(args, label, said)
@@ -197,39 +185,42 @@ function M.fetch(spec, callback)
   })
 end
 
-function M.load(spec)
-  local buf = ensure_buffer()
+local function load_into(buf, shown)
+  draw(buf, shown, { format.title(shown.spec), "", "Loading..." })
 
-  shown_spec = spec
-  draw(buf, { format.title(spec), "", "Loading..." })
-
-  M.fetch(spec, function(objects, err)
-    if not vim.api.nvim_buf_is_valid(buf) or shown_spec ~= spec then
+  M.fetch(shown.spec, function(objects, err)
+    if not vim.api.nvim_buf_is_valid(buf) then
       return
     end
 
     if err then
       message.report(err)
 
-      return draw(buf, format.refusal(spec, err))
+      return draw(buf, shown, format.refusal(shown.spec, err))
     end
 
-    render_into(buf, spec, objects)
+    render_into(buf, shown, objects)
   end)
-
-  return buf
 end
 
 function M.refresh()
-  if shown_spec then
-    M.load(shown_spec)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local shown = view_of(buf)
+
+    if shown and #vim.fn.win_findbuf(buf) > 0 then
+      load_into(buf, shown)
+    end
   end
 end
 
 function M.open(spec)
-  vim.api.nvim_win_set_buf(0, ensure_buffer())
+  local buf, shown = ensure_buffer(spec)
 
-  return M.load(spec)
+  require("damnit.sidebar").leave_fixed_window()
+  vim.api.nvim_win_set_buf(0, buf)
+  load_into(buf, shown)
+
+  return buf
 end
 
 return M

@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local scratch = require("damnit.scratch")
 local task_format = require("damnit.task_format")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit.diagnostics")
@@ -96,16 +97,10 @@ function M.write(buf)
   run_in_order(buf, steps)
 end
 
-function M.open(oid)
-  local buf = vim.api.nvim_create_buf(false, true)
-
-  vim.api.nvim_buf_set_name(buf, ("damnit://task/%s"):format(oid))
+local function configure(buf)
   vim.bo[buf].filetype = "damtask"
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
-
-  require("damnit.sidebar").leave_fixed_window()
-  vim.api.nvim_win_set_buf(0, buf)
 
   vim.api.nvim_create_autocmd("BufWriteCmd", {
     buffer = buf,
@@ -114,6 +109,19 @@ function M.open(oid)
       M.write(buf)
     end,
   })
+end
+
+function M.open(oid)
+  local buf, created = scratch.named(("damnit://task/%s"):format(oid), configure)
+
+  if not scratch.focus(buf) then
+    require("damnit.sidebar").leave_fixed_window()
+    vim.api.nvim_win_set_buf(0, buf)
+  end
+
+  if not created then
+    return buf
+  end
 
   require("damnit.queue").submit({
     args = { "show", oid, "--json" },

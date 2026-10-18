@@ -113,4 +113,29 @@ return {
       assert(#vim.api.nvim_list_wins() == windows, "nothing was opened")
     end)
   end,
+
+  ["opens the same conflict twice into its one pair of sides"] = function()
+    status_window.with(function()
+      vim.api.nvim_feedkeys("gc", "x", false)
+      local status_win = vim.api.nvim_get_current_win()
+      vim.api.nvim_feedkeys("\r", "x", false)
+      local windows = #vim.api.nvim_list_wins()
+
+      vim.api.nvim_set_current_win(status_win)
+      vim.v.errmsg = ""
+      vim.api.nvim_feedkeys("\r", "x", false)
+
+      assert(vim.v.errmsg == "", vim.v.errmsg)
+      assert(#vim.api.nvim_list_wins() == windows, ("%d windows, not %d"):format(#vim.api.nvim_list_wins(), windows))
+
+      local sides = 0
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_get_name(buf):find("damnit://conflict", 1, true) then
+          sides = sides + 1
+        end
+      end
+      assert(sides == 2, ("%d conflict sides exist"):format(sides))
+      assert(vim.api.nvim_buf_get_name(0):find("/theirs", 1, true), vim.api.nvim_buf_get_name(0))
+    end)
+  end,
 }

@@ -7,14 +7,12 @@ dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local damnit = require("damnit")
-local list = require("damnit.list")
 local queue = require("damnit.queue")
 local views = require("damnit.views")
 
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
 
-local function forget_the_session_folds_and_refused_view_names()
-  list.forget_folds()
+local function forget_the_refused_view_names()
   views.reset()
 end
 
@@ -28,7 +26,7 @@ function M.with(run, opts)
   })
   queue.reset()
 
-  forget_the_session_folds_and_refused_view_names()
+  forget_the_refused_view_names()
   damnit.options.views = opts.views or {}
 
   local notifications = {}

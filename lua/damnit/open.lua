@@ -2,18 +2,26 @@ local M = {}
 
 local diff = require("damnit.render.diff")
 local message = require("damnit.message")
+local scratch = require("damnit.scratch")
 local status_model = require("damnit.status_model")
 
-local function read_only(name, lines)
-  local buf = vim.api.nvim_create_buf(false, true)
-
-  vim.api.nvim_buf_set_name(buf, name)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
+end
+
+local function read_only(name, lines, split)
+  local buf = scratch.named(name, configure)
+
+  vim.bo[buf].modifiable = true
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
-  vim.api.nvim_win_set_buf(0, buf)
+
+  if not scratch.focus(buf) then
+    vim.cmd(split)
+    vim.api.nvim_win_set_buf(0, buf)
+  end
 
   return buf
 end
@@ -31,11 +39,8 @@ end
 function M.conflict(entry)
   local short = entry.oid:sub(1, 7)
 
-  vim.cmd("vsplit")
-  read_only(("damnit://conflict/%s/ours"):format(short), set_field_lines(entry.ours))
-
-  vim.cmd("vsplit")
-  read_only(("damnit://conflict/%s/theirs"):format(short), set_field_lines(entry.theirs))
+  read_only(("damnit://conflict/%s/ours"):format(short), set_field_lines(entry.ours), "vsplit")
+  read_only(("damnit://conflict/%s/theirs"):format(short), set_field_lines(entry.theirs), "vsplit")
 end
 
 local function commit_lines(commit)
@@ -87,8 +92,7 @@ function M.unpushed(entry)
         vim.list_extend(lines, commit_lines(commit))
       end
 
-      vim.cmd("split")
-      read_only(("damnit://unpushed/%s"):format(entry.remote), lines)
+      read_only(("damnit://unpushed/%s"):format(entry.remote), lines, "split")
     end,
   })
 end

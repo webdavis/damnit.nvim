@@ -81,4 +81,27 @@ return {
       assert(vim.endswith(vim.fs.normalize(vim.api.nvim_buf_get_name(0)), "/lua/list.lua"), "the wrong file opened")
     end)
   end,
+
+  [":Dam list from inside the sidebar opens the view beside it and leaves the sidebar's own"] = function()
+    sidebar_tab.in_its_own_tabpage({}, function()
+      local win = sidebar.toggle()
+      sidebar_tab.wait_until_drawn_from_dams_answer(win)
+      local held = vim.api.nvim_win_get_buf(win)
+
+      vim.api.nvim_set_current_win(win)
+      require("damnit").open()
+      sidebar_tab.wait_until_drawn_from_dams_answer(0)
+
+      assert(vim.api.nvim_get_current_win() ~= win, "the view opened into the sidebar")
+      assert(vim.api.nvim_win_get_buf(win) == held, "the sidebar lost its list")
+      assert(
+        vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] == "dam: all open tasks",
+        vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+      )
+      assert(
+        vim.api.nvim_buf_get_lines(held, 0, 1, false)[1] == "dam: today  (due:today | overdue)",
+        vim.api.nvim_buf_get_lines(held, 0, 1, false)[1]
+      )
+    end)
+  end,
 }

@@ -47,4 +47,20 @@ return {
       screen.matches_golden("sidebar")
     end)
   end,
+
+  ["the sidebar keeps its view beside :Dam list and then :Dam done in the main window"] = function()
+    sidebar_tab.in_its_own_tabpage({}, function()
+      screen.fix_size()
+      sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle())
+      vim.cmd("wincmd p")
+
+      vim.cmd("Dam list")
+      sidebar_tab.wait_until_drawn_from_dams_answer(0)
+      screen.matches_golden("sidebar_beside_list")
+
+      vim.cmd("Dam done")
+      sidebar_tab.wait_until_drawn_from_dams_answer(0)
+      screen.matches_golden("sidebar_beside_done")
+    end)
+  end,
 }

@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local scratch = require("damnit.scratch")
 
 function M.message(lines)
   local non_comment_lines = {}
@@ -50,23 +51,7 @@ local function staged(key)
   return nil
 end
 
-function M.open(key)
-  local section = staged(key)
-
-  if not section then
-    message.warn("nothing is staged to commit")
-
-    return nil
-  end
-
-  local lines = { "", "# Staged" }
-  for _, entry in ipairs(section.entries) do
-    lines[#lines + 1] = ("# %-8s %s  %s"):format(entry.verb, entry.oid:sub(1, 7), entry.subject)
-  end
-
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(buf, ("damnit://commit/%s"):format(key or require("damnit.queue").key()))
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+local function configure(buf)
   vim.bo[buf].filetype = "damcommitmsg"
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].bufhidden = "wipe"
@@ -79,6 +64,30 @@ function M.open(key)
       M.write(buf)
     end,
   })
+end
+
+function M.open(key)
+  local section = staged(key)
+
+  if not section then
+    message.warn("nothing is staged to commit")
+
+    return nil
+  end
+
+  local buf, created = scratch.named(("damnit://commit/%s"):format(key or require("damnit.queue").key()), configure)
+
+  if scratch.focus(buf) then
+    return buf
+  end
+
+  if created then
+    local lines = { "", "# Staged" }
+    for _, entry in ipairs(section.entries) do
+      lines[#lines + 1] = ("# %-8s %s  %s"):format(entry.verb, entry.oid:sub(1, 7), entry.subject)
+    end
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  end
 
   vim.cmd("split")
   vim.api.nvim_win_set_buf(0, buf)

@@ -4,7 +4,6 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local damnit = require("damnit")
-local list = require("damnit.list")
 local queue = require("damnit.queue")
 local views = require("damnit.views")
 
@@ -14,6 +13,10 @@ local function cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_
   if queue.running() then
     queue.cancel()
   end
+end
+
+local function take_the_default_wrap_rather_than_the_last_cases_status_window()
+  vim.wo.wrap = true
 end
 
 function M.in_its_own_tabpage(opts, body)
@@ -35,7 +38,6 @@ function M.in_its_own_tabpage(opts, body)
     sleep = opts.slow_first_fetch and "5" or nil,
   })
   queue.reset()
-  list.forget_folds()
   views.reset()
 
   local notifications = {}
@@ -46,6 +48,7 @@ function M.in_its_own_tabpage(opts, body)
   vim.o.columns = 160
   vim.cmd("tabnew")
   local tab = vim.api.nvim_get_current_tabpage()
+  take_the_default_wrap_rather_than_the_last_cases_status_window()
 
   local ok, result = pcall(body, fake)
 
