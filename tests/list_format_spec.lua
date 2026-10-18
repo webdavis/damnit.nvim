@@ -181,14 +181,14 @@ return {
     assert(mapped == 1, vim.inspect(entries))
   end,
 
-  ["reports a refusal in dam's own wording"] = function()
+  ["reports a refusal in dam's own wording, its first line only"] = function()
     local lines = format.refusal(
       { title = "broken", query = "due befor: tomorrow" },
-      { kind = "parse", code = 1, message = "unexpected befor in query" }
+      { kind = "parse", code = 1, message = "unexpected befor in query\n\nUsage: dam ls [QUERY]" }
     )
 
     assert(joined(lines):find("dam refused this view:", 1, true), joined(lines))
-    assert(joined(lines):find("unexpected befor in query", 1, true), joined(lines))
+    assert(lines[#lines] == "  unexpected befor in query", vim.inspect(lines))
     assert(not joined(lines):find("No objects.", 1, true), joined(lines))
   end,
 }
