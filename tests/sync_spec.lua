@@ -1,4 +1,4 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
@@ -7,14 +7,14 @@ local CONFLICT = "f3784324d2d2793b7daa6c532887b034bd365ddf"
 return {
   ["P pushes every remote, re-reads the remote list a push moves, and reports dam's own counts"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("P", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before + 2
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before + 2
       end)
 
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
       assert(log[before + 1] == "push --json", vim.inspect(log))
       assert(log[before + 2] == "remote list --json", "a push moves what each remote last had: " .. vim.inspect(log))
       assert(log[before + 3] == "status --json", vim.inspect(log))
@@ -33,29 +33,29 @@ return {
   ["P on a remote's line pushes only that remote"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gp", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("P", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "push fake --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_process.argv_log(fake)[before + 1] == "push fake --json", vim.inspect(fake_process.argv_log(fake)))
     end)
   end,
 
   ["p pulls and reports what arrived"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("p", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "pull --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_process.argv_log(fake)[before + 1] == "pull --json", vim.inspect(fake_process.argv_log(fake)))
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return table.concat(notifications, "\n"):find("fake: 2 new, 1 updated, 0 conflicts", 1, true) ~= nil
       end)
     end)
@@ -63,22 +63,21 @@ return {
 
   ["a credential failure says where to fix it, beside dam's own line"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
-      vim.env.DAMNIT_TEST_STDERR =
+      fake.stderr =
         '{"error":{"kind":"credential","rule":null,"message":"no credential for remote \\"fake\\"","oids":[]}}'
-      vim.env.DAMNIT_TEST_EXIT = "1"
+      fake.exit = 1
 
       vim.api.nvim_feedkeys("p", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
-      vim.env.DAMNIT_TEST_STDERR = ""
-      vim.env.DAMNIT_TEST_EXIT = ""
+      fake.stderr, fake.exit = nil, nil
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #notifications >= 1
       end)
 
@@ -97,16 +96,16 @@ return {
   ["co and ct resolve the conflict under the cursor"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gc", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("co", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == ("resolve %s --ours --json"):format(CONFLICT),
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == ("resolve %s --ours --json"):format(CONFLICT),
+        vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,
@@ -114,17 +113,17 @@ return {
   ["ct anywhere else sends nothing"] = function()
     status_window.with(function(fake, notifications)
       vim.api.nvim_feedkeys("gu", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("ct", "x", false)
 
-      assert(#fake_dam.argv_log(fake) == before)
+      assert(#fake_process.argv_log(fake) == before)
       assert(notifications[#notifications] == "damnit.nvim: no conflict on this line", notifications[#notifications])
     end)
   end,
 
   ["says there is nothing to push, as plain information, when no remote is behind"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       local level
       local capturing = vim.notify
       vim.notify = function(text, at)
@@ -134,7 +133,7 @@ return {
       vim.api.nvim_feedkeys("P", "x", false)
       vim.notify = capturing
 
-      assert(#fake_dam.argv_log(fake) == before)
+      assert(#fake_process.argv_log(fake) == before)
       assert(notifications[#notifications] == "damnit.nvim: nothing to push", notifications[#notifications])
       assert(level == vim.log.levels.INFO, tostring(level))
     end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
@@ -142,11 +141,11 @@ return {
 
   ["says there is nothing to pull when dam has no remote"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("p", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and #notifications > 0
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and #notifications > 0
       end)
 
       assert(vim.deep_equal(notifications, { "damnit.nvim: nothing to pull" }), vim.inspect(notifications))

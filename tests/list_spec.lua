@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
@@ -11,7 +11,7 @@ end
 return {
   ["asks dam for every open object and draws one line each"] = function()
     list_buffer.with(function(buf, fake)
-      assert(vim.tbl_contains(fake_dam.argv_log(fake), "ls !done --json"), vim.inspect(fake_dam.argv_log(fake)))
+      assert(vim.tbl_contains(fake_process.argv_log(fake), "ls !done --json"), vim.inspect(fake_process.argv_log(fake)))
 
       local body = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
       assert(body:find("parent", 1, true), body)
@@ -53,8 +53,8 @@ return {
   ["sends the declared query rather than the view's name"] = function()
     list_buffer.with(function(_, fake)
       assert(
-        vim.tbl_contains(fake_dam.argv_log(fake), "ls due:today | overdue --json"),
-        vim.inspect(fake_dam.argv_log(fake))
+        vim.tbl_contains(fake_process.argv_log(fake), "ls due:today | overdue --json"),
+        vim.inspect(fake_process.argv_log(fake))
       )
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,
@@ -75,15 +75,15 @@ return {
 
   ["R re-reads the view, and za folds a subtree away"] = function()
     list_buffer.with(function(buf, fake)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
-      assert(fake_dam.argv_log(fake)[before + 1] == "ls !done --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_process.argv_log(fake)[before + 1] == "ls !done --json", vim.inspect(fake_process.argv_log(fake)))
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):find("- child", 1, true) ~= nil
       end)
       local full = vim.api.nvim_buf_line_count(buf)
@@ -101,16 +101,16 @@ return {
   ["<CR> opens the object on the line as a task buffer"] = function()
     list_buffer.with(function(buf, fake)
       list_buffer.cursor_to(buf, "buy oat milk")
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys(vim.keycode("<CR>"), "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == "show c30414962aa4332b6e5dfc2e0360e2b328735efe --json",
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == "show c30414962aa4332b6e5dfc2e0360e2b328735efe --json",
+        vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,
@@ -118,15 +118,15 @@ return {
   ["u outside the completed history refuses and sends nothing"] = function()
     list_buffer.with(function(buf, fake, notifications)
       list_buffer.cursor_to(buf, "buy oat milk")
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       vim.api.nvim_feedkeys("u", "x", false)
-      fake_dam.wait_long_enough_to_catch_a_stray_call(fake, before)
+      fake_process.drain()
 
       assert(
-        #fake_dam.argv_log(fake) == before,
+        #fake_process.argv_log(fake) == before,
         "a plain dam ls holds completed objects too, and reopening one clears completed_at for good: "
-          .. vim.inspect(fake_dam.argv_log(fake))
+          .. vim.inspect(fake_process.argv_log(fake))
       )
       assert(
         said.whole(
@@ -153,10 +153,10 @@ return {
   ["<CR> on the title says there is no object there and opens nothing"] = function()
     list_buffer.with(function(_, fake, notifications)
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys(vim.keycode("<CR>"), "x", false)
 
-      assert(#fake_dam.argv_log(fake) == before, vim.inspect(fake_dam.argv_log(fake)))
+      assert(#fake_process.argv_log(fake) == before, vim.inspect(fake_process.argv_log(fake)))
       assert(notifications[#notifications] == "damnit.nvim: no object on this line", vim.inspect(notifications))
     end)
   end,

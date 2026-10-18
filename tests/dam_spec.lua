@@ -1,23 +1,23 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local function dam()
   return require("damnit").app().dam
 end
 local damnit = require("damnit")
 
 local function call_through_a_fake(fake_opts, args)
-  local fake = fake_dam.install(fake_opts)
+  local fake = fake_process.install(fake_opts)
 
   local answered, data, err = false, nil, nil
   dam().call(args, nil, function(value, failure)
     answered, data, err = true, value, failure
   end)
 
-  fake_dam.settle(function()
+  fake_process.settle(function()
     return answered
   end)
 
-  local log = fake_dam.argv_log(fake)
-  fake_dam.remove(fake)
+  local log = fake_process.argv_log(fake)
+  fake_process.remove(fake)
 
   return data, err, log
 end
@@ -129,22 +129,17 @@ return {
   end,
 
   ["calls an undecodable answer on a clean exit malformed rather than raising"] = function()
-    local fake = fake_dam.install()
-    vim.env.DAMNIT_TEST_FIXTURES = fake.script_dir
-
-    local file = assert(io.open(fake.script_dir .. "/status.json", "w"))
-    file:write("not json at all\n")
-    file:close()
+    local fake = fake_process.install({ stdout = "not json at all\n" })
 
     local answered, err = false, nil
     dam().call({ "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return answered
     end)
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(err.kind == "malformed", vim.inspect(err))
     assert(err.plugin == true, "the plugin wrote this one")
@@ -160,9 +155,12 @@ return {
       answered, err = true, failure
     end)
 
-    fake_dam.settle(function()
-      return answered
-    end)
+    assert(
+      vim.wait(1000, function()
+        return answered
+      end),
+      "the missing dam never answered"
+    )
 
     vim.env.PATH = saved
     require("damnit").setup({})

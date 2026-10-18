@@ -1,4 +1,4 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local poll = require("damnit.poll")
 local function queue()
   return require("damnit").app().queue
@@ -14,7 +14,7 @@ local function open_task_due(oid, due)
 end
 
 local function recorded_ls_line_or_nil(fake)
-  for _, line in ipairs(fake_dam.argv_log(fake)) do
+  for _, line in ipairs(fake_process.argv_log(fake)) do
     if line:find("^ls ") then
       return line
     end
@@ -25,16 +25,16 @@ end
 
 return {
   ["asks dam for the open objects due today or earlier, without a pull"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
     poll.refresh()
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return queue().running() == nil
     end)
 
     local line = recorded_ls_line_or_nil(fake)
     poll.stop()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(
       line == "ls !done & (due:today | overdue) --no-pull --json",
@@ -98,34 +98,34 @@ return {
   end,
 
   ["shows the count rather than its own fetch while the poller is reading"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
     poll.apply({ open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
 
     poll.refresh()
     local shown = poll.status()
 
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return queue().running() == nil
     end)
     poll.stop()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
   end,
 
   ["shows the running operation instead of the count"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
     poll.apply({ open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
 
     queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
 
     local shown = poll.status()
 
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return queue().running() == nil
     end)
     poll.stop()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(
       shown:match("^dam: push todoist %d+%.%ds$"),
@@ -134,18 +134,18 @@ return {
   end,
 
   ["leaves the lane alone while another call holds it"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
     queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
     poll.refresh()
 
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return queue().running() == nil
     end)
 
     local line = recorded_ls_line_or_nil(fake)
     poll.stop()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(
       line == nil,

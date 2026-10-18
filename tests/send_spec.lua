@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local send = require("damnit.send")
@@ -134,7 +134,7 @@ return {
   ["S in the list opens the note box on the object under the cursor"] = function()
     list_buffer.with(function(buf, fake)
       list_buffer.cursor_to(buf, "buy oat milk")
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       local asked = {}
       local real = vim.ui.input
@@ -149,8 +149,8 @@ return {
 
       assert(vim.deep_equal(asked, { "Note: " }), "the box opening is the only evidence: " .. vim.inspect(asked))
       assert(
-        #fake_dam.argv_log(fake) == before,
-        "an unanswered box hands nothing over: " .. vim.inspect(fake_dam.argv_log(fake))
+        #fake_process.argv_log(fake) == before,
+        "an unanswered box hands nothing over: " .. vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,

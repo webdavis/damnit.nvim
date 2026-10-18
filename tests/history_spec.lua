@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local damnit = require("damnit")
 
@@ -19,13 +19,13 @@ return {
   ["asks dam for the done objects in one call"] = function()
     history_over_the_done_fixtures(function(_, fake)
       local reads = 0
-      for _, line in ipairs(fake_dam.argv_log(fake)) do
+      for _, line in ipairs(fake_process.argv_log(fake)) do
         if vim.startswith(line, "ls ") then
           reads = reads + 1
         end
       end
 
-      assert(vim.tbl_contains(fake_dam.argv_log(fake), "ls done --json"), vim.inspect(fake_dam.argv_log(fake)))
+      assert(vim.tbl_contains(fake_process.argv_log(fake), "ls done --json"), vim.inspect(fake_process.argv_log(fake)))
       assert(reads == 1, "the whole history is one query, so there is nothing to page")
     end)
   end,
@@ -58,16 +58,16 @@ return {
   ["u reopens the object the cursor is on"] = function()
     history_over_the_done_fixtures(function(buf, fake)
       list_buffer.cursor_to(buf, "filed the report")
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       vim.api.nvim_feedkeys("u", "x", false)
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == ("edit %s --undone --json"):format(REPORT),
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == ("edit %s --undone --json"):format(REPORT),
+        vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,

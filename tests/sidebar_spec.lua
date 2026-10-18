@@ -2,7 +2,7 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
 local sidebar = require("damnit.sidebar")
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local function queue()
   return require("damnit").app().queue
 end
@@ -116,7 +116,7 @@ return {
     local _, notifications = sidebar_tab.in_its_own_tabpage({ view = "tomorrow" }, function()
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle()
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return queue().running() == nil
       end)
 
@@ -144,7 +144,7 @@ return {
   end,
 
   ["it says it is loading while the first fetch is out"] = function()
-    sidebar_tab.in_its_own_tabpage({ slow_first_fetch = true }, function()
+    sidebar_tab.in_its_own_tabpage({}, function()
       local win = sidebar.toggle()
       local lines = vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false)
 

@@ -1,11 +1,11 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local function dam()
   return require("damnit").app().dam
 end
 local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)
-  local fake = fake_dam.install({ version = version_banner })
+  local fake = fake_process.install({ version = version_banner })
 
   local notifications = {}
   local real = vim.notify
@@ -18,13 +18,13 @@ local function first_call_to_a_dam_whose_version_says(version_banner)
     answered, err = true, failure
   end)
 
-  fake_dam.settle(function()
+  fake_process.settle(function()
     return answered
   end)
 
   vim.notify = real
-  local log = fake_dam.argv_log(fake)
-  fake_dam.remove(fake)
+  local log = fake_process.argv_log(fake)
+  fake_process.remove(fake)
 
   return err, notifications, log
 end
@@ -69,20 +69,20 @@ return {
   end,
 
   ["runs the handshake once per session, not once per call"] = function()
-    local fake = fake_dam.install()
+    local fake = fake_process.install()
 
     for _ = 1, 3 do
       local answered = false
       dam().call({ "status", "--json" }, nil, function()
         answered = true
       end)
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return answered
       end)
     end
 
-    local log = fake_dam.argv_log(fake)
-    fake_dam.remove(fake)
+    local log = fake_process.argv_log(fake)
+    fake_process.remove(fake)
 
     local versions = 0
     for _, line in ipairs(log) do

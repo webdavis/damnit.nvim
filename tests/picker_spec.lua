@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local picker = require("damnit.picker")
 
@@ -13,7 +13,7 @@ local OBJECT = {
 }
 
 local function wait_until_the_answer_was_read_and_offered(offered, count)
-  fake_dam.settle(function()
+  fake_process.settle(function()
     return #offered == count
   end)
 end
@@ -50,21 +50,21 @@ return {
   ["follows the screen when it is given no name"] = function()
     list_buffer.with(function(_, fake)
       with_select_recording_what_it_offered(function(offered)
-        local before = #fake_dam.argv_log(fake)
+        local before = #fake_process.argv_log(fake)
         picker.pick(nil)
         wait_until_the_answer_was_read_and_offered(offered, 1)
 
         assert(
-          fake_dam.argv_log(fake)[before + 1] == "ls due:today | overdue --json",
-          vim.inspect(fake_dam.argv_log(fake))
+          fake_process.argv_log(fake)[before + 1] == "ls due:today | overdue --json",
+          vim.inspect(fake_process.argv_log(fake))
         )
 
         vim.cmd("silent! %bwipeout!")
-        local alone = #fake_dam.argv_log(fake)
+        local alone = #fake_process.argv_log(fake)
         picker.pick(nil)
         wait_until_the_answer_was_read_and_offered(offered, 2)
 
-        assert(fake_dam.argv_log(fake)[alone + 1] == "ls !done --json", vim.inspect(fake_dam.argv_log(fake)))
+        assert(fake_process.argv_log(fake)[alone + 1] == "ls !done --json", vim.inspect(fake_process.argv_log(fake)))
       end)
     end, { views = { today = "due:today | overdue" }, name = "today" })
   end,
@@ -72,12 +72,12 @@ return {
   ["says dam's own reason when the view it searches is refused, and offers nothing"] = function()
     list_buffer.with(function(_, fake, notifications)
       with_select_recording_what_it_offered(function(offered)
-        local logged_before = #fake_dam.argv_log(fake)
+        local logged_before = #fake_process.argv_log(fake)
         local said_before = #notifications
 
         picker.pick("today")
-        fake_dam.settle(function()
-          return #fake_dam.argv_log(fake) > logged_before and require("damnit").app().queue.running() == nil
+        fake_process.settle(function()
+          return #fake_process.argv_log(fake) > logged_before and require("damnit").app().queue.running() == nil
         end)
 
         assert(#offered == 0, "a refused view offered " .. vim.inspect(offered))

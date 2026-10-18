@@ -1,11 +1,11 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local function queue()
   return require("damnit").app().queue
 end
 local damnit = require("damnit")
 
 local function with_fake(run, opts)
-  local fake = fake_dam.install(opts)
+  local fake = fake_process.install(opts)
 
   local notifications = {}
   local real = vim.notify
@@ -16,7 +16,7 @@ local function with_fake(run, opts)
   local ok, err = pcall(run, fake, notifications)
 
   vim.notify = real
-  fake_dam.remove(fake)
+  fake_process.remove(fake)
   damnit.options.store = nil
 
   assert(ok, err)
@@ -35,7 +35,7 @@ return {
       local running = queue().running()
       assert(running ~= nil, "the first entry starts as soon as it is submitted")
       assert(running.pending == 1, tostring(running.pending))
-    end, { sleep = "0.3" })
+    end)
   end,
 
   ["hides a background entry from the display and still reports it as running"] = function()
@@ -53,7 +53,7 @@ return {
         foreground == nil,
         "nothing is said about a background read where a person is reading: " .. vim.inspect(foreground)
       )
-    end, { sleep = "0.3" })
+    end)
   end,
 
   ["reports a call somebody asked for as the one worth showing"] = function()
@@ -65,7 +65,7 @@ return {
       assert(foreground ~= nil, "a foreground entry is what the header and the statusline draw")
       assert(foreground.label == "push fake", foreground.label)
       assert(foreground.background == nil, vim.inspect(foreground))
-    end, { sleep = "0.3" })
+    end)
   end,
 
   ["refuses a second push and names the one already running"] = function()
@@ -79,18 +79,18 @@ return {
       assert(#notifications == 1, vim.inspect(notifications))
       assert(notifications[1] == "damnit.nvim: push todoist is already running; C-c cancels it", notifications[1])
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return queue().running() == nil
       end)
 
       local pushes = 0
-      for _, line in ipairs(fake_dam.argv_log(fake)) do
+      for _, line in ipairs(fake_process.argv_log(fake)) do
         if line == "push --json" then
           pushes = pushes + 1
         end
       end
-      assert(pushes == 1, vim.inspect(fake_dam.argv_log(fake)))
-    end, { sleep = "0.2" })
+      assert(pushes == 1, vim.inspect(fake_process.argv_log(fake)))
+    end)
   end,
 
   ["tells a pull that a push is what is in the way"] = function()
@@ -99,7 +99,7 @@ return {
       queue().submit(entry({ "pull", "--json" }, { label = "pull todoist", verb = "pull", network = true }))
 
       assert(notifications[1] == "damnit.nvim: push todoist is running; C-c cancels it, then pull", notifications[1])
-    end, { sleep = "0.2" })
+    end)
   end,
 
   ["queues a local call behind a running network one"] = function()
@@ -108,7 +108,7 @@ return {
 
       assert(queue().submit(entry({ "status", "--json" })), "a local call queues rather than being refused")
       assert(queue().running().pending == 1, vim.inspect(queue().running()))
-    end, { sleep = "0.2" })
+    end)
   end,
 
   ["frees the lane when setup runs while a call is in flight"] = function()
@@ -122,7 +122,7 @@ return {
 
       damnit.setup({})
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return answered
       end)
 
@@ -131,7 +131,7 @@ return {
         "setup forgets the handshake the call waits on, so the call is cancelled: " .. vim.inspect(err)
       )
       assert(queue().running() == nil, "a lane left running here is one no later call ever gets out of")
-    end, { sleep = "0.2" })
+    end)
   end,
 
   ["keeps a second store's lane independent of the first"] = function()
@@ -144,7 +144,7 @@ return {
 
       assert(queue().running("/store/one.db") ~= nil, "the first store is still running")
       assert(queue().running("/store/two.db") ~= nil, "the second store did not wait on the first")
-    end, { sleep = "0.3" })
+    end)
   end,
 
   ["says nothing is running when there is nothing to cancel"] = function()
