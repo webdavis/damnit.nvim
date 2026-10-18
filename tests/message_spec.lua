@@ -66,11 +66,12 @@ return {
     assert(history():find("damnit.nvim: " .. DAM_REFUSAL_OF_254_COLUMNS, 1, true), history():sub(-300))
   end,
 
-  ["shows only the first line of a message that has several"] = function()
+  ["shows only the first line of a message that has several and keeps every line in :messages"] = function()
     local seen = notifications(function()
       message.say("3 sent\n1 failed: rate limited")
     end)
 
     assert(seen[1].text == "damnit.nvim: 3 sent", seen[1].text)
+    assert(history():find("damnit.nvim: 3 sent\n1 failed: rate limited", 1, true), history():sub(-300))
   end,
 }
