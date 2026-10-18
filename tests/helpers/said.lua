@@ -2,8 +2,8 @@ local M = {}
 
 local ELLIPSIS = "…"
 
-local function history_lines()
-  return vim.split(vim.api.nvim_exec2("messages", { output = true }).output, "\n", { plain = true })
+local function kept()
+  return require("damnit.message").kept()
 end
 
 function M.whole_text(notification)
@@ -13,7 +13,7 @@ function M.whole_text(notification)
 
   local stem = notification:sub(1, -#ELLIPSIS - 1)
   local found = notification
-  for _, line in ipairs(history_lines()) do
+  for _, line in ipairs(kept()) do
     if vim.startswith(line, stem) then
       found = line
     end

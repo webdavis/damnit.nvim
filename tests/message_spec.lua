@@ -15,8 +15,17 @@ local function notifications(run)
   return seen
 end
 
-local function history()
-  return vim.api.nvim_exec2("messages", { output = true }).output
+local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = (arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"
+dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
+
+local function shown_by_dam_messages()
+  vim.cmd("Dam messages")
+  local buf = vim.api.nvim_get_current_buf()
+
+  assert(vim.api.nvim_buf_get_name(buf) == "damnit://messages", vim.api.nvim_buf_get_name(buf))
+  assert(vim.bo[buf].modifiable == false, "the messages buffer is read only")
+
+  return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
 end
 
 local DAM_REFUSAL_OF_254_COLUMNS = ('--due: cannot read "whenever-ish" as a date; '):rep(5)
@@ -51,7 +60,7 @@ return {
     assert(seen[1].level == vim.log.levels.ERROR, tostring(seen[1].level))
   end,
 
-  ["cuts a long refusal to the command line at 80 columns and keeps the whole of it in :messages"] = function()
+  ["cuts a long refusal to the command line at 80 columns and keeps the whole of it for :Dam messages"] = function()
     vim.o.columns = 80
     assert(#DAM_REFUSAL_OF_254_COLUMNS == 254, tostring(#DAM_REFUSAL_OF_254_COLUMNS))
 
@@ -63,15 +72,48 @@ return {
     assert(vim.startswith(seen[1].text, "damnit.nvim: --due: cannot read"), seen[1].text)
     assert(vim.endswith(seen[1].text, "…"), seen[1].text)
     assert(vim.fn.strdisplaywidth(seen[1].text) <= 68, tostring(vim.fn.strdisplaywidth(seen[1].text)))
-    assert(history():find("damnit.nvim: " .. DAM_REFUSAL_OF_254_COLUMNS, 1, true), history():sub(-300))
+
+    local kept = message.kept()
+    assert(kept[#kept] == "damnit.nvim: " .. DAM_REFUSAL_OF_254_COLUMNS, vim.inspect(kept))
+    assert(
+      shown_by_dam_messages():find("damnit.nvim: " .. DAM_REFUSAL_OF_254_COLUMNS, 1, true),
+      shown_by_dam_messages()
+    )
   end,
 
-  ["shows only the first line of a message that has several and keeps every line in :messages"] = function()
+  ["a line that fits ends without an ellipsis"] = function()
+    local seen = notifications(function()
+      message.say("nothing to pull")
+    end)
+
+    assert(seen[1].text == "damnit.nvim: nothing to pull", seen[1].text)
+  end,
+
+  ["shows only the first line of a message that has several and keeps every line for :Dam messages"] = function()
     local seen = notifications(function()
       message.say("3 sent\n1 failed: rate limited")
     end)
 
     assert(seen[1].text == "damnit.nvim: 3 sent", seen[1].text)
-    assert(history():find("damnit.nvim: 3 sent\n1 failed: rate limited", 1, true), history():sub(-300))
+
+    local kept = message.kept()
+    assert(kept[#kept] == "damnit.nvim: 3 sent\n1 failed: rate limited", vim.inspect(kept))
+    assert(
+      shown_by_dam_messages():find("damnit.nvim: 3 sent\n1 failed: rate limited", 1, true),
+      shown_by_dam_messages()
+    )
+  end,
+
+  ["keeps the newest 200 messages, newest last"] = function()
+    notifications(function()
+      for i = 1, 205 do
+        message.say(("note %d"):format(i))
+      end
+    end)
+
+    local kept = message.kept()
+    assert(#kept == 200, tostring(#kept))
+    assert(kept[1] == "damnit.nvim: note 6", kept[1])
+    assert(kept[200] == "damnit.nvim: note 205", kept[200])
   end,
 }

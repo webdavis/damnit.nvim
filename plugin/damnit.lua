@@ -26,6 +26,9 @@ local SUBCOMMANDS = {
   pick = function(args)
     require("damnit").pick(args[1])
   end,
+  messages = function()
+    require("damnit.message").show()
+  end,
   toggle = function()
     require("damnit").toggle()
   end,
