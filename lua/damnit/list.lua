@@ -2,6 +2,7 @@ local M = {}
 
 local format = require("damnit.list_format")
 local message = require("damnit.message")
+local redraw = require("damnit.redraw")
 local scratch = require("damnit.scratch")
 local tree = require("damnit.tree")
 
@@ -102,12 +103,26 @@ local function ensure_buffer(spec)
   return buf, shown
 end
 
-local function draw(buf, shown, lines, line_entries, objects)
-  vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modifiable = false
+local function oid_by_line(lines, line_entries)
+  local oids = {}
 
-  shown.entry_by_line = line_entries or {}
+  for index = 1, #lines do
+    oids[index] = line_entries[index] and line_entries[index].object.oid or false
+  end
+
+  return oids
+end
+
+local function draw(buf, shown, lines, line_entries, objects)
+  line_entries = line_entries or {}
+
+  redraw.keep_cursor(buf, oid_by_line(lines, line_entries), function()
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+  end)
+
+  shown.entry_by_line = line_entries
   shown.objects = objects
 end
 
@@ -185,8 +200,14 @@ function M.fetch(spec, callback)
   })
 end
 
+local function nothing_drawn_yet(buf)
+  return vim.api.nvim_buf_line_count(buf) == 1 and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+end
+
 local function load_into(buf, shown)
-  draw(buf, shown, { format.title(shown.spec), "", "Loading..." })
+  if nothing_drawn_yet(buf) then
+    draw(buf, shown, { format.title(shown.spec), "", "Loading..." })
+  end
 
   M.fetch(shown.spec, function(objects, err)
     if not vim.api.nvim_buf_is_valid(buf) then
