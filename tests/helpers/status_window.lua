@@ -42,6 +42,7 @@ function M.with(run, fixtures)
 
   local ok, err = pcall(run, fake, notifications)
 
+  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
   vim.notify = real
   vim.cmd("silent! %bwipeout!")
   queue.reset()

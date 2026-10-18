@@ -44,9 +44,19 @@ local function pull_lines(report)
 end
 
 local function credential_advice(verb)
-  return ("dam could not resolve this remote's credential; if its source is a command that prompts, run dam %s in a terminal, and otherwise fix the source in dam's config"):format(
+  return ("if its source is a command that prompts, run dam %s in a terminal, and otherwise fix the source in dam's config"):format(
     verb
   )
+end
+
+local function one_line(verb, report)
+  local lines = verb == "push" and push_lines(report) or pull_lines(report)
+
+  if #lines == 0 then
+    return "nothing to " .. verb
+  end
+
+  return table.concat(lines, "; ")
 end
 
 function M.sync(verb, remote)
@@ -64,16 +74,12 @@ function M.sync(verb, remote)
     verb = verb,
     network = true,
     on_done = function(report, err)
-      if err then
+      if err and err.kind == "credential" then
+        message.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
+      elseif err then
         message.report(err)
-
-        if err.kind == "credential" then
-          message.warn(credential_advice(verb))
-        end
       else
-        for _, line in ipairs(verb == "push" and push_lines(report) or pull_lines(report)) do
-          message.say(line)
-        end
+        message.say(one_line(verb, report))
       end
 
       local window = require("damnit.window")
@@ -92,7 +98,7 @@ function M.push()
   end
 
   if not any_remote_behind then
-    return message.warn("nothing to push")
+    return message.say("nothing to push")
   end
 
   M.sync("push", M.remote_under_cursor())
