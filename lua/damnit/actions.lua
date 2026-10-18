@@ -36,7 +36,7 @@ end
 function M.help(filetype)
   local rows = {}
   for _, map in ipairs(require("damnit.keys").MAPS[filetype] or {}) do
-    rows[#rows + 1] = ("  %-8s %s"):format(map[2], map[4])
+    rows[#rows + 1] = ("  %-8s %s"):format(map.lhs, map.desc)
   end
 
   local buf = vim.api.nvim_create_buf(false, true)
