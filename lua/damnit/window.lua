@@ -3,7 +3,6 @@ local M = {}
 local entries = require("damnit.window.entries")
 local folds = require("damnit.folds")
 local layout = require("damnit.window.layout")
-local message = require("damnit.message")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
@@ -226,7 +225,7 @@ function M.refresh(app, key)
     label = "status",
     on_done = function(status, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       M.redraw(app, key, status)

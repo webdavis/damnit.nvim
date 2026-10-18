@@ -1,7 +1,6 @@
 local M = {}
 
 local format = require("damnit.list_format")
-local message = require("damnit.message")
 local tree = require("damnit.tree")
 local view = require("damnit.list.view")
 
@@ -15,11 +14,11 @@ local function entry_under_cursor()
   return shown_here().entry_by_line[vim.api.nvim_win_get_cursor(0)[1]]
 end
 
-function M.object_under_cursor(_)
+function M.object_under_cursor(app)
   local entry = entry_under_cursor()
 
   if not entry then
-    message.warn("no object on this line")
+    app.say.warn("no object on this line")
 
     return nil
   end
@@ -52,7 +51,7 @@ function M.jump_to_location_under_cursor(app)
   local entry = entry_under_cursor()
 
   if not entry then
-    return message.warn("no object on this line")
+    return app.say.warn("no object on this line")
   end
 
   require("damnit.location_edit").jump(app, entry.location)
@@ -111,7 +110,7 @@ function M.toggle_fold(app)
 
   local path = tostring(object.path or "")
   if #M.children_of(path) == 0 then
-    return message.say("nothing is nested here")
+    return app.say.info("nothing is nested here")
   end
 
   local collapsed = shown_here().collapsed
@@ -125,9 +124,9 @@ function M.write(app, args, label, said)
     label = label,
     on_done = function(_, err)
       if err then
-        message.report(err)
+        app.say.report(err)
       elseif said then
-        message.say(said)
+        app.say.info(said)
       end
 
       M.refresh(app)
@@ -158,7 +157,7 @@ local function load_into(app, buf, shown)
     end
 
     if err then
-      message.report(err)
+      app.say.report(err)
 
       return view.draw(buf, shown, format.refusal(shown.spec, err))
     end

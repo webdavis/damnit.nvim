@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 function M.remote_under_cursor(app)
@@ -68,11 +67,11 @@ function M.sync(app, verb, remote)
     network = true,
     on_done = function(report, err)
       if err and err.kind == "credential" then
-        message.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
+        app.say.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
       elseif err then
-        message.report(err)
+        app.say.report(err)
       else
-        message.say(one_line(verb, report))
+        app.say.info(one_line(verb, report))
       end
 
       local window = require("damnit.window")
@@ -91,7 +90,7 @@ function M.push(app)
   end
 
   if not any_remote_behind then
-    return message.say("nothing to push")
+    return app.say.info("nothing to push")
   end
 
   M.sync(app, "push", M.remote_under_cursor(app))
@@ -105,7 +104,7 @@ function M.resolve(app, side)
   local found = require("damnit.window").entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "conflict" then
-    return message.warn("no conflict on this line")
+    return app.say.warn("no conflict on this line")
   end
 
   require("damnit.actions").write(app, verbs.resolve(found.entry.oid, side), "resolve")

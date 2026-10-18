@@ -9,11 +9,7 @@ local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 local function first_call_to_a_dam_whose_version_says(version_banner)
   local fake = fake_process.install({ version = version_banner })
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local answered, err = false, nil
   dam().call({ "status", "--json" }, nil, function(_, failure)
@@ -24,7 +20,6 @@ local function first_call_to_a_dam_whose_version_says(version_banner)
     return answered
   end)
 
-  vim.notify = real
   local log = fake_process.argv_log(fake)
   fake_process.remove(fake)
 

@@ -2,6 +2,7 @@ local app = require("damnit").app()
 local M = {}
 
 local send = require("damnit.send")
+local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 M.OID = "78b8950b02735107aa608659dcf19f6f50adfeb1"
 
@@ -57,16 +58,13 @@ end
 
 function M.hand_over_to_a_double(env, object)
   local host, seen = herdr_and_clipboard_double(env)
-  seen.said = {}
 
-  local real_notify = vim.notify
-  vim.notify = function(text)
-    table.insert(seen.said, text)
-  end
+  local say
+  say, seen.said = recording.recorder()
+  local speaking = vim.tbl_extend("force", app, { say = say })
 
-  local ok, err = pcall(send.hand_off, app, object or M.FULL, env.note, host)
+  local ok, err = pcall(send.hand_off, speaking, object or M.FULL, env.note, host)
 
-  vim.notify = real_notify
   assert(ok, err)
 
   return seen

@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local tree = require("damnit.tree")
 local verbs = require("damnit.dam.verbs")
 
@@ -38,7 +37,7 @@ function M.reopen_here(app)
 
   local showing_completed_history = spec and spec.flat
   if not showing_completed_history then
-    return message.warn("u reopens in the completed history; X reopens an object here")
+    return app.say.warn("u reopens in the completed history; X reopens an object here")
   end
 
   M.reopen(app)
@@ -131,14 +130,14 @@ function M.labels(app)
     label = "category list",
     on_done = function(data, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       local on = type(object.labels) == "table" and object.labels or {}
       local choices = M.label_choices(on, data and data.categories)
 
       if #choices == 0 then
-        return message.say("dam's config declares no label categories")
+        return app.say.info("dam's config declares no label categories")
       end
 
       vim.ui.select(choices, {
@@ -221,7 +220,7 @@ end
 
 local function reparent(app, object, destination, refusal)
   if not destination then
-    return message.warn(refusal)
+    return app.say.warn(refusal)
   end
 
   send(app, verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))

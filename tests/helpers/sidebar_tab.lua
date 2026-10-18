@@ -23,7 +23,6 @@ end
 
 function M.in_its_own_tabpage(opts, body)
   local options = damnit.options
-  local real_notify = vim.notify
   local columns = vim.o.columns
 
   damnit.options = vim.tbl_deep_extend("force", options, {
@@ -38,10 +37,7 @@ function M.in_its_own_tabpage(opts, body)
   local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
   views.reset()
 
-  local notifications = {}
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   vim.o.columns = 160
   vim.cmd("tabnew")
@@ -63,7 +59,6 @@ function M.in_its_own_tabpage(opts, body)
   views.reset()
   damnit.options = options
   fake_process.remove(fake)
-  vim.notify = real_notify
 
   assert(ok, result)
 

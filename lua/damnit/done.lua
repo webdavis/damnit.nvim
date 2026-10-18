@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 local SHORT_OID_LENGTH = 7
@@ -42,14 +41,14 @@ local function recurring_roll_forward(report)
   end
 end
 
-local function report_completion(_, object, report)
+local function report_completion(app, object, report)
   local rolled_forward = recurring_roll_forward(report)
 
   if rolled_forward then
-    return message.say(rolled_forward)
+    return app.say.info(rolled_forward)
   end
 
-  message.say("completed " .. text(object.subject))
+  app.say.info("completed " .. text(object.subject))
 end
 
 local function forcing_would_help(err, already_forced)
@@ -78,7 +77,7 @@ function M.send(app, object, children)
       end
 
       if not forcing_would_help(err, children) then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       vim.ui.select(DISPOSITIONS, {

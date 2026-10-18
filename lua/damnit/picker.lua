@@ -1,7 +1,6 @@
 local M = {}
 
 local format = require("damnit.list_format")
-local message = require("damnit.message")
 
 local OID_DELIMITER = "\t"
 
@@ -55,7 +54,7 @@ function M.fzf_lua(app)
   local wanted = app.options.picker
 
   if wanted ~= "auto" and wanted ~= "fzf-lua" and wanted ~= "select" then
-    message.warn(("picker %q is not auto, fzf-lua or select; using auto"):format(tostring(wanted)))
+    app.say.warn(("picker %q is not auto, fzf-lua or select; using auto"):format(tostring(wanted)))
     wanted = "auto"
   end
 
@@ -69,7 +68,7 @@ function M.fzf_lua(app)
   end
 
   if wanted == "fzf-lua" then
-    message.warn("fzf-lua is not installed, so this is vim.ui.select")
+    app.say.warn("fzf-lua is not installed, so this is vim.ui.select")
   end
 
   return nil
@@ -128,12 +127,12 @@ local function search(app, spec)
 
   list.fetch(app, spec, function(objects, err)
     if err then
-      return message.report(err)
+      return app.say.report(err)
     end
 
     local entries = M.entries(objects)
     if #entries == 0 then
-      return message.warn(("no objects in %s"):format(title))
+      return app.say.warn(("no objects in %s"):format(title))
     end
 
     M.show(app, entries, title)

@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 function M.refresh(app)
@@ -16,9 +15,9 @@ local function is_the_only_window_left()
   return #vim.api.nvim_list_tabpages() == 1 and #vim.api.nvim_tabpage_list_wins(0) == 1
 end
 
-function M.close()
+function M.close(app)
   if is_the_only_window_left() then
-    return message.warn("the status window is the only window open")
+    return app.say.warn("the status window is the only window open")
   end
 
   vim.api.nvim_win_close(0, false)
@@ -28,7 +27,7 @@ function M.jump_to_section(app, kind, heading, count)
   local line = require("damnit.window").line_of(app, kind, count)
 
   if not line then
-    return message.warn(("no %s section"):format(heading))
+    return app.say.warn(("no %s section"):format(heading))
   end
 
   vim.api.nvim_win_set_cursor(0, { line, 0 })
@@ -87,7 +86,7 @@ function M.write(app, args, label)
     label = label,
     on_done = function(_, err)
       if err then
-        message.report(err)
+        app.say.report(err)
       end
 
       require("damnit.window").refresh(app)
@@ -99,11 +98,11 @@ function M.stage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   if picked.section == "staged" then
-    return message.warn("already staged")
+    return app.say.warn("already staged")
   end
 
   M.write(app, verbs.add(picked.oids), "add")
@@ -113,11 +112,11 @@ function M.unstage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   if picked.section ~= "staged" then
-    return message.warn("not staged")
+    return app.say.warn("not staged")
   end
 
   M.write(app, verbs.reset(picked.oids), "reset")
@@ -127,7 +126,7 @@ function M.toggle_stage(app)
   local picked = M.targets()
 
   if #picked.oids == 0 then
-    return message.warn("nothing to stage on this line")
+    return app.say.warn("nothing to stage on this line")
   end
 
   local verb = picked.section == "staged" and "reset" or "add"
@@ -143,7 +142,7 @@ function M.unstage_all(app)
   end
 
   if not anything_staged then
-    return message.warn("nothing is staged")
+    return app.say.warn("nothing is staged")
   end
 
   M.write(app, verbs.reset(), "reset")
@@ -153,7 +152,7 @@ function M.discard(app)
   local found = require("damnit.window").entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
-    return message.warn("nothing to discard on this line")
+    return app.say.warn("nothing to discard on this line")
   end
 
   local entry = found.entry
@@ -179,7 +178,7 @@ function M.toggle_diff(app)
   local found = window.entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "change" then
-    return message.warn("nothing to show on this line")
+    return app.say.warn("nothing to show on this line")
   end
 
   local entry = found.entry

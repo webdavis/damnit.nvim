@@ -1,7 +1,6 @@
 local M = {}
 
 local due = require("damnit.due")
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 M.QUERY = "!done & (due:today | overdue)"
@@ -76,7 +75,7 @@ local function announce(app, clock)
       instants_still_overdue[key] = true
 
       if not announced_instants[key] and past_first_fetch then
-        message.say(("due now: %s"):format(tostring(object.subject)))
+        app.say.info(("due now: %s"):format(tostring(object.subject)))
       end
     end
   end

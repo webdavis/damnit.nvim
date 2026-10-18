@@ -28,15 +28,15 @@ local SUBCOMMANDS = {
   pick = function(app, args)
     require("damnit.picker").pick(app, args[1])
   end,
-  messages = function()
-    require("damnit.message").show()
+  messages = function(app)
+    app.say.show()
   end,
   toggle = function(app)
     require("damnit.sidebar").toggle(app)
   end,
   task = function(app, args)
     if #args ~= 1 then
-      return require("damnit.message").fail("usage is :Dam task <oid>")
+      return app.say.fail("usage is :Dam task <oid>")
     end
 
     require("damnit.task_buffer").open(app, args[1])
@@ -81,14 +81,15 @@ local function complete(arg_lead, cmd_line)
 end
 
 vim.api.nvim_create_user_command("Dam", function(cmd)
+  local app = require("damnit").app()
   local args = cmd.fargs
   local run = SUBCOMMANDS[args[1] or ""]
 
   if not run then
-    return require("damnit.message").fail(usage())
+    return app.say.fail(usage())
   end
 
-  run(require("damnit").app(), vim.list_slice(args, 2), cmd)
+  run(app, vim.list_slice(args, 2), cmd)
 end, {
   nargs = "*",
   range = true,

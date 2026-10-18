@@ -124,18 +124,11 @@ return {
   ["says there is nothing to push, as plain information, when no remote is behind"] = function()
     status_window.with(function(fake, notifications)
       local before = #fake_process.argv_log(fake)
-      local level
-      local capturing = vim.notify
-      vim.notify = function(text, at)
-        level = at
-        capturing(text)
-      end
       vim.api.nvim_feedkeys("P", "x", false)
-      vim.notify = capturing
 
       assert(#fake_process.argv_log(fake) == before)
       assert(notifications[#notifications] == "damnit.nvim: nothing to push", notifications[#notifications])
-      assert(level == vim.log.levels.INFO, tostring(level))
+      assert(fake.levels[#notifications] == vim.log.levels.INFO, tostring(fake.levels[#notifications]))
     end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
   end,
 

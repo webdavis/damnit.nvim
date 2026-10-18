@@ -23,10 +23,18 @@ local function tick_the_status_window(key)
 end
 
 local function client_for(record)
-  return require("damnit.dam").new(record.options, record.process)
+  return require("damnit.dam").new(record.options, record.process, record.say)
 end
 
-app = { options = M.options, process = require("damnit.process") }
+local function through_vim_notify(text, level)
+  vim.notify(text, level)
+end
+
+app = {
+  options = M.options,
+  process = require("damnit.process"),
+  say = require("damnit.message").new(through_vim_notify),
+}
 app.store = require("damnit.store").of(app.options)
 app.dam = client_for(app)
 app.queue = require("damnit.queue").new(app, tick_the_status_window)
@@ -49,6 +57,7 @@ function M.setup(opts, ports)
   local old_dam = app.dam
   app.options = M.options
   app.process = ports and ports.process or app.process
+  app.say = ports and ports.say or app.say
   app.store = require("damnit.store").of(app.options)
   app.dam = client_for(app)
   old_dam.close()

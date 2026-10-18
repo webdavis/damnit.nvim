@@ -1,5 +1,3 @@
-local message = require("damnit.message")
-
 local M = {}
 
 local function repository_root(path)
@@ -31,8 +29,8 @@ function M.of_buffer(buf, line)
   return { path = vim.fs.basename(path), line = line }
 end
 
-local function refuse(_, text)
-  message.warn(text)
+local function refuse(app, text)
+  app.say.warn(text)
 
   return false
 end
@@ -64,7 +62,7 @@ function M.jump(app, location)
 
   local file_shrank_under_the_task = line ~= location.line
   if file_shrank_under_the_task then
-    message.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
+    app.say.warn(("%s has %d lines, so this is the last one"):format(location.path, last))
   end
 
   return true

@@ -1,7 +1,6 @@
 local M = {}
 
 local format = require("damnit.list_format")
-local message = require("damnit.message")
 
 local BRACKETED_PASTE_START = "\27[200~"
 local BRACKETED_PASTE_END = "\27[201~"
@@ -106,17 +105,17 @@ function M.agent_in(listing, workspace, me)
   return nil, "no agent pane in this workspace"
 end
 
-local function copy(_, host, brief, because)
+local function copy(app, host, brief, because)
   local reached_system_clipboard = host.copy(brief)
   local reason = because and (because .. "; ") or ""
   local where = reached_system_clipboard and "the clipboard" or "the unnamed register, no clipboard provider"
   local said = ("%scopied the brief to %s, %s"):format(reason, where, NO_RECORD)
 
   if because then
-    return message.warn(said)
+    return app.say.warn(said)
   end
 
-  message.say(said)
+  app.say.info(said)
 end
 
 local function focus_as_a_convenience(host, pane)
@@ -147,7 +146,7 @@ function M.hand_off(app, object, note, host)
 
       focus_as_a_convenience(host, agent.pane)
 
-      message.say(("sent to %s, %s"):format(agent.name, NO_RECORD))
+      app.say.info(("sent to %s, %s"):format(agent.name, NO_RECORD))
     end)
   end)
 end

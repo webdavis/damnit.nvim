@@ -31,11 +31,7 @@ function M.with(run, fixtures)
   forget_the_remote_list_cached_per_store()
   forget_the_diffs_remembered_for_the_session()
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local buf = window.open(app)
   fake_process.settle(function()
@@ -45,7 +41,6 @@ function M.with(run, fixtures)
   local ok, err = pcall(run, fake, notifications)
 
   fake_process.drain()
-  vim.notify = real
   vim.cmd("silent! %bwipeout!")
   fake_process.remove(fake)
 

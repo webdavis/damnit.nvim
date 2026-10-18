@@ -1,7 +1,6 @@
 local M = {}
 
 local diff = require("damnit.render.diff")
-local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local status_model = require("damnit.status_model")
 local verbs = require("damnit.dam.verbs")
@@ -51,7 +50,7 @@ end
 
 function M.unpushed(app, entry)
   if (entry.commits or 0) == 0 then
-    return message.warn("this remote has no commit on this line")
+    return app.say.warn("this remote has no commit on this line")
   end
 
   app.queue.submit({
@@ -59,7 +58,7 @@ function M.unpushed(app, entry)
     label = "log",
     on_done = function(data, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       local lines = {

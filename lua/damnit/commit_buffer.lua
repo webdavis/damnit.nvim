@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local verbs = require("damnit.dam.verbs")
 
@@ -20,7 +19,7 @@ function M.write(app, buf)
   local text = M.message(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
 
   if text == "" then
-    return message.warn("no commit message; the commit was not made")
+    return app.say.warn("no commit message; the commit was not made")
   end
 
   app.queue.submit({
@@ -28,11 +27,11 @@ function M.write(app, buf)
     label = "commit",
     on_done = function(report, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       local count = #(report.changes or {})
-      message.say(
+      app.say.info(
         ("%s committed, %d %s"):format(tostring(report.id):sub(1, 7), count, count == 1 and "change" or "changes")
       )
 
@@ -74,7 +73,7 @@ function M.open(app, key)
   local section = staged(app, key)
 
   if not section then
-    message.warn("nothing is staged to commit")
+    app.say.warn("nothing is staged to commit")
 
     return nil
   end

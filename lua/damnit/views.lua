@@ -2,7 +2,6 @@ local M = {}
 
 M.COMPLETED = { title = "completed", query = "done", flat = true }
 
-local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
 local dam_filters_this_session = nil
@@ -53,7 +52,7 @@ function M.load(app, on_loaded)
       waiting_on_the_list = nil
 
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       dam_filters_this_session = {}
@@ -77,7 +76,7 @@ local function refuse(app, name)
     known = known .. "; dam's saved filters are " .. table.concat(dam_filters_this_session, ", ")
   end
 
-  message.fail(("there is no view named %q; %s"):format(name, known))
+  app.say.fail(("there is no view named %q; %s"):format(name, known))
 end
 
 function M.resolve(app, name)

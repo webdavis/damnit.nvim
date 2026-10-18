@@ -1,7 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
-
 local SIDEBAR_WINDOW_FLAG = "damnit_sidebar"
 
 function M.window()
@@ -50,11 +48,11 @@ function M.open(app)
   local opts = app.options.sidebar
 
   if opts.side ~= "left" and opts.side ~= "right" then
-    return message.fail(('sidebar.side is %q, and it is either "left" or "right"'):format(tostring(opts.side)))
+    return app.say.fail(('sidebar.side is %q, and it is either "left" or "right"'):format(tostring(opts.side)))
   end
 
   if type(opts.width) ~= "number" or opts.width < 1 then
-    return message.fail(("sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)))
+    return app.say.fail(("sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)))
   end
 
   return require("damnit.views").resolve_then(app, opts.view, function(spec)
@@ -76,14 +74,14 @@ function M.leave_fixed_window()
   split_full_height_at("right")
 end
 
-function M.close(_)
+function M.close(app)
   local win = M.window()
   if not win then
     return false
   end
 
   if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-    message.warn("the sidebar is the only window here, so closing it would leave nothing")
+    app.say.warn("the sidebar is the only window here, so closing it would leave nothing")
 
     return false
   end

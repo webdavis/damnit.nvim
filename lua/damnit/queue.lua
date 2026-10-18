@@ -1,7 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
-
 local function network_entry(lane)
   if lane.running and lane.running.network then
     return lane.running
@@ -16,16 +14,16 @@ local function network_entry(lane)
   return nil
 end
 
-local function refuse_a_second_network_call(lane, entry)
+local function refuse_a_second_network_call(say, lane, entry)
   local in_lane = network_entry(lane)
   if not in_lane then
     return false
   end
 
   if in_lane.verb == entry.verb then
-    message.warn(("%s is already running; C-c cancels it"):format(in_lane.label))
+    say.warn(("%s is already running; C-c cancels it"):format(in_lane.label))
   else
-    message.warn(("%s is running; C-c cancels it, then %s"):format(in_lane.label, entry.verb))
+    say.warn(("%s is running; C-c cancels it, then %s"):format(in_lane.label, entry.verb))
   end
 
   return true
@@ -112,7 +110,7 @@ function M.new(app, on_tick)
     local key = app.store
     local lane = lane_for(key)
 
-    if entry.network and refuse_a_second_network_call(lane, entry) then
+    if entry.network and refuse_a_second_network_call(app.say, lane, entry) then
       return false
     end
 
@@ -166,7 +164,7 @@ function M.new(app, on_tick)
           return escalate(entry, "sigkill")
         end
 
-        message.warn(("%s would not stop and was killed"):format(entry.label))
+        app.say.warn(("%s would not stop and was killed"):format(entry.label))
       end)
     )
   end
@@ -176,7 +174,7 @@ function M.new(app, on_tick)
     local lane = lanes_by_store[key]
 
     if not lane or not lane.running then
-      message.warn("nothing is running")
+      app.say.warn("nothing is running")
 
       return false
     end

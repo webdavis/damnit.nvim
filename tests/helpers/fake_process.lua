@@ -2,6 +2,8 @@ local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
+local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+
 local GLOBAL_FLAGS_TAKING_A_VALUE = { ["--store"] = true, ["--config"] = true }
 
 local CANCELLED_LIKE_DAM = { code = 3, stdout = "", stderr = "dam: cancelled\n" }
@@ -132,7 +134,10 @@ function M.install(opts)
     end
   end
 
-  require("damnit").setup({}, { process = fake })
+  local say
+  say, fake.said, fake.levels = said.recorder()
+  fake.say_before = require("damnit").app().say
+  require("damnit").setup({}, { process = fake, say = say })
 
   return fake
 end
@@ -174,9 +179,9 @@ function M.drain()
   until fake.in_flight == 0 and fake.delivered == delivered
 end
 
-function M.remove(_)
+function M.remove(fake)
   M.drain()
-  require("damnit").setup({}, { process = require("damnit.process") })
+  require("damnit").setup({}, { process = require("damnit.process"), say = fake.say_before })
 end
 
 return M

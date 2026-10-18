@@ -1,6 +1,5 @@
 local M = {}
 
-local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local task_format = require("damnit.task_format")
 local verbs = require("damnit.dam.verbs")
@@ -74,7 +73,7 @@ end
 function M.write(app, buf)
   local object = last_drawn_object_by_buf[buf]
   if not object then
-    return message.warn("this buffer has no object to write")
+    return app.say.warn("this buffer has no object to write")
   end
 
   vim.diagnostic.reset(M.NAMESPACE, buf)
@@ -92,7 +91,7 @@ function M.write(app, buf)
   if #changes.edit == 0 and not changes.move then
     vim.bo[buf].modified = false
 
-    return message.warn("nothing changed")
+    return app.say.warn("nothing changed")
   end
 
   local steps = {}
@@ -142,7 +141,7 @@ function M.open(app, oid)
     label = "show",
     on_done = function(object, err)
       if err then
-        return message.report(err)
+        return app.say.report(err)
       end
 
       if vim.api.nvim_buf_is_valid(buf) then

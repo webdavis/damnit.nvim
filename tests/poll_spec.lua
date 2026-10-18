@@ -1,6 +1,7 @@
 local app = require("damnit").app()
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local poll = require("damnit.poll")
+local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 local function queue()
   return require("damnit").app().queue
 end
@@ -22,6 +23,12 @@ local function recorded_ls_line_or_nil(fake)
   end
 
   return nil
+end
+
+local function an_app_whose_reminders_are(on)
+  local say, lines = recording.recorder()
+
+  return { options = { reminders = on }, say = say }, lines
 end
 
 return {
@@ -155,27 +162,19 @@ return {
   end,
 
   ["says nothing about what was already overdue when the first fetch lands"] = function()
-    require("damnit").options.reminders = true
     poll.stop()
-
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    local reminding, said = an_app_whose_reminders_are(true)
 
     local past = open_task_due("cccc3333", "2000-01-01T09:00:00")
     past.subject = "stand up"
     local later = open_task_due("dddd4444", "2000-01-01T10:00:00")
     later.subject = "sit down"
 
-    poll.apply(app, { past }, nil)
+    poll.apply(reminding, { past }, nil)
     local after_first = #said
 
-    poll.apply(app, { past, later }, nil)
+    poll.apply(reminding, { past, later }, nil)
 
-    vim.notify = real
-    require("damnit").options.reminders = false
     poll.stop()
 
     assert(after_first == 0, "opening the editor in the evening does not replay the morning: " .. vim.inspect(said))
@@ -185,49 +184,35 @@ return {
 
   ["says nothing at all when reminders are off"] = function()
     poll.stop()
-
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    local reminding, said = an_app_whose_reminders_are(false)
 
     local past = open_task_due("cccc3333", "2000-01-01T09:00:00")
 
-    poll.apply(app, { past }, nil)
-    poll.apply(app, { past, open_task_due("dddd4444", "2000-01-01T10:00:00") }, nil)
+    poll.apply(reminding, { past }, nil)
+    poll.apply(reminding, { past, open_task_due("dddd4444", "2000-01-01T10:00:00") }, nil)
 
-    vim.notify = real
     poll.stop()
 
     assert(#said == 0, vim.inspect(said))
   end,
 
   ["announces a task again when its time moves, because the key carries the stamp"] = function()
-    require("damnit").options.reminders = true
     poll.stop()
-
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    local reminding, said = an_app_whose_reminders_are(true)
 
     local at_nine = open_task_due("cccc3333", "2000-01-01T09:00:00")
     at_nine.subject = "stand up"
     local at_eleven = open_task_due("cccc3333", "2000-01-01T11:00:00")
     at_eleven.subject = "stand up"
 
-    poll.apply(app, { at_nine }, nil)
+    poll.apply(reminding, { at_nine }, nil)
     local after_seed = #said
 
-    poll.apply(app, { at_eleven }, nil)
+    poll.apply(reminding, { at_eleven }, nil)
     local after_move = #said
 
-    poll.apply(app, { at_eleven }, nil)
+    poll.apply(reminding, { at_eleven }, nil)
 
-    vim.notify = real
-    require("damnit").options.reminders = false
     poll.stop()
 
     assert(after_seed == 0, vim.inspect(said))
@@ -239,20 +224,12 @@ return {
   end,
 
   ["announces a whole-day task never, because it has no moment to come due at"] = function()
-    require("damnit").options.reminders = true
     poll.stop()
+    local reminding, said = an_app_whose_reminders_are(true)
 
-    local said = {}
-    local real = vim.notify
-    vim.notify = function(text)
-      table.insert(said, text)
-    end
+    poll.apply(reminding, { open_task_due("aaaa1111", "2000-01-01") }, nil)
+    poll.apply(reminding, { open_task_due("aaaa1111", "2000-01-01"), open_task_due("bbbb2222", "2000-01-02") }, nil)
 
-    poll.apply(app, { open_task_due("aaaa1111", "2000-01-01") }, nil)
-    poll.apply(app, { open_task_due("aaaa1111", "2000-01-01"), open_task_due("bbbb2222", "2000-01-02") }, nil)
-
-    vim.notify = real
-    require("damnit").options.reminders = false
     poll.stop()
 
     assert(#said == 0, vim.inspect(said))

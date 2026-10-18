@@ -16,17 +16,12 @@ local function with_views(declared, run)
   views.reset()
   damnit.options.views = declared
 
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
+  local notifications = fake.said
 
   local ok, err = pcall(run, notifications, fake)
 
   fake_process.drain()
 
-  vim.notify = real
   damnit.options.views = {}
   views.reset()
   fake_process.remove(fake)
