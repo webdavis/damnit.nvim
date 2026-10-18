@@ -222,7 +222,6 @@ function M.reset()
   end
 
   lanes_by_store = {}
-  tick_listeners = {}
 end
 
 return M

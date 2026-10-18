@@ -244,14 +244,12 @@ local ENTRY_LINES = {
 }
 
 function M.lines(model, state)
-  local lines = { header_line("Store:", state.store), remotes_line(model.remotes, model.remotes_known, state.now) }
-
-  if state.running then
-    lines[#lines + 1] = running_line(state.running)
-  end
-
-  lines[#lines + 1] = header_line("Help:", "g?")
-  lines[#lines + 1] = blank()
+  local lines = {
+    header_line("Store:", state.store),
+    remotes_line(model.remotes, model.remotes_known, state.now),
+    state.running and running_line(state.running) or header_line("Help:", "g?"),
+    blank(),
+  }
 
   if model.empty then
     lines[#lines + 1] = { text = "nothing staged, nothing changed", kind = "empty", marks = {} }

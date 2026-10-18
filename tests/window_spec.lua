@@ -75,7 +75,7 @@ return {
       assert(header[3]:find("Running: push fake", 1, true), vim.inspect(header))
       assert(header[3]:find("[C-c to cancel]", 1, true), header[3])
 
-      for lnum = 0, 3 do
+      for lnum = 0, 2 do
         local marks = vim.api.nvim_buf_get_extmarks(buf, render.NAMESPACE, { lnum, 0 }, { lnum, -1 }, {})
         assert(#marks > 0, ("the header-only rewrite replaced row %d and left it with no mark"):format(lnum))
       end
@@ -83,6 +83,51 @@ return {
       fake_dam.settle(function()
         return #fake_dam.argv_log(fake) > before and queue.running() == nil
       end)
+    end)
+  end,
+
+  ["shows a running call in the header after queue.reset without a tick by hand"] = function()
+    with_window(function(fake)
+      queue.reset()
+      local buf = window.buffer()
+      local before = #fake_dam.argv_log(fake)
+      vim.env.DAMNIT_TEST_SLEEP = "1"
+
+      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+
+      local function row_3()
+        return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
+      end
+      assert(
+        vim.wait(2000, function()
+          return row_3():find("Running: push fake", 1, true) ~= nil
+        end, 50),
+        "reset dropped the header's tick listener: " .. row_3()
+      )
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      end)
+    end)
+  end,
+
+  ["- on the first of two Working entries leaves the cursor on the second"] = function()
+    with_window(function(fake)
+      vim.api.nvim_feedkeys("gu", "x", false)
+      local line = vim.api.nvim_win_get_cursor(0)[1]
+      vim.env.DAMNIT_TEST_FIXTURES = TESTS_DIR .. "/fixtures/staged_first"
+      local before = #fake_dam.argv_log(fake)
+
+      vim.api.nvim_feedkeys("-", "x", false)
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+      end)
+
+      local landed = vim.api.nvim_win_get_cursor(0)[1]
+      assert(landed == line, ("the cursor left line %d for line %d"):format(line, landed))
+      local found = window.entry_under_cursor()
+      assert(found and found.section.kind == "working", vim.inspect(found and found.section.kind))
+      assert(found.entry.oid:sub(1, 7) == "e648ce0", found.entry.oid)
     end)
   end,
 
