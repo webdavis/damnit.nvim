@@ -175,6 +175,26 @@ return {
     end)
   end,
 
+  ["runs the queued call when setup lands during the running call's handshake"] = function()
+    with_fake(function(fake)
+      local order = {}
+      local function noting(name)
+        return function(_, failure)
+          table.insert(order, failure and ("%s: %s"):format(name, failure.message) or name)
+        end
+      end
+
+      fake.hold = true
+      queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
+      queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
+
+      damnit.setup({})
+      fake_process.drain()
+
+      assert(vim.deep_equal(order, { "a: the dam call was dropped when the options changed", "b" }), vim.inspect(order))
+    end)
+  end,
+
   ["keeps a second store's lane independent of the first"] = function()
     with_fake(function()
       damnit.options.store = "/store/one.db"

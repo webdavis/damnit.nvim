@@ -43,10 +43,11 @@ end
 function M.setup(opts, ports)
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 
-  app.dam.close()
+  local old_dam = app.dam
   app.options = M.options
   app.process = ports and ports.process or app.process
   app.dam = client_for(app)
+  old_dam.close()
 
   forget_dams_filters_read_from_the_old_store()
 
