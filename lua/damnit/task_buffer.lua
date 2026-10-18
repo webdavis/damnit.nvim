@@ -2,7 +2,8 @@ local M = {}
 
 local fixed_window = require("damnit.fixed_window")
 local scratch = require("damnit.scratch")
-local task_format = require("damnit.task_format")
+local task_edit = require("damnit.task_edit")
+local task_header = require("damnit.task_header")
 local verbs = require("damnit.dam.verbs")
 local write = require("damnit.write")
 
@@ -27,7 +28,7 @@ end
 function M.show(object, buf)
   buf = buf or vim.api.nvim_get_current_buf()
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, task_format.render(object))
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, task_header.render(object))
   vim.bo[buf].modified = false
 
   last_drawn_object_by_buf[buf] = object
@@ -39,13 +40,25 @@ end
 local function line_named_by(refusal, header)
   local flag = refusal:match("^(%-%-?[%w%-]+):")
 
-  for key, flags in pairs(task_format.FLAGS) do
+  for key, flags in pairs(task_edit.FLAGS) do
     if flag == flags.set or flag == flags.clear then
       return (header[key] or {}).line or 1
     end
   end
 
   return 1
+end
+
+local function show_when_a_window_shows(object, buf)
+  vim.bo[buf].modified = false
+
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      M.show(object, buf)
+    end,
+  })
 end
 
 local function run_in_order(app, buf, steps, header)
@@ -61,6 +74,10 @@ local function run_in_order(app, buf, steps, header)
 
       if failure then
         return diagnose(buf, failure.message, line_named_by(failure.message, header))
+      end
+
+      if #steps == 0 and #vim.fn.win_findbuf(buf) == 0 then
+        return show_when_a_window_shows(updated, buf)
       end
 
       if #steps == 0 then
@@ -80,12 +97,12 @@ function M.write(app, buf)
 
   vim.diagnostic.reset(M.NAMESPACE, buf)
 
-  local header, body, err = task_format.parse(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  local header, body, err = task_header.parse(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
   if err then
     return diagnose(buf, err, 1)
   end
 
-  local changes, refused = task_format.changes(object, header, body)
+  local changes, refused = task_edit.changes(object, header, body)
   if refused then
     return diagnose(buf, refused.message, refused.line)
   end

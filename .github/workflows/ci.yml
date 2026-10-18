@@ -49,7 +49,9 @@ jobs:
         run: |
           pure=(
             lua/damnit/status_model.lua
-            lua/damnit/task_format.lua
+            lua/damnit/task_header.lua
+            lua/damnit/task_edit.lua
+            lua/damnit/task_check.lua
             lua/damnit/list_format.lua
             lua/damnit/tree.lua
             lua/damnit/location.lua

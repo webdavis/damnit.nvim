@@ -1,4 +1,5 @@
-local task_format = require("damnit.task_format")
+local task_edit = require("damnit.task_edit")
+local task_header = require("damnit.task_header")
 
 local DAM_SHOW_TASK = {
   oid = "c30414962aa4332b6e5dfc2e0360e2b328735efe",
@@ -35,7 +36,7 @@ local DAM_SHOW_EVENT = {
 }
 
 local function changes_after_editing(object, edits)
-  local lines = task_format.render(object)
+  local lines = task_header.render(object)
 
   for index, line in ipairs(lines) do
     local key = line:match("^(%l[%l_]*):")
@@ -44,14 +45,14 @@ local function changes_after_editing(object, edits)
     end
   end
 
-  local header, body = task_format.parse(lines)
+  local header, body = task_header.parse(lines)
 
-  return task_format.changes(object, header, body)
+  return task_edit.changes(object, header, body)
 end
 
 return {
   ["renders the header dam's way, priority first and reversed"] = function()
-    local lines = task_format.render(DAM_SHOW_TASK)
+    local lines = task_header.render(DAM_SHOW_TASK)
 
     assert(lines[1] == "---", lines[1])
     assert(vim.tbl_contains(lines, "subject: buy oat milk"), vim.inspect(lines))
@@ -141,7 +142,7 @@ return {
   end,
 
   ["reads an event's own fields and leaves out the ones dam does not keep"] = function()
-    local lines = task_format.render(DAM_SHOW_EVENT)
+    local lines = task_header.render(DAM_SHOW_EVENT)
 
     assert(vim.tbl_contains(lines, "start: 2026-09-21T09:00:00-06:00[America/Denver]"), vim.inspect(lines))
     assert(vim.tbl_contains(lines, "location: room 3"), vim.inspect(lines))

@@ -3,13 +3,10 @@ local M = {}
 local dam_object = require("damnit.object")
 local text = dam_object.text
 local list = require("damnit.list")
-local tree = require("damnit.tree")
 local verbs = require("damnit.dam.verbs")
 
 local MOST_URGENT = 1
 local LEAST_URGENT_AND_DEFAULT = 4
-
-local TOP_LEVEL = ""
 
 local function send(app, args, said)
   list.write(app, args, args[1], said)
@@ -151,52 +148,6 @@ function M.labels(app)
   })
 end
 
-function M.paths_in_view()
-  local paths, seen = {}, {}
-
-  local function offer(path)
-    if not seen[path] then
-      seen[path] = true
-      paths[#paths + 1] = path
-    end
-  end
-
-  offer(TOP_LEVEL)
-
-  for _, object in ipairs(list.objects_in_view()) do
-    local path = text(object.path)
-
-    while path ~= TOP_LEVEL do
-      offer(path)
-      path = tree.parent_path(path)
-    end
-  end
-
-  table.sort(paths)
-
-  return paths
-end
-
-function M.move(app)
-  local object = list.object_under_cursor(app)
-  if not object then
-    return
-  end
-
-  vim.ui.select(M.paths_in_view(), {
-    prompt = "Move into",
-    format_item = function(path)
-      return path == TOP_LEVEL and "(top level)" or path
-    end,
-  }, function(path)
-    if path == nil then
-      return
-    end
-
-    send(app, verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
-  end)
-end
-
 function M.add(app)
   local path = list.path_under_cursor()
 
@@ -207,32 +158,6 @@ function M.add(app)
 
     list.write(app, verbs.new(subject, path), "new", "added " .. vim.trim(subject))
   end)
-end
-
-local function reparent(app, object, destination, refusal)
-  if not destination then
-    return app.say.warn(refusal)
-  end
-
-  send(app, verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
-end
-
-function M.indent(app)
-  local object = list.object_under_cursor(app)
-  if not object then
-    return
-  end
-
-  reparent(app, object, tree.indent_to(object, list.object_above_cursor()))
-end
-
-function M.promote(app)
-  local object = list.object_under_cursor(app)
-  if not object then
-    return
-  end
-
-  reparent(app, object, tree.promote_to(object, tree.index(list.objects_in_view())))
 end
 
 return M
