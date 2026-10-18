@@ -7,6 +7,7 @@ local task_buffer = require("damnit.task_buffer")
 local tree = require("damnit.tree")
 local view = require("damnit.list.view")
 local views = require("damnit.views")
+local write = require("damnit.write")
 
 local NOTHING_DRAWN = { entry_by_line = {} }
 
@@ -123,18 +124,15 @@ function M.toggle_fold(app)
 end
 
 function M.write(app, args, label, said)
-  app.queue.submit({
+  write.submit(app, {
     args = args,
     label = label,
-    on_done = function(_, err)
-      if err then
-        app.say.report(err)
-      elseif said then
+    on_ok = function()
+      if said then
         app.say.info(said)
       end
-
-      M.refresh(app)
     end,
+    refresh = M.refresh,
   })
 end
 

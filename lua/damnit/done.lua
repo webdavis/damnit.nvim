@@ -4,6 +4,7 @@ local dam_object = require("damnit.object")
 local text = dam_object.text
 local list = require("damnit.list")
 local verbs = require("damnit.dam.verbs")
+local write = require("damnit.write")
 
 local BLOCKED_TASK_INDEX = 1
 
@@ -59,16 +60,14 @@ local function ask_for_the_group_then_send(app, object)
 end
 
 function M.send(app, object, children)
-  app.queue.submit({
+  write.submit(app, {
     args = verbs.done(object.oid, children),
     label = "done",
-    on_done = function(report, err)
-      if not err then
-        report_completion(app, object, report)
-
-        return list.refresh(app)
-      end
-
+    on_ok = function(report)
+      report_completion(app, object, report)
+      list.refresh(app)
+    end,
+    on_error = function(err)
       if not forcing_would_help(err, children) then
         return app.say.report(err)
       end

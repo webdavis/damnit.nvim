@@ -5,6 +5,7 @@ local open = require("damnit.open")
 local task_buffer = require("damnit.task_buffer")
 local verbs = require("damnit.dam.verbs")
 local window = require("damnit.window")
+local write = require("damnit.write")
 
 function M.refresh(app)
   window.forget_remotes(app)
@@ -85,17 +86,7 @@ function M.targets()
 end
 
 function M.write(app, args, label)
-  app.queue.submit({
-    args = args,
-    label = label,
-    on_done = function(_, err)
-      if err then
-        app.say.report(err)
-      end
-
-      window.refresh(app)
-    end,
-  })
+  write.submit(app, { args = args, label = label, refresh = window.refresh })
 end
 
 function M.stage(app)

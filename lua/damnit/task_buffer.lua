@@ -4,6 +4,7 @@ local fixed_window = require("damnit.fixed_window")
 local scratch = require("damnit.scratch")
 local task_format = require("damnit.task_format")
 local verbs = require("damnit.dam.verbs")
+local write = require("damnit.write")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit.diagnostics")
 
@@ -137,14 +138,10 @@ function M.open(app, oid)
     return buf
   end
 
-  app.queue.submit({
+  write.submit(app, {
     args = verbs.show(oid),
     label = "show",
-    on_done = function(object, err)
-      if err then
-        return app.say.report(err)
-      end
-
+    on_ok = function(object)
       if not vim.api.nvim_buf_is_valid(buf) then
         return
       end
