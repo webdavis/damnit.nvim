@@ -2,22 +2,18 @@ local M = {}
 
 local diff = require("damnit.render.diff")
 local entries = require("damnit.window.entries")
-local folds = require("damnit.folds")
+local header = require("damnit.window.header")
 local highlights = require("damnit.render.highlights")
 local layout = require("damnit.window.layout")
-local redraw = require("damnit.redraw")
-local render = require("damnit.render")
-local scratch = require("damnit.scratch")
+local remotes = require("damnit.window.remotes")
+local status_draw = require("damnit.window.draw")
 local status_lines = require("damnit.render.status_lines")
 local status_model = require("damnit.status_model")
-local store = require("damnit.store")
 local verbs = require("damnit.dam.verbs")
 
 local buffer_by_store = {}
 
 local model_by_store = {}
-
-local remote_list_by_store = {}
 
 local window_dam_was_opened_from = nil
 
@@ -103,36 +99,10 @@ function M.entry_under_cursor(app)
   return entries.at_line(buf, vim.api.nvim_win_get_cursor(0)[1], M.model(app))
 end
 
-local function keep_the_cursor_in_its_section(buf, win, place)
-  local row = scratch.row(buf, vim.api.nvim_win_get_cursor(win)[1])
-  if not place or (row and row.section) == place.section then
-    return
-  end
-
-  local line = entries.line_of(buf, place.section, place.nth)
-  if line then
-    vim.api.nvim_win_set_cursor(win, { line, 0 })
-  end
-end
-
 local function draw(key, lines)
   local buf = buffer_by_store[key]
-  local win = window_for(buf)
-  local place = win and entries.place(buf, vim.api.nvim_win_get_cursor(win)[1])
 
-  if win then
-    folds.remember(key, win)
-  end
-
-  redraw.keep_cursor(buf, function()
-    render.draw(buf, lines)
-    diff.apply(buf, key, model_by_store[key])
-  end)
-
-  if win then
-    keep_the_cursor_in_its_section(buf, win, place)
-    folds.apply(key, win)
-  end
+  status_draw.draw(buf, window_for(buf), key, model_by_store[key], lines)
 end
 
 function M.open_diffs(app, key)
@@ -140,14 +110,7 @@ function M.open_diffs(app, key)
 end
 
 local function header_state(app, key)
-  local win = window_for(buffer_by_store[key])
-
-  return {
-    store = store.display(key),
-    running = app.queue.foreground(key),
-    now = os.time(),
-    width = win and vim.api.nvim_win_get_width(win) or nil,
-  }
+  return header.state(app, key, window_for(buffer_by_store[key]))
 end
 
 function M.redraw_current(app, key)
@@ -166,23 +129,9 @@ function M.redraw(app, key, status)
     return
   end
 
-  model_by_store[key] = status_model.build(status, remote_list_by_store[key])
+  model_by_store[key] = status_model.build(status, remotes.of(key))
 
   draw(key, status_lines.lines(model_by_store[key], header_state(app, key)))
-end
-
-local function read_the_remote_list_until_cached(app, key)
-  if remote_list_by_store[key] ~= nil then
-    return
-  end
-
-  app.queue.submit({
-    args = verbs.remote_list(),
-    label = "remote list",
-    on_done = function(data)
-      remote_list_by_store[key] = data
-    end,
-  })
 end
 
 local function status_args_full_while_a_diff_is_open(key)
@@ -196,7 +145,7 @@ end
 function M.refresh(app, key)
   key = key or app.store
 
-  read_the_remote_list_until_cached(app, key)
+  remotes.read_until_cached(app, key)
 
   app.queue.submit({
     args = status_args_full_while_a_diff_is_open(key),
@@ -212,7 +161,7 @@ function M.refresh(app, key)
 end
 
 function M.forget_remotes(app, key)
-  remote_list_by_store[key or app.store] = nil
+  remotes.forget(key or app.store)
 end
 
 function M.tick(app, key)
@@ -221,21 +170,7 @@ function M.tick(app, key)
     return
   end
 
-  local lines = status_lines.lines(model_by_store[key], header_state(app, key))
-
-  local head, text = {}, {}
-  for index, line in ipairs(lines) do
-    if line.kind ~= "header" then
-      break
-    end
-    head[index], text[index] = line, line.text
-  end
-
-  vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, #head, false, text)
-  vim.bo[buf].modifiable = false
-
-  render.mark(buf, head, 0)
+  header.rewrite(buf, status_lines.lines(model_by_store[key], header_state(app, key)))
 end
 
 function M.tick_every_store(app)
