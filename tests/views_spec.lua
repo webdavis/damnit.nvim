@@ -3,14 +3,15 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 dofile(TESTS_DIR .. "/../plugin/damnit.lua")
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 local damnit = require("damnit")
 local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
 local function with_views(declared, run)
   local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-  queue.reset()
   views.reset()
   damnit.options.views = declared
 
@@ -27,7 +28,6 @@ local function with_views(declared, run)
   vim.notify = real
   damnit.options.views = {}
   views.reset()
-  queue.reset()
   fake_dam.remove(fake)
 
   assert(ok, err)
@@ -40,7 +40,7 @@ local function resolved(name)
     spec, answered = found, true
   end)
   fake_dam.settle(function()
-    return answered or queue.running() == nil
+    return answered or queue().running() == nil
   end)
 
   return spec

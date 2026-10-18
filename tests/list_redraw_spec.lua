@@ -2,7 +2,9 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 
 local EIGHT_OBJECTS = TESTS_DIR .. "/fixtures/long"
 
@@ -26,7 +28,7 @@ return {
 
       vim.api.nvim_feedkeys("p", "x", false)
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+        return #fake_dam.argv_log(fake) >= before + 2 and queue().running() == nil
       end)
 
       local line = vim.api.nvim_win_get_cursor(0)[1]
@@ -45,7 +47,7 @@ return {
 
       vim.api.nvim_feedkeys("R", "x", false)
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+        return #fake_dam.argv_log(fake) > before and queue().running() == nil
       end)
 
       assert(#seen >= 1, "dam's answer never redrew the list")

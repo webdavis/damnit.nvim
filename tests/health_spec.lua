@@ -71,12 +71,12 @@ return {
   ["errors with the install line when dam is not on PATH"] = function()
     local saved = vim.env.PATH
     vim.env.PATH = "/nonexistent-for-this-spec"
-    require("damnit.dam").forget()
+    require("damnit").setup({})
 
     local lines = report(health.check)
 
     vim.env.PATH = saved
-    require("damnit.dam").forget()
+    require("damnit").setup({})
 
     assert(said(lines, "error", "cargo install damnit"), vim.inspect(lines))
     assert(#lines == 2, "nothing is asked of a dam that is not there")

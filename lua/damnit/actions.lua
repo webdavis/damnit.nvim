@@ -9,7 +9,7 @@ function M.refresh()
 end
 
 function M.cancel()
-  require("damnit.queue").cancel()
+  require("damnit").app().queue.cancel()
 end
 
 local function is_the_only_window_left()
@@ -82,7 +82,7 @@ function M.targets()
 end
 
 function M.write(args, label)
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = args,
     label = label,
     on_done = function(_, err)

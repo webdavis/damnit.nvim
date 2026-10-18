@@ -7,7 +7,9 @@ dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local damnit = require("damnit")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
@@ -24,7 +26,6 @@ function M.with(run, opts)
     exit = opts.exit,
     stderr = opts.stderr,
   })
-  queue.reset()
 
   forget_the_refused_view_names()
   damnit.options.views = opts.views or {}
@@ -37,7 +38,7 @@ function M.with(run, opts)
 
   local buf = opts.open and opts.open() or damnit.open(opts.name)
   fake_dam.settle(function()
-    return queue.running() == nil
+    return queue().running() == nil
   end)
 
   local ok, err = pcall(run, buf, fake, notifications)
@@ -47,7 +48,6 @@ function M.with(run, opts)
   vim.notify = real
   damnit.options.views = {}
   vim.cmd("silent! %bwipeout!")
-  queue.reset()
   views.reset()
   fake_dam.remove(fake)
 

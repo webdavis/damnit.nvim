@@ -3,14 +3,12 @@ local M = {}
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
 local task_buffer = require("damnit.task_buffer")
 
 M.OID = "badb4903b653809e591c31118004e07de7c8183c"
 
 function M.with_task(run, opts)
   local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full", fail = (opts or {}).fail })
-  queue.reset()
 
   local notifications = {}
   local real = vim.notify
@@ -28,7 +26,6 @@ function M.with_task(run, opts)
 
   vim.notify = real
   vim.cmd("silent! %bwipeout!")
-  queue.reset()
   fake_dam.remove(fake)
 
   assert(ok, err)

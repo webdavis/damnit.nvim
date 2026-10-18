@@ -61,7 +61,7 @@ local function one_line(verb, report)
 end
 
 function M.sync(verb, remote)
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs[verb](remote),
     label = remote and ("%s %s"):format(verb, remote) or verb,
     verb = verb,

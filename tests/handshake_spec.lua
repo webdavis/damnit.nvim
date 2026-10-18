@@ -1,5 +1,7 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
-local dam = require("damnit.dam")
+local function dam()
+  return require("damnit").app().dam
+end
 local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)
@@ -12,7 +14,7 @@ local function first_call_to_a_dam_whose_version_says(version_banner)
   end
 
   local answered, err = false, nil
-  dam.call({ "status", "--json" }, nil, function(_, failure)
+  dam().call({ "status", "--json" }, nil, function(_, failure)
     answered, err = true, failure
   end)
 
@@ -45,10 +47,10 @@ return {
   end,
 
   ["refuses 0.3.0, which is the first version outside the range"] = function()
-    assert(dam.supported("0.2.0"))
-    assert(dam.supported("0.2.9"))
-    assert(not dam.supported("0.3.0"))
-    assert(not dam.supported("0.1.9"))
+    assert(require("damnit.dam").supported("0.2.0"))
+    assert(require("damnit.dam").supported("0.2.9"))
+    assert(not require("damnit.dam").supported("0.3.0"))
+    assert(not require("damnit.dam").supported("0.1.9"))
   end,
 
   ["warns once about a banner it cannot read, then makes the call anyway"] = function()
@@ -71,7 +73,7 @@ return {
 
     for _ = 1, 3 do
       local answered = false
-      dam.call({ "status", "--json" }, nil, function()
+      dam().call({ "status", "--json" }, nil, function()
         answered = true
       end)
       fake_dam.settle(function()

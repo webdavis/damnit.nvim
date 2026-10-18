@@ -126,7 +126,7 @@ function M.labels()
     return
   end
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.category_list(),
     label = "category list",
     on_done = function(data, err)

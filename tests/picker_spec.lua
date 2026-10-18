@@ -77,7 +77,7 @@ return {
 
         picker.pick("today")
         fake_dam.settle(function()
-          return #fake_dam.argv_log(fake) > logged_before and require("damnit.queue").running() == nil
+          return #fake_dam.argv_log(fake) > logged_before and require("damnit").app().queue.running() == nil
         end)
 
         assert(#offered == 0, "a refused view offered " .. vim.inspect(offered))

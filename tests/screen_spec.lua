@@ -3,7 +3,9 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
 local sidebar = require("damnit.sidebar")
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
@@ -42,7 +44,7 @@ return {
       status_window.with(function()
         screen.fix_size()
         vim.env.DAMNIT_TEST_SLEEP = "1"
-        queue.submit({ args = { "status", "--json" }, label = "push fake" })
+        queue().submit({ args = { "status", "--json" }, label = "push fake" })
         assert(
           vim.wait(2000, function()
             return vim.api.nvim_buf_get_lines(0, 2, 3, false)[1]:find("Running:", 1, true) ~= nil

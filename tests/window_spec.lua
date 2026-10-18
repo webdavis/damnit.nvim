@@ -1,6 +1,8 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local render = require("damnit.render")
 local window = require("damnit.window")
 
@@ -8,8 +10,8 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
-  window.tick(queue.key())
-  window.tick(queue.key())
+  window.tick(queue().key())
+  window.tick(queue().key())
 end
 
 return {
@@ -45,7 +47,7 @@ return {
       local buf = window.buffer()
       local before = #fake_dam.argv_log(fake)
 
-      queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
+      queue().submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
       tick_twice_by_hand_full_redraw_then_header_only()
 
@@ -58,7 +60,7 @@ return {
       end
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+        return #fake_dam.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
@@ -68,7 +70,7 @@ return {
       local buf = window.buffer()
       local before = #fake_dam.argv_log(fake)
 
-      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+      queue().submit({ args = { "status", "--json" }, label = "push fake" })
       tick_twice_by_hand_full_redraw_then_header_only()
 
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
@@ -81,19 +83,19 @@ return {
       end
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+        return #fake_dam.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
 
   ["shows a running call in the header after queue.reset without a tick by hand"] = function()
     with_window(function(fake)
-      queue.reset()
+      require("damnit").setup({})
       local buf = window.buffer()
       local before = #fake_dam.argv_log(fake)
       vim.env.DAMNIT_TEST_SLEEP = "1"
 
-      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+      queue().submit({ args = { "status", "--json" }, label = "push fake" })
 
       local function row_3()
         return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
@@ -106,7 +108,7 @@ return {
       )
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+        return #fake_dam.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
@@ -120,7 +122,7 @@ return {
 
       vim.api.nvim_feedkeys("-", "x", false)
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+        return #fake_dam.argv_log(fake) >= before + 2 and queue().running() == nil
       end)
 
       local landed = vim.api.nvim_win_get_cursor(0)[1]
@@ -158,7 +160,7 @@ return {
       local before = #fake_dam.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+        return #fake_dam.argv_log(fake) > before and queue().running() == nil
       end)
 
       local moved = heading_of("staged")
@@ -222,7 +224,7 @@ return {
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+        return #fake_dam.argv_log(fake) >= before + 2 and queue().running() == nil
       end)
 
       local log = fake_dam.argv_log(fake)

@@ -4,14 +4,16 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local damnit = require("damnit")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 
 M.CONFIGURED_WIDTH = 34
 
 local function cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  if queue.running() then
-    queue.cancel()
+  if queue().running() then
+    queue().cancel()
   end
 end
 
@@ -37,7 +39,6 @@ function M.in_its_own_tabpage(opts, body)
     fixtures = TESTS_DIR .. "/fixtures/full",
     sleep = opts.slow_first_fetch and "5" or nil,
   })
-  queue.reset()
   views.reset()
 
   local notifications = {}
@@ -63,7 +64,6 @@ function M.in_its_own_tabpage(opts, body)
   vim.cmd("silent! %bwipeout!")
 
   cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  queue.reset()
   views.reset()
   fake_dam.remove(fake)
   damnit.options = options

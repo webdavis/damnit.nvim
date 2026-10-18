@@ -1,12 +1,14 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
-local dam = require("damnit.dam")
+local function dam()
+  return require("damnit").app().dam
+end
 local damnit = require("damnit")
 
 local function call_through_a_fake(fake_opts, args)
   local fake = fake_dam.install(fake_opts)
 
   local answered, data, err = false, nil, nil
-  dam.call(args, nil, function(value, failure)
+  dam().call(args, nil, function(value, failure)
     answered, data, err = true, value, failure
   end)
 
@@ -24,13 +26,13 @@ return {
   ["builds an argv with no store flags when neither option is set"] = function()
     damnit.options.store, damnit.options.config = nil, nil
 
-    assert(vim.deep_equal(dam.argv({ "status", "--json" }), { "dam", "status", "--json" }))
+    assert(vim.deep_equal(dam().argv({ "status", "--json" }), { "dam", "status", "--json" }))
   end,
 
   ["passes --store and --config through as global flags, before the subcommand"] = function()
     damnit.options.store, damnit.options.config = "/store/dam.db", "/config/dam.toml"
 
-    local argv = dam.argv({ "status", "--json" })
+    local argv = dam().argv({ "status", "--json" })
     damnit.options.store, damnit.options.config = nil, nil
 
     assert(
@@ -135,7 +137,7 @@ return {
     file:close()
 
     local answered, err = false, nil
-    dam.call({ "status", "--json" }, nil, function(_, failure)
+    dam().call({ "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 
@@ -151,10 +153,10 @@ return {
   ["reports a dam that is not on PATH instead of raising"] = function()
     local saved = vim.env.PATH
     vim.env.PATH = "/nonexistent-for-this-spec"
-    dam.forget()
+    require("damnit").setup({})
 
     local answered, err = false, nil
-    local ok = pcall(dam.call, { "status", "--json" }, nil, function(_, failure)
+    local ok = pcall(dam().call, { "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 
@@ -163,7 +165,7 @@ return {
     end)
 
     vim.env.PATH = saved
-    dam.forget()
+    require("damnit").setup({})
 
     assert(ok, "a missing binary must not raise out of dam.call")
     assert(err.kind == "missing", vim.inspect(err))

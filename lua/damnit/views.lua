@@ -43,7 +43,7 @@ function M.load(on_loaded)
   end
 
   waiting_on_the_list = { on_loaded }
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.filter_list(),
     label = "filter list",
     on_done = function(data, err)

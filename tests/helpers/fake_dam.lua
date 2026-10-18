@@ -134,7 +134,7 @@ function M.install(opts)
   vim.env.DAMNIT_TEST_STDERR = failure.stderr or ""
   vim.env.DAMNIT_TEST_EXIT = failure.exit and tostring(failure.exit) or ""
 
-  require("damnit.dam").forget()
+  require("damnit").setup({}, { process = require("damnit.process") })
 
   return fake
 end
@@ -171,7 +171,7 @@ end
 
 function M.drain_the_lane_so_no_answer_lands_in_the_next_case()
   pcall(M.settle, function()
-    return require("damnit.queue").running() == nil
+    return require("damnit").app().queue.running() == nil
   end)
 end
 
@@ -188,7 +188,7 @@ function M.remove(fake)
     vim.env[name] = nil
   end
 
-  require("damnit.dam").forget()
+  require("damnit").setup({}, { process = require("damnit.process") })
 end
 
 return M

@@ -4,7 +4,9 @@ local entries = require("damnit.window.entries")
 local folds = require("damnit.folds")
 local layout = require("damnit.window.layout")
 local message = require("damnit.message")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
@@ -37,7 +39,7 @@ local function window_for(buf)
 end
 
 function M.buffer(key)
-  key = key or queue.key()
+  key = key or queue().key()
 
   local existing = buffer_by_store[key]
   if existing and vim.api.nvim_buf_is_valid(existing) then
@@ -60,7 +62,7 @@ function M.buffer(key)
 end
 
 function M.open()
-  local key = queue.key()
+  local key = queue().key()
   render.define()
 
   local buf = M.buffer(key)
@@ -88,11 +90,11 @@ function M.origin()
 end
 
 function M.model(key)
-  return model_by_store[key or queue.key()]
+  return model_by_store[key or queue().key()]
 end
 
 function M.line_of(section_kind, nth)
-  local buf = buffer_by_store[queue.key()]
+  local buf = buffer_by_store[queue().key()]
   if not buf then
     return nil
   end
@@ -167,7 +169,7 @@ local function draw(key, lines)
 end
 
 function M.open_diffs(key)
-  return require("damnit.render.diff").open_set(key or queue.key())
+  return require("damnit.render.diff").open_set(key or queue().key())
 end
 
 local function header_state(key)
@@ -175,14 +177,14 @@ local function header_state(key)
 
   return {
     store = M.store_display(key),
-    running = queue.foreground(key),
+    running = queue().foreground(key),
     now = os.time(),
     width = win and vim.api.nvim_win_get_width(win) or nil,
   }
 end
 
 function M.redraw_current(key)
-  key = key or queue.key()
+  key = key or queue().key()
 
   if not model_by_store[key] then
     return
@@ -207,7 +209,7 @@ local function read_the_remote_list_until_cached(key)
     return
   end
 
-  queue.submit({
+  queue().submit({
     args = verbs.remote_list(),
     label = "remote list",
     on_done = function(data)
@@ -225,11 +227,11 @@ local function status_args_full_while_a_diff_is_open(key)
 end
 
 function M.refresh(key)
-  key = key or queue.key()
+  key = key or queue().key()
 
   read_the_remote_list_until_cached(key)
 
-  queue.submit({
+  queue().submit({
     args = status_args_full_while_a_diff_is_open(key),
     label = "status",
     on_done = function(status, err)
@@ -243,7 +245,7 @@ function M.refresh(key)
 end
 
 function M.forget_remotes(key)
-  remote_list_by_store[key or queue.key()] = nil
+  remote_list_by_store[key or queue().key()] = nil
 end
 
 function M.tick(key)
@@ -268,8 +270,6 @@ function M.tick(key)
 
   render.mark(buf, head, 0)
 end
-
-queue.on_tick(M.tick)
 
 vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
   group = vim.api.nvim_create_augroup("damnit", { clear = false }),

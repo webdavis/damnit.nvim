@@ -1,7 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
 local done = require("damnit.done")
 
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }
@@ -28,7 +27,6 @@ local function with_dam(run, opts)
     exit = opts.exit,
     stderr = opts.stderr,
   })
-  queue.reset()
 
   local notifications = {}
   local real = vim.notify
@@ -41,7 +39,6 @@ local function with_dam(run, opts)
   fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
 
   vim.notify = real
-  queue.reset()
   fake_dam.remove(fake)
 
   assert(ok, err)

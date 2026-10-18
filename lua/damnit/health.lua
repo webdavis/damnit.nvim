@@ -26,7 +26,7 @@ end
 
 local function call(args)
   return M.settle(function(done)
-    require("damnit.dam").call(args, nil, done)
+    require("damnit").app().dam.call(args, nil, done)
   end)
 end
 
@@ -36,6 +36,7 @@ end
 
 local function report_version_and_store()
   local dam = require("damnit.dam")
+  local client = require("damnit").app().dam
   local finished, data, err = call(verbs.ls(nil, true))
 
   if not finished then
@@ -52,9 +53,9 @@ local function report_version_and_store()
 
   local range = ("the supported range is >=%s <%s"):format(dam.MIN_VERSION, dam.MAX_VERSION)
 
-  if dam.version then
+  if client.version then
     local first_dam_on_path = vim.fn.exepath("dam")
-    vim.health.ok(("dam %s at %s, and %s"):format(dam.version, first_dam_on_path, range))
+    vim.health.ok(("dam %s at %s, and %s"):format(client.version, first_dam_on_path, range))
   else
     vim.health.warn(("dam --version printed something that is not a version, and %s"):format(range))
   end

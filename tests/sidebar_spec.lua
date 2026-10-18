@@ -3,7 +3,9 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
 local sidebar = require("damnit.sidebar")
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 
 return {
   ["toggle opens a fixed-width split and a second call closes it"] = function()
@@ -115,7 +117,7 @@ return {
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle()
       fake_dam.settle(function()
-        return queue.running() == nil
+        return queue().running() == nil
       end)
 
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")

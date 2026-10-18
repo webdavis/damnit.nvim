@@ -62,7 +62,7 @@ function M.create(content, where)
     return message.warn("there is nothing to capture here")
   end
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = M.args(content, where),
     label = "new",
     on_done = function(object, err)

@@ -50,7 +50,7 @@ end
 local function run_in_order(buf, steps, header)
   local step = table.remove(steps, 1)
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = step.args,
     label = step.label,
     on_done = function(updated, failure)
@@ -135,7 +135,7 @@ function M.open(oid)
     return buf
   end
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.show(oid),
     label = "show",
     on_done = function(object, err)
