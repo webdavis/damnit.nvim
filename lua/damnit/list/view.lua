@@ -24,7 +24,7 @@ local function bar_the_current_row_cut_long_rows_and_show_the_legend_in_this_win
   vim.wo[0][0].winbar = "%!v:lua.require'damnit.list.view'.winbar()"
 end
 
-local function configure(app, buf)
+local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
@@ -34,14 +34,10 @@ local function configure(app, buf)
     buffer = buf,
     callback = bar_the_current_row_cut_long_rows_and_show_the_legend_in_this_window_only,
   })
-
-  require("damnit.keys").attach(buf, "damlist", app)
 end
 
-function M.ensure(app, spec)
-  local buf = scratch.named(buffer_name(spec), function(new)
-    configure(app, new)
-  end)
+function M.ensure(spec)
+  local buf = scratch.named(buffer_name(spec), configure)
   local shown = scratch.state(buf)
 
   shown.spec = spec

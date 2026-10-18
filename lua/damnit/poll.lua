@@ -19,8 +19,6 @@ local DEFAULT_REFRESH_SECONDS = 60
 
 local MIN_REFRESH_SECONDS = 5
 
-local stop_on_exit_registered = false
-
 local function task_of(object)
   local task = object.task
 
@@ -137,11 +135,6 @@ function M.start(app)
       M.refresh(app)
     end)
   )
-
-  if not stop_on_exit_registered then
-    vim.api.nvim_create_autocmd("VimLeavePre", { callback = M.stop, desc = "dam: stop the refresh timer" })
-    stop_on_exit_registered = true
-  end
 end
 
 function M.stop()

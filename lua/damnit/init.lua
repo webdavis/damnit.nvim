@@ -18,9 +18,11 @@ M.options = {
 
 local app
 
-local function tick_the_status_window(key)
-  require("damnit.window").tick(app, key)
-end
+local autocmds = require("damnit.autocmds")
+
+local tick_the_status_window_once_it_is_loaded = autocmds.once_loaded("damnit.window", function(window, key)
+  window.tick(app, key)
+end)
 
 local function client_for(record)
   return require("damnit.dam").new(record.options, record.process, record.say)
@@ -37,7 +39,8 @@ app = {
 }
 app.store = require("damnit.store").of(app.options)
 app.dam = client_for(app)
-app.queue = require("damnit.queue").new(app, tick_the_status_window)
+app.queue = require("damnit.queue").new(app, tick_the_status_window_once_it_is_loaded)
+autocmds.setup(app)
 
 function M.app()
   return app

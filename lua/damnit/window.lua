@@ -44,7 +44,6 @@ function M.buffer(app, key)
   vim.bo[buf].buflisted = false
   vim.bo[buf].modifiable = false
 
-  require("damnit.keys").attach(buf, "damstatus", app)
   buffer_by_store[key] = buf
 
   return buf
@@ -260,23 +259,10 @@ function M.tick(app, key)
   render.mark(buf, head, 0)
 end
 
-vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
-  group = vim.api.nvim_create_augroup("damnit", { clear = false }),
-  desc = "dam: the legend keeps whole entries when the status window narrows",
-  callback = function()
-    for key in pairs(buffer_by_store) do
-      M.tick(require("damnit").app(), key)
-    end
-  end,
-})
-
-vim.api.nvim_create_autocmd("BufReadCmd", {
-  group = vim.api.nvim_create_augroup("damnit", { clear = false }),
-  pattern = "damnit://status/*",
-  desc = "dam: :e re-reads the status",
-  callback = function()
-    M.refresh(require("damnit").app())
-  end,
-})
+function M.tick_every_store(app)
+  for key in pairs(buffer_by_store) do
+    M.tick(app, key)
+  end
+end
 
 return M

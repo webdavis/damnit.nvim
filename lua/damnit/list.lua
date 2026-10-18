@@ -177,7 +177,7 @@ function M.refresh(app)
 end
 
 function M.open(app, spec)
-  local buf, shown = view.ensure(app, spec)
+  local buf, shown = view.ensure(spec)
 
   require("damnit.sidebar").leave_fixed_window()
   vim.api.nvim_win_set_buf(0, buf)

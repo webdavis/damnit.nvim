@@ -101,22 +101,16 @@ function M.toggle(app)
   return M.open(app)
 end
 
-local function restore_the_width_once_another_window_takes_the_rest()
+function M.hold_width(app)
   local win = M.window()
   if not win or #vim.api.nvim_tabpage_list_wins(0) == 1 then
     return
   end
 
-  local width = require("damnit").app().options.sidebar.width
+  local width = app.options.sidebar.width
   if type(width) == "number" and width >= 1 and vim.api.nvim_win_get_width(win) ~= width then
     vim.api.nvim_win_set_width(win, width)
   end
 end
-
-vim.api.nvim_create_autocmd({ "WinNew", "WinResized" }, {
-  group = vim.api.nvim_create_augroup("damnit-sidebar", { clear = true }),
-  desc = "dam: hold the sidebar at its configured width",
-  callback = restore_the_width_once_another_window_takes_the_rest,
-})
 
 return M
