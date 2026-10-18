@@ -33,7 +33,7 @@ find_the_subcommand_past_global_flags_and_their_values() {
   for arg in "$@"; do
     if [ "$skip" = 1 ]; then skip=0; continue; fi
     case "$arg" in
-      --store|--config) skip=1 ;;
+      "--store"|"--config") skip=1 ;;
       -*) ;;
       *) subcommand="$arg"; break ;;
     esac
