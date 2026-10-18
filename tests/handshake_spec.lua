@@ -1,7 +1,9 @@
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+
 local function dam()
   return require("damnit").app().dam
 end
+
 local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)

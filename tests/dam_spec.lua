@@ -1,7 +1,9 @@
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+
 local function dam()
   return require("damnit").app().dam
 end
+
 local damnit = require("damnit")
 
 local function call_through_a_fake(fake_opts, args)
