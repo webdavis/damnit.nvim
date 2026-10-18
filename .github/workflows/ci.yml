@@ -54,9 +54,10 @@ jobs:
             lua/damnit/tree.lua
             lua/damnit/location.lua
             lua/damnit/answer.lua
+            lua/damnit/dam/verbs.lua
           )
           if grep -nHE 'vim\.(api|fn|system|notify|schedule)' "${pure[@]}"; then
-            echo "these six are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
+            echo "these are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
             exit 1
           fi
       - name: No em-dash
