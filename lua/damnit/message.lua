@@ -60,12 +60,6 @@ function M.report(err)
   M.tell(err.kind == "missing" and vim.log.levels.ERROR or vim.log.levels.WARN, err.message)
 end
 
-local function configure(buf)
-  vim.bo[buf].buftype = "nofile"
-  vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].swapfile = false
-end
-
 local function kept_lines()
   local lines = {}
   for _, whole in ipairs(kept) do
@@ -76,18 +70,9 @@ local function kept_lines()
 end
 
 function M.show()
-  local buf = scratch.named(M.NAME, configure)
   local lines = kept_lines()
 
-  vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modifiable = false
-
-  if not scratch.focus(buf) then
-    vim.cmd("split")
-    vim.api.nvim_win_set_buf(0, buf)
-  end
-
+  scratch.read_only(M.NAME, lines, "split")
   vim.api.nvim_win_set_cursor(0, { math.max(#lines, 1), 0 })
 end
 
