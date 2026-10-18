@@ -97,26 +97,17 @@ return {
     assert(vim.deep_equal(changes.edit, { "--label", "slow", "--unlabel", "errand" }), vim.inspect(changes.edit))
   end,
 
-  ["moves into the container a changed path names"] = function()
-    local changes = changes_after_editing(DAM_SHOW_TASK, { path = "home/inbox/" })
+  ["moves to the path as typed, which is what dam mv stores"] = function()
+    local changes = changes_after_editing(DAM_SHOW_TASK, { path = "home/" })
 
     assert(changes.move == "home/", tostring(changes.move))
     assert(#changes.edit == 0, vim.inspect(changes.edit))
   end,
 
-  ["sends a root object's new path whole, since it has no segment of its own"] = function()
-    local rooted = vim.tbl_extend("force", DAM_SHOW_TASK, { path = "" })
-    local changes = changes_after_editing(rooted, { path = "home/errands/" })
+  ["keeps every segment of a typed path, the old one included"] = function()
+    local changes = changes_after_editing(DAM_SHOW_TASK, { path = "home/inbox/" })
 
-    assert(changes.move == "home/errands/", tostring(changes.move))
-  end,
-
-  ["refuses a path that renames the object, which dam mv cannot do"] = function()
-    local _, refused = changes_after_editing(DAM_SHOW_TASK, { path = "home/errands/" })
-
-    assert(refused.message:find("inbox", 1, true), refused.message)
-    assert(refused.message:find("errands", 1, true), refused.message)
-    assert(refused.line > 1, tostring(refused.line))
+    assert(changes.move == "home/inbox/", tostring(changes.move))
   end,
 
   ["refuses a path with an empty segment"] = function()

@@ -28,7 +28,7 @@ local REFUSAL_FOR_A_MOVE_UNDER_ITS_OWN_CHILD = table.concat({
 })
 
 local EDIT_ARGV = ("edit %s --subject buy the oat milk --json"):format(OID)
-local MV_ARGV = ("mv %s home/ --json"):format(OID)
+local MV_ARGV = ("mv %s home/inbox/ --json"):format(OID)
 
 local function through_the_command(oid)
   vim.cmd("Dam task " .. oid)
@@ -76,11 +76,14 @@ return {
     end)
   end,
 
-  ["sends a changed path as the container dam mv takes"] = function()
+  ["sends a changed path to dam mv as typed, and the object ends there"] = function()
     with_dam(task.opts(), function(dam)
-      task.set_field(dam.buf, "path", "home/inbox/")
+      task.set_field(dam.buf, "path", "home/")
 
       assert(task.argv_the_write_sent_or_nil(dam.fake) == ("mv %s home/ --json"):format(OID), "the wrong argv")
+      fake_process.settle(function()
+        return task.field_line(dam.buf, "path") == "path: home/"
+      end)
     end)
   end,
 
