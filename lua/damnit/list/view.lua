@@ -15,8 +15,16 @@ function M.of(buf)
   return vim.bo[buf].filetype == "damlist" and scratch.state(buf) or nil
 end
 
+local function place_of(win)
+  local shown = M.of(vim.api.nvim_win_get_buf(win))
+  local showing_completed_history = shown and shown.spec and shown.spec.flat
+
+  return showing_completed_history and "history" or "list"
+end
+
 function M.winbar()
-  local legend = keymaps.legend("damlist", vim.api.nvim_win_get_width(vim.g.statusline_winid))
+  local win = vim.g.statusline_winid
+  local legend = keymaps.legend("damlist", vim.api.nvim_win_get_width(win), place_of(win))
 
   return "%#DamLegend#" .. legend:gsub("%%", "%%%%")
 end

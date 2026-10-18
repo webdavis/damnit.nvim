@@ -77,7 +77,22 @@ M.MAPS = {
       desc = "open this object",
       legend = "open",
     },
-    { mode = "n", lhs = "x", run = call("done", "complete"), desc = "complete this object", legend = "done" },
+    {
+      mode = "n",
+      lhs = "x",
+      run = call("done", "complete"),
+      desc = "complete this object",
+      legend = "done",
+      legend_in = "list",
+    },
+    {
+      mode = "n",
+      lhs = "u",
+      run = edit("reopen_here"),
+      desc = "reopen this object, in the completed history",
+      legend = "reopen",
+      legend_in = "history",
+    },
     { mode = "n", lhs = "p", run = edit("cycle_priority"), desc = "cycle this object's priority", legend = "priority" },
     { mode = "n", lhs = "s", run = edit("schedule"), desc = "set this object's due date", legend = "due" },
     { mode = "n", lhs = "a", run = edit("add"), desc = "add an object where the cursor is", legend = "add" },
@@ -90,7 +105,6 @@ M.MAPS = {
       desc = "jump to the code this came from",
     },
     { mode = "n", lhs = "X", run = edit("reopen"), desc = "reopen this object" },
-    { mode = "n", lhs = "u", run = edit("reopen_here"), desc = "reopen this object, in the completed history" },
     { mode = "n", lhs = "dd", run = edit("delete"), desc = "remove this object, after the confirm" },
     { mode = "n", lhs = "l", run = edit("labels"), desc = "toggle a label on this object" },
     { mode = "n", lhs = "m", run = move("move"), desc = "move this object into another path" },
@@ -102,11 +116,11 @@ M.MAPS = {
 
 local LEGEND_GAP = "  "
 
-function M.legend(filetype, width)
+function M.legend(filetype, width, place)
   local shown, used = {}, 0
 
   for _, map in ipairs(M.MAPS[filetype] or {}) do
-    if map.legend then
+    if map.legend and (map.legend_in == nil or map.legend_in == (place or "list")) then
       local entry = map.lhs .. " " .. map.legend
       local needed = vim.api.nvim_strwidth(entry) + (#shown > 0 and #LEGEND_GAP or 0)
 
