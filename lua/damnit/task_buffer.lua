@@ -145,9 +145,15 @@ function M.open(app, oid)
         return app.say.report(err)
       end
 
-      if vim.api.nvim_buf_is_valid(buf) then
-        M.show(object, buf)
+      if not vim.api.nvim_buf_is_valid(buf) then
+        return
       end
+
+      if #vim.fn.win_findbuf(buf) == 0 then
+        return vim.api.nvim_buf_delete(buf, { force = true })
+      end
+
+      M.show(object, buf)
     end,
   })
 
