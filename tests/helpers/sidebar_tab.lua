@@ -57,13 +57,13 @@ function M.in_its_own_tabpage(opts, body)
   end
 
   vim.o.columns = columns
-  vim.notify = real_notify
   vim.cmd("silent! %bwipeout!")
 
   cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
   views.reset()
   damnit.options = options
   fake_process.remove(fake)
+  vim.notify = real_notify
 
   assert(ok, result)
 

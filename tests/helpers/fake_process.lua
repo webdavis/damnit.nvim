@@ -175,6 +175,7 @@ function M.drain()
 end
 
 function M.remove(_)
+  M.drain()
   require("damnit").setup({}, { process = require("damnit.process") })
 end
 

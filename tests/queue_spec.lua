@@ -134,6 +134,47 @@ return {
     end)
   end,
 
+  ["keeps the running call, its queue and its lane when setup runs mid-call"] = function()
+    with_fake(function(fake)
+      queue().submit(entry({ "status", "--json" }))
+      fake_process.drain()
+
+      local peak = 0
+      local run = fake.run
+      fake.run = function(...)
+        local handle = run(...)
+        peak = math.max(peak, fake.in_flight)
+
+        return handle
+      end
+
+      local order = {}
+      local function noting(name)
+        return function(_, failure)
+          table.insert(order, failure and ("%s: %s"):format(name, failure.message) or name)
+        end
+      end
+
+      fake.hold = true
+      queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
+      queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
+
+      damnit.setup({})
+
+      assert(queue().running().label == "a", "the call in flight left the header: " .. vim.inspect(queue().running()))
+      queue().submit(entry({ "status", "--json" }, { label = "c", on_done = noting("c") }))
+      assert(
+        queue().running().pending == 2,
+        "a call queued before setup was dropped: " .. vim.inspect(queue().running())
+      )
+
+      fake_process.drain()
+
+      assert(vim.deep_equal(order, { "a", "b", "c" }), vim.inspect(order))
+      assert(peak == 1, "more than one call was in flight at once: " .. peak)
+    end)
+  end,
+
   ["keeps a second store's lane independent of the first"] = function()
     with_fake(function()
       damnit.options.store = "/store/one.db"

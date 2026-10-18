@@ -20,18 +20,13 @@ local function tick_the_status_window(key)
   require("damnit.window").tick(key)
 end
 
-local function build(options, process)
-  local dam = require("damnit.dam").new(options, process)
-
-  return {
-    options = options,
-    process = process,
-    dam = dam,
-    queue = require("damnit.queue").new(dam, options, tick_the_status_window),
-  }
+local function client_for(app)
+  return require("damnit.dam").new(app.options, app.process)
 end
 
-local app = build(M.options, require("damnit.process"))
+local app = { options = M.options, process = require("damnit.process") }
+app.dam = client_for(app)
+app.queue = require("damnit.queue").new(app, tick_the_status_window)
 
 function M.app()
   return app
@@ -49,8 +44,9 @@ function M.setup(opts, ports)
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 
   app.dam.close()
-  app.queue.close()
-  app = build(M.options, ports and ports.process or app.process)
+  app.options = M.options
+  app.process = ports and ports.process or app.process
+  app.dam = client_for(app)
 
   forget_dams_filters_read_from_the_old_store()
 

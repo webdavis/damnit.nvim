@@ -45,13 +45,13 @@ local function refuse_a_second_network_call(lane, entry)
   return true
 end
 
-function M.new(dam, options, on_tick)
+function M.new(app, on_tick)
   local queue = { TICK_MS = 250, GRACE_MS = 2000 }
 
   local lanes_by_store = {}
 
   function queue.key()
-    return store_key(options)
+    return store_key(app.options)
   end
 
   local function lane_for(key)
@@ -104,7 +104,7 @@ function M.new(dam, options, on_tick)
     entry.started_at = vim.uv.hrtime()
     start_timer(key, lane)
 
-    dam.call(entry.args, {
+    app.dam.call(entry.args, {
       label = entry.label,
       on_spawn = function(handle)
         entry.handle = handle
@@ -210,12 +210,6 @@ function M.new(dam, options, on_tick)
     end
 
     return true
-  end
-
-  function queue.close()
-    for key, lane in pairs(lanes_by_store) do
-      stop_timer(key, lane)
-    end
   end
 
   return queue
