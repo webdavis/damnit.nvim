@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 function M.remote_under_cursor()
   local found = require("damnit.window").entry_under_cursor()
@@ -60,16 +61,8 @@ local function one_line(verb, report)
 end
 
 function M.sync(verb, remote)
-  local args = { verb }
-
-  if remote then
-    args[#args + 1] = remote
-  end
-
-  args[#args + 1] = "--json"
-
   require("damnit.queue").submit({
-    args = args,
+    args = verbs[verb](remote),
     label = remote and ("%s %s"):format(verb, remote) or verb,
     verb = verb,
     network = true,
@@ -115,7 +108,7 @@ function M.resolve(side)
     return message.warn("no conflict on this line")
   end
 
-  require("damnit.actions").write({ "resolve", found.entry.oid, "--" .. side, "--json" }, "resolve")
+  require("damnit.actions").write(verbs.resolve(found.entry.oid, side), "resolve")
 end
 
 return M

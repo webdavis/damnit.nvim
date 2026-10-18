@@ -4,6 +4,7 @@ local diff = require("damnit.render.diff")
 local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local status_model = require("damnit.status_model")
+local verbs = require("damnit.dam.verbs")
 
 local function set_field_lines(object)
   local lines = {}
@@ -54,7 +55,7 @@ function M.unpushed(entry)
   end
 
   require("damnit.queue").submit({
-    args = { "log", "--json" },
+    args = verbs.log(),
     label = "log",
     on_done = function(data, err)
       if err then

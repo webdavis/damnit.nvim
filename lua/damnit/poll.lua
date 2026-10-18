@@ -2,6 +2,7 @@ local M = {}
 
 local due = require("damnit.due")
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 M.QUERY = "!done & (due:today | overdue)"
 
@@ -107,7 +108,7 @@ function M.refresh()
   end
 
   queue.submit({
-    args = { "ls", M.QUERY, "--no-pull", "--json" },
+    args = verbs.ls(M.QUERY, true),
     label = "ls",
     background = true,
     on_done = function(data, err)

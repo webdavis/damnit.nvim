@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 function M.refresh()
   require("damnit.window").forget_remotes()
@@ -80,14 +81,6 @@ function M.targets()
   return { oids = picked, section = section }
 end
 
-local function verb_args(verb, oids)
-  local args = { verb }
-  vim.list_extend(args, oids)
-  args[#args + 1] = "--json"
-
-  return args
-end
-
 function M.write(args, label)
   require("damnit.queue").submit({
     args = args,
@@ -113,7 +106,7 @@ function M.stage()
     return message.warn("already staged")
   end
 
-  M.write(verb_args("add", picked.oids), "add")
+  M.write(verbs.add(picked.oids), "add")
 end
 
 function M.unstage()
@@ -127,7 +120,7 @@ function M.unstage()
     return message.warn("not staged")
   end
 
-  M.write(verb_args("reset", picked.oids), "reset")
+  M.write(verbs.reset(picked.oids), "reset")
 end
 
 function M.toggle_stage()
@@ -138,7 +131,7 @@ function M.toggle_stage()
   end
 
   local verb = picked.section == "staged" and "reset" or "add"
-  M.write(verb_args(verb, picked.oids), verb)
+  M.write(verbs[verb](picked.oids), verb)
 end
 
 function M.unstage_all()
@@ -153,8 +146,7 @@ function M.unstage_all()
     return message.warn("nothing is staged")
   end
 
-  local reset_with_no_oids_unstages_everything = { "reset", "--json" }
-  M.write(reset_with_no_oids_unstages_everything, "reset")
+  M.write(verbs.reset(), "reset")
 end
 
 function M.discard()
@@ -175,10 +167,10 @@ function M.discard()
     end
 
     if never_committed then
-      return M.write({ "rm", entry.oid, "--json" }, "rm")
+      return M.write(verbs.rm(entry.oid), "rm")
     end
 
-    M.write({ "restore", entry.oid, "--json" }, "restore")
+    M.write(verbs.restore(entry.oid), "restore")
   end)
 end
 

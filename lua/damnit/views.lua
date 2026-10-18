@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 local dam_filters_this_session = nil
 local waiting_on_the_list = nil
@@ -45,7 +46,7 @@ function M.load(on_loaded)
 
   waiting_on_the_list = { on_loaded }
   require("damnit.queue").submit({
-    args = { "filter", "list", "--json" },
+    args = verbs.filter_list(),
     label = "filter list",
     on_done = function(data, err)
       local waiting = waiting_on_the_list or {}
@@ -120,10 +121,10 @@ end
 
 function M.query_args(spec)
   if spec.query == nil or spec.query == "" then
-    return { "ls", "!done", "--json" }
+    return verbs.ls("!done")
   end
 
-  return { "ls", spec.query, "--json" }
+  return verbs.ls(spec.query)
 end
 
 return M

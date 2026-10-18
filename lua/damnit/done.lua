@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 local SHORT_OID_LENGTH = 7
 
@@ -67,16 +68,8 @@ end
 
 --- `children` is nil for a plain completion, or one of dam's `--children` values, which forces it.
 function M.send(object, children)
-  local args = { "done", object.oid }
-
-  if children then
-    vim.list_extend(args, { "--force", "--children", children })
-  end
-
-  args[#args + 1] = "--json"
-
   require("damnit.queue").submit({
-    args = args,
+    args = verbs.done(object.oid, children),
     label = "done",
     on_done = function(report, err)
       if not err then

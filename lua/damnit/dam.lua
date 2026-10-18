@@ -3,6 +3,7 @@ local M = {}
 local answer = require("damnit.answer")
 local message = require("damnit.message")
 local process = require("damnit.process")
+local verbs = require("damnit.dam.verbs")
 
 M.MIN_VERSION = "0.2.0"
 M.MAX_VERSION = "0.3.0"
@@ -94,7 +95,7 @@ local function handshake(callback)
 
   local generation_at_start = options_generation
 
-  spawn({ "--version" }, timeout_seconds(), function(out)
+  spawn(verbs.version(), timeout_seconds(), function(out)
     local began_under_old_options = generation_at_start ~= options_generation
     if began_under_old_options then
       return

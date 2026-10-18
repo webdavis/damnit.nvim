@@ -2,6 +2,7 @@ local M = {}
 
 local message = require("damnit.message")
 local tree = require("damnit.tree")
+local verbs = require("damnit.dam.verbs")
 
 local MOST_URGENT = 1
 local LEAST_URGENT_AND_DEFAULT = 4
@@ -20,18 +21,15 @@ local function under_cursor()
   return require("damnit.list").object_under_cursor()
 end
 
-local function send_as_json(args, said)
-  local full = vim.list_extend({}, args)
-  full[#full + 1] = "--json"
-
-  require("damnit.list").write(full, args[1], said)
+local function send(args, said)
+  require("damnit.list").write(args, args[1], said)
 end
 
 function M.reopen()
   local object = under_cursor()
 
   if object then
-    send_as_json({ "edit", object.oid, "--undone" }, "reopened " .. text(object.subject))
+    send(verbs.reopen(object.oid), "reopened " .. text(object.subject))
   end
 end
 
@@ -59,7 +57,7 @@ function M.delete()
       return
     end
 
-    send_as_json({ "rm", object.oid }, "removed " .. subject)
+    send(verbs.rm(object.oid), "removed " .. subject)
   end)
 end
 
@@ -81,7 +79,7 @@ function M.cycle_priority()
 
   local next_priority = M.cycled(type(object.task) == "table" and object.task.priority or nil)
 
-  send_as_json({ "edit", object.oid, "-p", tostring(next_priority) }, "priority p" .. next_priority)
+  send(verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
 end
 
 function M.schedule()
@@ -95,7 +93,7 @@ function M.schedule()
       return
     end
 
-    send_as_json({ "edit", object.oid, "--due", due }, "due " .. due)
+    send(verbs.due(object.oid, due), "due " .. due)
   end)
 end
 
@@ -129,7 +127,7 @@ function M.labels()
   end
 
   require("damnit.queue").submit({
-    args = { "category", "list", "--json" },
+    args = verbs.category_list(),
     label = "category list",
     on_done = function(data, err)
       if err then
@@ -153,8 +151,8 @@ function M.labels()
           return
         end
 
-        send_as_json(
-          { "edit", object.oid, choice.on and "--unlabel" or "--label", choice.name },
+        send(
+          (choice.on and verbs.unlabel or verbs.label)(object.oid, choice.name),
           ("@%s %s"):format(choice.name, choice.on and "off" or "on")
         )
       end)
@@ -204,7 +202,7 @@ function M.move()
       return
     end
 
-    send_as_json({ "mv", object.oid, path }, ("moved %s"):format(text(object.subject)))
+    send(verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
   end)
 end
 
@@ -216,7 +214,7 @@ function M.add()
       return
     end
 
-    require("damnit.list").write({ "new", subject, "--path", path, "--json" }, "new", "added " .. vim.trim(subject))
+    require("damnit.list").write(verbs.new(subject, path), "new", "added " .. vim.trim(subject))
   end)
 end
 
@@ -225,7 +223,7 @@ local function reparent(object, destination, refusal)
     return message.warn(refusal)
   end
 
-  send_as_json({ "mv", object.oid, destination }, ("moved %s"):format(text(object.subject)))
+  send(verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
 end
 
 function M.indent()

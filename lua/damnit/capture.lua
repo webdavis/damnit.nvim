@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 local INBOX = "inbox/"
 
@@ -53,15 +54,7 @@ function M.content(lines)
 end
 
 function M.args(content, location)
-  local args = { "new", content, "--path", INBOX }
-
-  if location then
-    vim.list_extend(args, { "--body", require("damnit.location").describe(location) })
-  end
-
-  args[#args + 1] = "--json"
-
-  return args
+  return verbs.new(content, INBOX, location and require("damnit.location").describe(location))
 end
 
 function M.create(content, where)
