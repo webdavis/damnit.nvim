@@ -33,6 +33,8 @@ function M.jump_to_section(kind, heading, count)
   vim.api.nvim_win_set_cursor(0, { line, 0 })
 end
 
+local HELP_CLOSE_KEYS = { "q", "g?", "<Esc>" }
+
 function M.help(filetype)
   local rows = {}
   for _, map in ipairs(require("damnit.keys").MAPS[filetype] or {}) do
@@ -58,9 +60,11 @@ function M.help(filetype)
     border = "rounded",
   })
 
-  vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_win_close(win, true)
-  end, { buffer = buf, nowait = true })
+  for _, key in ipairs(HELP_CLOSE_KEYS) do
+    vim.keymap.set("n", key, function()
+      vim.api.nvim_win_close(win, true)
+    end, { buffer = buf, nowait = true })
+  end
   vim.api.nvim_create_autocmd("BufLeave", {
     buffer = buf,
     once = true,

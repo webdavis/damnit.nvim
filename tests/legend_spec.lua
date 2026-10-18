@@ -12,7 +12,30 @@ local function winbar_of(win)
   return vim.api.nvim_eval_statusline(vim.wo[win].winbar, { winid = win, use_winbar = true, highlights = true })
 end
 
+local function the_help_float_closes_on(key)
+  list_buffer.with(function()
+    vim.api.nvim_feedkeys("g?", "x", false)
+    local float = vim.api.nvim_get_current_win()
+    assert(vim.api.nvim_win_get_config(float).relative == "editor", "g? opened no float")
+
+    vim.api.nvim_feedkeys(vim.keycode(key), "x", false)
+    assert(not vim.api.nvim_win_is_valid(float), key .. " left the help float open")
+  end)
+end
+
 return {
+  ["q closes the help float"] = function()
+    the_help_float_closes_on("q")
+  end,
+
+  ["g? closes the help float it opened"] = function()
+    the_help_float_closes_on("g?")
+  end,
+
+  ["<Esc> closes the help float"] = function()
+    the_help_float_closes_on("<Esc>")
+  end,
+
   ["the staging legend names the six most-used keys from the key table"] = function()
     assert(keys.legend("damstatus") == STAGING_LEGEND, keys.legend("damstatus"))
   end,
