@@ -85,10 +85,20 @@ function M.current_spec()
   return shown and shown.spec
 end
 
+local function bar_the_current_row_and_cut_long_rows_in_this_window_only()
+  vim.wo[0][0].cursorline = true
+  vim.wo[0][0].wrap = false
+end
+
 local function configure(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "damlist"
+
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    buffer = buf,
+    callback = bar_the_current_row_and_cut_long_rows_in_this_window_only,
+  })
 
   require("damnit.keys").attach(buf, "damlist")
 end
