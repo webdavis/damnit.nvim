@@ -1,5 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
+local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local queue = require("damnit.queue")
@@ -27,21 +28,9 @@ local function golden_rows(name)
   return rows
 end
 
-local function with_the_clock_at(epoch, body)
-  local real = os.time
-  rawset(os, "time", function(date)
-    return date and real(date) or epoch
-  end)
-
-  local ok, err = pcall(body)
-  rawset(os, "time", real)
-
-  assert(ok, err)
-end
-
 return {
   ["the staging window on the full fixtures draws this screen at 80x24"] = function()
-    with_the_clock_at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
+    clock.at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
       status_window.with(function()
         screen.matches_golden("staging")
       end)
@@ -49,7 +38,7 @@ return {
   end,
 
   ["a running call takes the help row and moves nothing else on the staging screen"] = function()
-    with_the_clock_at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
+    clock.at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
       status_window.with(function()
         screen.fix_size()
         vim.env.DAMNIT_TEST_SLEEP = "1"
