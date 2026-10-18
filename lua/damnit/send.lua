@@ -159,7 +159,7 @@ function M.host()
     workspace = vim.env.HERDR_WORKSPACE_ID,
     me = vim.env.HERDR_PANE_ID,
     run = function(args, done)
-      local dam = require("damnit.dam")
+      local process = require("damnit.process")
       local binary = vim.env.HERDR_BIN_PATH
       if text(binary) == "" then
         binary = "herdr"
@@ -167,7 +167,7 @@ function M.host()
 
       local command = vim.list_extend({ binary }, args)
 
-      dam.spawn(command, dam.timeout_seconds(), function(out)
+      process.run(command, process.timeout_seconds(require("damnit").options), function(out)
         if out.missing then
           return done("", ("%s: no such file or directory"):format(binary))
         end

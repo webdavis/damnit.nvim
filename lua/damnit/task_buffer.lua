@@ -3,6 +3,7 @@ local M = {}
 local message = require("damnit.message")
 local scratch = require("damnit.scratch")
 local task_format = require("damnit.task_format")
+local verbs = require("damnit.dam.verbs")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit.diagnostics")
 
@@ -97,15 +98,11 @@ function M.write(buf)
   local steps = {}
 
   if #changes.edit > 0 then
-    local args = { "edit", object.oid }
-    vim.list_extend(args, changes.edit)
-    args[#args + 1] = "--json"
-
-    steps[#steps + 1] = { args = args, label = "edit" }
+    steps[#steps + 1] = { args = verbs.edit(object.oid, changes.edit), label = "edit" }
   end
 
   if changes.move then
-    steps[#steps + 1] = { args = { "mv", object.oid, changes.move, "--json" }, label = "mv" }
+    steps[#steps + 1] = { args = verbs.mv(object.oid, changes.move), label = "mv" }
   end
 
   run_in_order(buf, steps, header)
@@ -139,7 +136,7 @@ function M.open(oid)
   end
 
   require("damnit.queue").submit({
-    args = { "show", oid, "--json" },
+    args = verbs.show(oid),
     label = "show",
     on_done = function(object, err)
       if err then

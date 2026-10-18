@@ -1,6 +1,7 @@
 local M = {}
 
 local message = require("damnit.message")
+local verbs = require("damnit.dam.verbs")
 
 local dam_filters_this_session = nil
 local waiting_on_the_list = nil
@@ -16,7 +17,6 @@ function M.declared()
   return names
 end
 
---- Every name `:Dam list` takes: the declared views and, once read, dam's saved filters.
 function M.known()
   local names = M.declared()
 
@@ -30,7 +30,6 @@ function M.known()
   return names
 end
 
---- Read `dam filter list` once per session, then call `on_loaded`.
 function M.load(on_loaded)
   on_loaded = on_loaded or function() end
 
@@ -45,7 +44,7 @@ function M.load(on_loaded)
 
   waiting_on_the_list = { on_loaded }
   require("damnit.queue").submit({
-    args = { "filter", "list", "--json" },
+    args = verbs.filter_list(),
     label = "filter list",
     on_done = function(data, err)
       local waiting = waiting_on_the_list or {}
@@ -96,7 +95,6 @@ function M.resolve(name)
   refuse(name)
 end
 
---- Resolve at once when no saved filter is needed, else after dam's list is read; nothing on a refusal.
 function M.resolve_then(name, on_spec)
   local needs_dams_list = name ~= nil and name ~= "" and type(declared_views()[name]) ~= "string"
 
@@ -120,10 +118,10 @@ end
 
 function M.query_args(spec)
   if spec.query == nil or spec.query == "" then
-    return { "ls", "!done", "--json" }
+    return verbs.ls("!done")
   end
 
-  return { "ls", spec.query, "--json" }
+  return verbs.ls(spec.query)
 end
 
 return M

@@ -2,6 +2,7 @@ local M = {}
 
 local message = require("damnit.message")
 local scratch = require("damnit.scratch")
+local verbs = require("damnit.dam.verbs")
 
 function M.message(lines)
   local non_comment_lines = {}
@@ -23,7 +24,7 @@ function M.write(buf)
   end
 
   require("damnit.queue").submit({
-    args = { "commit", "-m", text, "--json" },
+    args = verbs.commit(text),
     label = "commit",
     on_done = function(report, err)
       if err then

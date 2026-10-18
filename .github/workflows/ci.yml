@@ -33,10 +33,10 @@ jobs:
         run: stylua --check .
       - name: luacheck
         run: luacheck .
-      - name: Only the dam boundary spawns a process
+      - name: Only the process module spawns a process
         run: |
-          if grep -rn 'vim\.system' lua --include='*.lua' | grep -v '^lua/damnit/dam\.lua:'; then
-            echo "vim.system belongs in lua/damnit/dam.lua and nowhere else" >&2
+          if grep -rn 'vim\.system' lua --include='*.lua' | grep -v '^lua/damnit/process\.lua:'; then
+            echo "vim.system belongs in lua/damnit/process.lua and nowhere else" >&2
             exit 1
           fi
       - name: Nothing waits on a dam call
@@ -54,9 +54,10 @@ jobs:
             lua/damnit/tree.lua
             lua/damnit/location.lua
             lua/damnit/answer.lua
+            lua/damnit/dam/verbs.lua
           )
           if grep -nHE 'vim\.(api|fn|system|notify|schedule)' "${pure[@]}"; then
-            echo "these six are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
+            echo "these are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
             exit 1
           fi
       - name: No em-dash

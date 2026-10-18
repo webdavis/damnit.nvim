@@ -1,5 +1,7 @@
 local M = {}
 
+local verbs = require("damnit.dam.verbs")
+
 local DEADLINE_MS = 20000
 
 local WAIT_INTERVAL_MS = 20
@@ -34,7 +36,7 @@ end
 
 local function report_version_and_store()
   local dam = require("damnit.dam")
-  local finished, data, err = call({ "ls", "--no-pull", "--json" })
+  local finished, data, err = call(verbs.ls(nil, true))
 
   if not finished then
     vim.health.error(("dam did not answer within %d seconds"):format(DEADLINE_MS / 1000))
@@ -86,7 +88,7 @@ local function report_paths()
 end
 
 local function report_remotes()
-  local finished, data, err = call({ "remote", "list", "--json" })
+  local finished, data, err = call(verbs.remote_list())
 
   if not finished or err then
     return vim.health.warn(("the remotes could not be read: %s"):format(err and err.message or "dam did not answer"))
@@ -120,7 +122,7 @@ local function report_remotes()
 end
 
 local function report_filters()
-  local finished, data, err = call({ "filter", "list", "--json" })
+  local finished, data, err = call(verbs.filter_list())
 
   if not finished or err then
     return vim.health.warn(
@@ -143,7 +145,7 @@ local function report_filters()
 end
 
 local function report_conflicts()
-  local finished, data, err = call({ "status", "--json" })
+  local finished, data, err = call(verbs.status())
 
   if not finished or err then
     return vim.health.warn(("the status could not be read: %s"):format(err and err.message or "dam did not answer"))
@@ -173,7 +175,7 @@ local function report_views()
 
   for _, name in ipairs(declared) do
     local query = views[name]
-    local finished, _, err = call({ "ls", query, "--no-pull", "--json" })
+    local finished, _, err = call(verbs.ls(query, true))
 
     if not finished then
       vim.health.error(("the view %s did not answer"):format(name))

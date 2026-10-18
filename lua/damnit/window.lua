@@ -8,6 +8,7 @@ local queue = require("damnit.queue")
 local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
+local verbs = require("damnit.dam.verbs")
 
 local buffer_by_store = {}
 
@@ -207,7 +208,7 @@ local function read_the_remote_list_until_cached(key)
   end
 
   queue.submit({
-    args = { "remote", "list", "--json" },
+    args = verbs.remote_list(),
     label = "remote list",
     on_done = function(data)
       remote_list_by_store[key] = data
@@ -217,10 +218,10 @@ end
 
 local function status_args_full_while_a_diff_is_open(key)
   if next(require("damnit.render.diff").open_set(key)) ~= nil then
-    return { "status", "--full", "--json" }
+    return verbs.status(true)
   end
 
-  return { "status", "--json" }
+  return verbs.status()
 end
 
 function M.refresh(key)
