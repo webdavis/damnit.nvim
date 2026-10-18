@@ -1,0 +1,18 @@
+{
+  "objects": [
+    {
+      "oid": "c30414962aa4332b6e5dfc2e0360e2b328735efe",
+      "kind": "task",
+      "subject": "buy oat milk",
+      "body": "",
+      "path": "inbox/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    }
+  ]
+}

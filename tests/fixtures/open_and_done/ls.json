@@ -1,0 +1,33 @@
+{
+  "objects": [
+    {
+      "oid": "c30414962aa4332b6e5dfc2e0360e2b328735efe",
+      "kind": "task",
+      "subject": "buy oat milk",
+      "body": "",
+      "path": "inbox/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": false,
+        "priority": 4
+      }
+    },
+    {
+      "oid": "f35490cde91e64e9ac5e33ada0fef4021584a737",
+      "kind": "task",
+      "subject": "took out the bins",
+      "body": "",
+      "path": "inbox/",
+      "labels": [],
+      "depends": [],
+      "reminders": [],
+      "task": {
+        "done": true,
+        "completed_at": "2026-09-21T08:17:20.138851Z",
+        "priority": 4
+      }
+    }
+  ]
+}

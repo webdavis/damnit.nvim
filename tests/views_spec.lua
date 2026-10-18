@@ -52,12 +52,12 @@ local function times_sent(fake, argv)
 end
 
 return {
-  ["means every open task when it is given no name"] = function()
+  ["means every open task when it is given no name, and asks dam for no finished one"] = function()
     local spec = views.resolve(nil)
 
     assert(spec.title == "all open tasks", spec.title)
     assert(spec.query == nil, tostring(spec.query))
-    assert(vim.deep_equal(views.query_args(spec), { "ls", "--json" }), vim.inspect(views.query_args(spec)))
+    assert(vim.deep_equal(views.query_args(spec), { "ls", "!done", "--json" }), vim.inspect(views.query_args(spec)))
   end,
 
   ["sends the declared query rather than the name, and asks dam nothing first"] = function()
@@ -80,6 +80,20 @@ return {
       resolved("today")
       fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
       assert(times_sent(fake, "filter list --json") == 1, vim.inspect(fake_dam.argv_log(fake)))
+    end)
+  end,
+
+  ["reads dam's saved filters again once setup points at another store"] = function()
+    with_views({}, function(_, fake)
+      resolved("inbox")
+      damnit.setup({ store = "/store/other.db" })
+      resolved("inbox")
+      damnit.options.store = nil
+
+      local filter_lists = vim.tbl_filter(function(line)
+        return vim.endswith(line, "filter list --json")
+      end, fake_dam.argv_log(fake))
+      assert(#filter_lists == 2, vim.inspect(fake_dam.argv_log(fake)))
     end)
   end,
 

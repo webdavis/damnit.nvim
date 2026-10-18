@@ -41,15 +41,16 @@ sleep_in_the_background_so_a_trap_answers_at_once_and_no_pipe_is_held() {
   wait $sleeper
 }
 
-find_the_fixture_preferring_the_full_shape_when_asked_for() {
+find_the_fixture_preferring_the_full_or_open_shape_when_asked_for() {
   fixture="$DAMNIT_TEST_FIXTURES/$subcommand.json"
   case " $* " in
-    *" --full "*)
-      if [ -f "$DAMNIT_TEST_FIXTURES/$subcommand-full.json" ]; then
-        fixture="$DAMNIT_TEST_FIXTURES/$subcommand-full.json"
-      fi
-      ;;
+    *" --full "*) shape="full" ;;
+    *" !done "*) shape="open" ;;
+    *) return ;;
   esac
+  if [ -f "$DAMNIT_TEST_FIXTURES/$subcommand-$shape.json" ]; then
+    fixture="$DAMNIT_TEST_FIXTURES/$subcommand-$shape.json"
+  fi
 }
 
 trap_interrupts_before_the_first_write_a_caller_may_wait_on
@@ -73,7 +74,7 @@ if fails_this_subcommand; then
   if [ -n "$DAMNIT_TEST_EXIT" ] && [ "$DAMNIT_TEST_EXIT" != 0 ]; then exit "$DAMNIT_TEST_EXIT"; fi
 fi
 
-find_the_fixture_preferring_the_full_shape_when_asked_for "$@"
+find_the_fixture_preferring_the_full_or_open_shape_when_asked_for "$@"
 cat "$fixture"
 ]==]
 
