@@ -1,9 +1,10 @@
 local M = {}
 
+local dam_object = require("damnit.object")
+local text = dam_object.text
 local list = require("damnit.list")
 local verbs = require("damnit.dam.verbs")
-
-local SHORT_OID_LENGTH = 7
+local write = require("damnit.write")
 
 local BLOCKED_TASK_INDEX = 1
 
@@ -14,20 +15,12 @@ local DISPOSITIONS = {
   { label = "Cancel" },
 }
 
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
-
 function M.blockers(err)
   local found = {}
 
   for index, oid in ipairs(err.oids or {}) do
     if index > BLOCKED_TASK_INDEX then
-      found[#found + 1] = text(oid):sub(1, SHORT_OID_LENGTH)
+      found[#found + 1] = dam_object.short_oid(oid)
     end
   end
 
@@ -67,16 +60,14 @@ local function ask_for_the_group_then_send(app, object)
 end
 
 function M.send(app, object, children)
-  app.queue.submit({
+  write.submit(app, {
     args = verbs.done(object.oid, children),
     label = "done",
-    on_done = function(report, err)
-      if not err then
-        report_completion(app, object, report)
-
-        return list.refresh(app)
-      end
-
+    on_ok = function(report)
+      report_completion(app, object, report)
+      list.refresh(app)
+    end,
+    on_error = function(err)
       if not forcing_would_help(err, children) then
         return app.say.report(err)
       end
@@ -85,10 +76,7 @@ function M.send(app, object, children)
         format_item = function(item)
           return item.label
         end,
-        prompt = ("%s is blocked by: %s"):format(
-          text(object.oid):sub(1, SHORT_OID_LENGTH),
-          table.concat(M.blockers(err), ", ")
-        ),
+        prompt = ("%s is blocked by: %s"):format(dam_object.short_oid(object.oid), table.concat(M.blockers(err), ", ")),
       }, function(choice)
         if not (choice and choice.children) then
           return

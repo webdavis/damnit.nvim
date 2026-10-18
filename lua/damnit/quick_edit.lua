@@ -1,5 +1,7 @@
 local M = {}
 
+local dam_object = require("damnit.object")
+local text = dam_object.text
 local list = require("damnit.list")
 local tree = require("damnit.tree")
 local verbs = require("damnit.dam.verbs")
@@ -8,14 +10,6 @@ local MOST_URGENT = 1
 local LEAST_URGENT_AND_DEFAULT = 4
 
 local TOP_LEVEL = ""
-
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
 
 local function send(app, args, said)
   list.write(app, args, args[1], said)
@@ -73,7 +67,7 @@ function M.cycle_priority(app)
     return
   end
 
-  local next_priority = M.cycled(type(object.task) == "table" and object.task.priority or nil)
+  local next_priority = M.cycled(dam_object.task(object).priority)
 
   send(app, verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
 end

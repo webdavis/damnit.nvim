@@ -3,6 +3,7 @@ local M = {}
 local describe = require("damnit.location").describe
 local location_edit = require("damnit.location_edit")
 local verbs = require("damnit.dam.verbs")
+local write = require("damnit.write")
 
 local INBOX = "inbox/"
 
@@ -63,14 +64,10 @@ function M.create(app, content, where)
     return app.say.warn("there is nothing to capture here")
   end
 
-  app.queue.submit({
+  write.submit(app, {
     args = M.args(content, where),
     label = "new",
-    on_done = function(object, err)
-      if err then
-        return app.say.report(err)
-      end
-
+    on_ok = function(object)
       if type(object) ~= "table" or not object.oid then
         return app.say.warn("dam answered without an object")
       end

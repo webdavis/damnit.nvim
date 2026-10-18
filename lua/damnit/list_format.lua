@@ -1,5 +1,7 @@
 local M = {}
 
+local dam_object = require("damnit.object")
+local text = dam_object.text
 local location = require("damnit.location")
 local tree = require("damnit.tree")
 
@@ -7,20 +9,12 @@ local INDENT_PER_LEVEL = "  "
 
 local DEFAULT_LEAST_URGENT_PRIORITY = 4
 
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
-
 function M.labels_of(object)
   return type(object.labels) == "table" and object.labels or {}
 end
 
 function M.due_of(object)
-  return text(type(object.task) == "table" and object.task.due or nil)
+  return text(dam_object.task(object).due)
 end
 
 local PRIORITY_GROUPS = { "DamPriority1", "DamPriority2", "DamPriority3" }
@@ -39,7 +33,7 @@ function M.badges(object, today)
     badges[#badges + 1] = { text = "(" .. due .. ")", group = is_before(due, today) and "DamOverdue" or "DamDue" }
   end
 
-  local priority = tonumber(type(object.task) == "table" and object.task.priority or nil)
+  local priority = tonumber(dam_object.task(object).priority)
   if priority and priority < DEFAULT_LEAST_URGENT_PRIORITY then
     badges[#badges + 1] = { text = "p" .. priority, group = PRIORITY_GROUPS[priority] }
   end
@@ -108,7 +102,7 @@ function M.refusal(spec, err)
 end
 
 local function completed_at_of(object)
-  return text(type(object.task) == "table" and object.task.completed_at or nil)
+  return text(dam_object.task(object).completed_at)
 end
 
 function M.by_completion(objects)

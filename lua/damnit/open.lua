@@ -1,4 +1,5 @@
 local M = {}
+local dam_object = require("damnit.object")
 
 local diff = require("damnit.render.diff")
 local scratch = require("damnit.scratch")
@@ -16,7 +17,7 @@ local function set_field_lines(object)
 end
 
 function M.conflict(_, entry)
-  local short = entry.oid:sub(1, 7)
+  local short = dam_object.short_oid(entry.oid)
 
   scratch.read_only(("damnit://conflict/%s/ours"):format(short), set_field_lines(entry.ours), "vsplit")
   scratch.read_only(("damnit://conflict/%s/theirs"):format(short), set_field_lines(entry.theirs), "vsplit")
@@ -24,7 +25,7 @@ end
 
 local function commit_lines(commit)
   local lines = {
-    ("commit %s  %s"):format(tostring(commit.id):sub(1, 7), tostring(commit.at or "")),
+    ("commit %s  %s"):format(dam_object.short_oid(commit.id), tostring(commit.at or "")),
     ("  %s"):format(tostring(commit.message or "")),
     "",
   }
@@ -34,7 +35,7 @@ local function commit_lines(commit)
 
     lines[#lines + 1] = ("  %-8s %s  %s"):format(
       status_model.VERBS[change.op] or tostring(change.op),
-      tostring(change.oid):sub(1, 7),
+      dam_object.short_oid(change.oid),
       tostring(change.subject or object.subject or "")
     )
   end

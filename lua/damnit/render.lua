@@ -1,4 +1,6 @@
 local M = {}
+local dam_object = require("damnit.object")
+local civil = require("damnit.civil")
 local keymaps = require("damnit.keymaps")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit")
@@ -111,23 +113,17 @@ end
 
 local MINUTE, HOUR, DAY = 60, 3600, 86400
 
-local function utc_epoch_by_hinnants_days_from_civil(timestamp)
-  local y, m, d, hh, mm, ss = timestamp:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
-  if not y then
+local function utc_epoch(timestamp)
+  local fields = { timestamp:match("^(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)") }
+  if #fields == 0 then
     return nil
   end
 
-  y, m, d = tonumber(y) - (tonumber(m) <= 2 and 1 or 0), tonumber(m), tonumber(d)
-  local era = math.floor(y / 400)
-  local yoe = y - era * 400
-  local doy = math.floor((153 * (m + (m > 2 and -3 or 9)) + 2) / 5) + d - 1
-  local days = era * 146097 + yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy - 719468
-
-  return days * DAY + tonumber(hh) * HOUR + tonumber(mm) * MINUTE + tonumber(ss)
+  return civil.seconds_from_civil(unpack(vim.tbl_map(tonumber, fields)))
 end
 
 local function pulled_ago_in_the_words_of_dam_remote_list(last_pull, now)
-  local at = last_pull and utc_epoch_by_hinnants_days_from_civil(last_pull)
+  local at = last_pull and utc_epoch(last_pull)
   if not at then
     return last_pull and "pulled" or "never pulled"
   end
@@ -199,7 +195,7 @@ local function change_line(entry)
   built.add(M.icon(entry.object_kind or "task"))
   built.add(" ", nil, M.COLUMNS.verb)
   built.add(entry.verb, OP_GROUPS[entry.op], M.COLUMNS.oid)
-  built.add(entry.oid:sub(1, 7), "DamOid", M.COLUMNS.subject)
+  built.add(dam_object.short_oid(entry.oid), "DamOid", M.COLUMNS.subject)
   built.add(entry.subject, "DamSubject", M.COLUMNS.fields)
 
   if #entry.fields > 0 then
@@ -227,7 +223,7 @@ local function conflict_line(entry)
   local built = row()
   built.add(M.icon("conflict"))
   built.add(" ", nil, M.COLUMNS.verb)
-  built.add(entry.oid:sub(1, 7), "DamOid", M.COLUMNS.subject)
+  built.add(dam_object.short_oid(entry.oid), "DamOid", M.COLUMNS.subject)
   built.add(entry.subject, "DamConflict", M.COLUMNS.fields)
   built.add(entry.remote, "DamRemote")
 

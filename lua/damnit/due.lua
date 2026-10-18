@@ -1,39 +1,9 @@
 local M = {}
 
-local SECONDS_PER_DAY = 86400
-
-local function days_from_civil(year, month, day)
-  local y = month <= 2 and year - 1 or year
-  local era = math.floor(y / 400)
-  local year_of_era = y - era * 400
-  local day_of_year = math.floor((153 * (month + (month > 2 and -3 or 9)) + 2) / 5) + day - 1
-  local day_of_era = year_of_era * 365 + math.floor(year_of_era / 4) - math.floor(year_of_era / 100) + day_of_year
-
-  return era * 146097 + day_of_era - 719468
-end
-
-local function civil_from_days(days)
-  local z = days + 719468
-  local era = math.floor(z / 146097)
-  local day_of_era = z - era * 146097
-  local year_of_era = math.floor(
-    (day_of_era - math.floor(day_of_era / 1460) + math.floor(day_of_era / 36524) - math.floor(day_of_era / 146096))
-      / 365
-  )
-  local year = year_of_era + era * 400
-  local day_of_year = day_of_era - (365 * year_of_era + math.floor(year_of_era / 4) - math.floor(year_of_era / 100))
-  local month_prime = math.floor((5 * day_of_year + 2) / 153)
-  local day = day_of_year - math.floor((153 * month_prime + 2) / 5) + 1
-  local month = month_prime + (month_prime < 10 and 3 or -9)
-
-  return (month <= 2 and year + 1 or year), month, day
-end
+local civil = require("damnit.civil")
 
 local function civil_seconds(stamp)
-  return days_from_civil(stamp.year, stamp.month, stamp.day) * SECONDS_PER_DAY
-    + stamp.hour * 3600
-    + stamp.min * 60
-    + stamp.sec
+  return civil.seconds_from_civil(stamp.year, stamp.month, stamp.day, stamp.hour, stamp.min, stamp.sec)
 end
 
 local function utc_offset_by_diffing_civil_stamps(now)
@@ -47,10 +17,10 @@ function M.clock()
 end
 
 local function shifted(year, month, day, hour, minute, second, seconds)
-  local total = days_from_civil(year, month, day) * SECONDS_PER_DAY + hour * 3600 + minute * 60 + second + seconds
-  local days = math.floor(total / SECONDS_PER_DAY)
-  local rest = total - days * SECONDS_PER_DAY
-  local y, m, d = civil_from_days(days)
+  local total = civil.seconds_from_civil(year, month, day, hour, minute, second) + seconds
+  local days = math.floor(total / civil.SECONDS_PER_DAY)
+  local rest = total - days * civil.SECONDS_PER_DAY
+  local y, m, d = civil.civil_from_days(days)
 
   return ("%04d-%02d-%02dT%02d:%02d:%02d"):format(
     y,
