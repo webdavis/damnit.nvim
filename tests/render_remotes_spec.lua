@@ -43,4 +43,19 @@ return {
       assert(text == ("Remotes: r (clean, %s)"):format(expected), last_pull .. ": " .. text)
     end
   end,
+
+  ["words a pull's age the way dam remote list does"] = function()
+    local ages = {
+      { last_pull = "2026-09-20T09:30:00Z", expected = "pulled 30m ago" },
+      { last_pull = "last tuesday", expected = "pulled" },
+      { last_pull = nil, expected = "never pulled" },
+    }
+
+    for _, age in ipairs(ages) do
+      local model = status_model.build({}, { remotes = { { name = "r", last_pull = age.last_pull } } })
+      local text = status_lines.lines(model, STATE)[2].text
+
+      assert(text == ("Remotes: r (clean, %s)"):format(age.expected), text)
+    end
+  end,
 }
