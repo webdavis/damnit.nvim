@@ -55,6 +55,7 @@ jobs:
             lua/damnit/location.lua
             lua/damnit/answer.lua
             lua/damnit/dam/verbs.lua
+            lua/damnit/civil.lua
           )
           if grep -nHE 'vim\.(api|fn|system|notify|schedule)' "${pure[@]}"; then
             echo "these are pure: they may use vim.tbl_*, vim.islist, vim.json, vim.split, vim.deep_equal" >&2
