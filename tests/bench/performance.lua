@@ -1,9 +1,14 @@
+local root = vim.fn.fnamemodify(arg[0], ":p:h:h:h")
+package.path = ("%s/lua/?.lua;%s/lua/?/init.lua;%s"):format(root, root, package.path)
+
 local status_model = require("damnit.status_model")
 local render = require("damnit.render")
 
 local SAMPLES = 5
 
-local function warn_rather_than_fail_when_the_median_is_over(name, target_ms, run)
+local over_target = 0
+
+local function median_inside(name, target_ms, run)
   local samples = {}
 
   for _ = 1, SAMPLES do
@@ -15,8 +20,11 @@ local function warn_rather_than_fail_when_the_median_is_over(name, target_ms, ru
   table.sort(samples)
   local median = samples[math.ceil(SAMPLES / 2)]
 
+  local verdict = median > target_ms and "OVER" or "ok"
+  io.write(("%s %s took %.3fms, target %.2fms\n"):format(verdict, name, median, target_ms))
+
   if median > target_ms then
-    io.write(("WARN %s took %.1fms, over its %.0fms target\n"):format(name, median, target_ms))
+    over_target = over_target + 1
   end
 end
 
@@ -50,26 +58,24 @@ local model = nil
 local lines = nil
 local buf = vim.api.nvim_create_buf(false, true)
 
-return {
-  ["every phase is inside its target, or says which one is not"] = function()
-    warn_rather_than_fail_when_the_median_is_over("modelling the document", 1, function()
-      model = status_model.build(status, nil)
-    end)
+median_inside("modelling the document", 1, function()
+  model = status_model.build(status, nil)
+end)
 
-    warn_rather_than_fail_when_the_median_is_over("rendering lines and marks", 60, function()
-      lines = render.lines(model, state)
-    end)
+median_inside("rendering lines and marks", 60, function()
+  lines = render.lines(model, state)
+end)
 
-    warn_rather_than_fail_when_the_median_is_over("a re-render after a write", 70, function()
-      render.draw(buf, render.lines(status_model.build(status, nil), state))
-    end)
+median_inside("a re-render after a write", 70, function()
+  render.draw(buf, render.lines(status_model.build(status, nil), state))
+end)
 
-    warn_rather_than_fail_when_the_median_is_over("status() on a redraw", 0.05, function()
-      require("damnit.poll").status(require("damnit").app())
-    end)
+median_inside("status() on a redraw", 0.05, function()
+  require("damnit.poll").status(require("damnit").app())
+end)
 
-    require("damnit.poll").stop()
+require("damnit.poll").stop()
 
-    assert(#lines > FAR_MORE_UPDATES_THAN_A_REAL_WORKING_LAYER_CARRIES, "the generated status really did render")
-  end,
-}
+assert(#lines > FAR_MORE_UPDATES_THAN_A_REAL_WORKING_LAYER_CARRIES, "the generated status really did render")
+
+os.exit(over_target == 0 and 0 or 1)
