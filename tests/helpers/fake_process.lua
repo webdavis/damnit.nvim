@@ -1,8 +1,8 @@
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 local GLOBAL_FLAGS_TAKING_A_VALUE = { ["--store"] = true, ["--config"] = true }
 

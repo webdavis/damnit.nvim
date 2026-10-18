@@ -1,5 +1,5 @@
 local damnit = require("damnit")
-local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 local function notifications(run)
   local say, lines, levels = said.recorder()
@@ -19,7 +19,7 @@ local function notifications(run)
   return seen, say
 end
 
-local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = (arg[0]:match("(.*)/") or ".") .. "/../plugin/damnit.lua"
+local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = require("helpers.paths").TESTS .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
 local function shown_by_dam_messages()

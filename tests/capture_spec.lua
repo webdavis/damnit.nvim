@@ -1,7 +1,9 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local capture = require("damnit.capture")
 local function queue()
   return require("damnit").app().queue
@@ -49,52 +51,44 @@ return {
   end,
 
   ["an empty subject is refused rather than sent"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    with_dam({ fixtures = harness.fixtures("full") }, function(dam)
+      local said = dam.said
 
-    local said = fake.said
+      capture.create(app, "", nil)
+      fake_process.drain()
 
-    capture.create(app, "", nil)
-    fake_process.drain()
+      local log = fake_process.argv_log(dam.fake)
 
-    local log = fake_process.argv_log(fake)
-
-    fake_process.remove(fake)
-
-    assert(#log == 0, vim.inspect(log))
-    assert(said[#said] == "damnit.nvim: there is nothing to capture here", vim.inspect(said))
+      assert(#log == 0, vim.inspect(log))
+      assert(said[#said] == "damnit.nvim: there is nothing to capture here", vim.inspect(said))
+    end)
   end,
 
   [":Dam capture over a range sends that argv and says what it captured"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-
-    local said = fake.said
-
     local prompts_opened = 0
-    local real_input = vim.ui.input
-    vim.ui.input = function()
+    local function input()
       prompts_opened = prompts_opened + 1
     end
 
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "-- TODO: hold the sidebar width" })
-    vim.api.nvim_win_set_buf(0, buf)
+    with_dam({ fixtures = harness.fixtures("full"), input = input }, function(dam)
+      local said = dam.said
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "-- TODO: hold the sidebar width" })
+      vim.api.nvim_win_set_buf(0, buf)
 
-    vim.cmd("1,1Dam capture")
-    fake_process.settle(function()
-      return queue().running() == nil and #said > 0
+      vim.cmd("1,1Dam capture")
+      fake_process.settle(function()
+        return queue().running() == nil and #said > 0
+      end)
+
+      local log = fake_process.argv_log(dam.fake)
+
+      assert(prompts_opened == 0, "a range makes the selection the subject, so nothing should have been asked for")
+      assert(
+        log[#log] == "new hold the sidebar width --path inbox/ --json",
+        "a scratch buffer is no file with a line in it, so no location and no --body: " .. vim.inspect(log)
+      )
+      assert(said[#said] == "damnit.nvim: captured hold the sidebar width", vim.inspect(said))
     end)
-
-    vim.ui.input = real_input
-    local log = fake_process.argv_log(fake)
-
-    vim.cmd("silent! %bwipeout!")
-    fake_process.remove(fake)
-
-    assert(prompts_opened == 0, "a range makes the selection the subject, so nothing should have been asked for")
-    assert(
-      log[#log] == "new hold the sidebar width --path inbox/ --json",
-      "a scratch buffer is no file with a line in it, so no location and no --body: " .. vim.inspect(log)
-    )
-    assert(said[#said] == "damnit.nvim: captured hold the sidebar width", vim.inspect(said))
   end,
 }

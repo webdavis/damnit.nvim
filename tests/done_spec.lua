@@ -1,7 +1,8 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local done = require("damnit.done")
 
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }
@@ -20,24 +21,8 @@ local REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP = table.concat({
   '"oids": ["a070c369a6dfc382d57988322e453d85d62ef9cf"]}}',
 })
 
-local function with_dam(run, opts)
-  opts = opts or {}
-
-  local fake = fake_process.install({
-    fixtures = opts.fixtures or (TESTS_DIR .. "/fixtures/full"),
-    exit = opts.exit,
-    stderr = opts.stderr,
-  })
-
-  local notifications = fake.said
-
-  local ok, err = pcall(run, fake, notifications)
-
-  fake_process.drain()
-
-  fake_process.remove(fake)
-
-  assert(ok, err)
+local function full(opts)
+  return vim.tbl_extend("keep", opts or {}, { fixtures = harness.fixtures("full") })
 end
 
 return {
@@ -57,19 +42,17 @@ return {
   end,
 
   ["offers to complete it anyway, and sends --force when that is chosen"] = function()
-    with_dam(function(fake)
-      local chosen = nil
-      local real = vim.ui.select
-      vim.ui.select = function(items, opts, on_choice)
-        chosen = opts.prompt
-        on_choice(items[1], 1)
-      end
+    local chosen = nil
+    local function select(items, opts, on_choice)
+      chosen = opts.prompt
+      on_choice(items[1], 1)
+    end
 
+    with_dam(full({ exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN, select = select }), function(dam)
       done.send(app, TAXES)
       fake_process.drain()
-      vim.ui.select = real
 
-      local log = fake_process.argv_log(fake)
+      local log = fake_process.argv_log(dam.fake)
       assert(log[2] == ("done %s --json"):format(TAXES.oid), vim.inspect(log))
       assert(
         log[3] == ("done %s --force --children keep --json"):format(TAXES.oid),
@@ -77,127 +60,120 @@ return {
           .. vim.inspect(log)
       )
       assert(chosen and chosen:find("4aa6797", 1, true), tostring(chosen))
-    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+    end)
   end,
 
   ["offers every disposition dam takes as a flag, and sends the one chosen"] = function()
-    with_dam(function(fake)
-      local offered = nil
-      local real = vim.ui.select
-      vim.ui.select = function(items, opts, on_choice)
-        offered = vim.tbl_map(opts.format_item, items)
-        on_choice(items[2], 2)
-      end
+    local offered = nil
+    local function select(items, opts, on_choice)
+      offered = vim.tbl_map(opts.format_item, items)
+      on_choice(items[2], 2)
+    end
 
+    with_dam(full({ exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN, select = select }), function(dam)
       done.send(app, TAXES)
       fake_process.drain()
-      vim.ui.select = real
 
       assert(#offered == 4, vim.inspect(offered))
       assert(offered[4] == "Cancel", vim.inspect(offered))
-      local log = fake_process.argv_log(fake)
+      local log = fake_process.argv_log(dam.fake)
       assert(log[3] == ("done %s --force --children up --json"):format(TAXES.oid), vim.inspect(log))
-    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+    end)
   end,
 
   ["asks for the group's name before moving the children into it"] = function()
-    with_dam(function(fake)
-      local real_select, real_input = vim.ui.select, vim.ui.input
-      vim.ui.select = function(items, _, on_choice)
-        on_choice(items[3], 3)
-      end
-      vim.ui.input = function(_, on_answer)
-        on_answer("leftovers")
-      end
+    local function select(items, _, on_choice)
+      on_choice(items[3], 3)
+    end
+    local function input(_, on_answer)
+      on_answer("leftovers")
+    end
 
-      done.send(app, TAXES)
-      fake_process.drain()
-      vim.ui.select, vim.ui.input = real_select, real_input
+    with_dam(
+      full({ exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN, select = select, input = input }),
+      function(dam)
+        done.send(app, TAXES)
+        fake_process.drain()
 
-      local log = fake_process.argv_log(fake)
-      assert(log[3] == ("done %s --force --children into:leftovers --json"):format(TAXES.oid), vim.inspect(log))
-    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+        local log = fake_process.argv_log(dam.fake)
+        assert(log[3] == ("done %s --force --children into:leftovers --json"):format(TAXES.oid), vim.inspect(log))
+      end
+    )
   end,
 
   ["sends nothing when the group's name is left blank"] = function()
-    with_dam(function(fake)
-      local real_select, real_input = vim.ui.select, vim.ui.input
-      vim.ui.select = function(items, _, on_choice)
-        on_choice(items[3], 3)
-      end
-      vim.ui.input = function(_, on_answer)
-        on_answer("  ")
-      end
+    local function select(items, _, on_choice)
+      on_choice(items[3], 3)
+    end
+    local function input(_, on_answer)
+      on_answer("  ")
+    end
 
-      done.send(app, TAXES)
-      fake_process.drain()
-      vim.ui.select, vim.ui.input = real_select, real_input
+    with_dam(
+      full({ exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN, select = select, input = input }),
+      function(dam)
+        done.send(app, TAXES)
+        fake_process.drain()
 
-      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
-    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+        assert(#fake_process.argv_log(dam.fake) == 2, vim.inspect(fake_process.argv_log(dam.fake)))
+      end
+    )
   end,
 
   ["sends nothing more when the offer is declined"] = function()
-    with_dam(function(fake)
-      local real = vim.ui.select
-      vim.ui.select = function(items, _, on_choice)
-        on_choice(items[#items], #items)
-      end
+    local function select(items, _, on_choice)
+      on_choice(items[#items], #items)
+    end
 
+    with_dam(full({ exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN, select = select }), function(dam)
       done.send(app, TAXES)
       fake_process.drain()
-      vim.ui.select = real
 
-      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
-    end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
+      assert(#fake_process.argv_log(dam.fake) == 2, vim.inspect(fake_process.argv_log(dam.fake)))
+    end)
   end,
 
   ["reports a refusal no force can help, and opens no picker"] = function()
-    with_dam(function(fake, notifications)
-      local offered = false
-      local real = vim.ui.select
-      vim.ui.select = function(items, _, on_choice)
-        offered = true
-        on_choice(items[1], 1)
-      end
+    local offered = false
+    local function select(items, _, on_choice)
+      offered = true
+      on_choice(items[1], 1)
+    end
 
+    with_dam(full({ exit = 4, stderr = REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP, select = select }), function(dam)
       done.send(app, STANDUP)
       fake_process.settle(function()
-        return #notifications > 0
+        return #dam.said > 0
       end)
-      vim.ui.select = real
 
       assert(not offered, "an event is not blocked, so no force was offered")
-      assert(
-        notifications[1] == "damnit.nvim: a070c36 is an event; events are not completed",
-        vim.inspect(notifications)
-      )
-      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
-    end, { exit = 4, stderr = REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP })
+      assert(dam.said[1] == "damnit.nvim: a070c36 is an event; events are not completed", vim.inspect(dam.said))
+      assert(#fake_process.argv_log(dam.fake) == 2, vim.inspect(fake_process.argv_log(dam.fake)))
+    end)
   end,
 
   ["says what it completed"] = function()
-    with_dam(function(_, notifications)
+    with_dam(full(), function(dam)
       done.send(app, TAXES)
       fake_process.settle(function()
-        return #notifications > 0
+        return #dam.said > 0
       end)
 
-      assert(notifications[1] == "damnit.nvim: completed file taxes", vim.inspect(notifications))
+      assert(dam.said[1] == "damnit.nvim: completed file taxes", vim.inspect(dam.said))
     end)
   end,
 
   ["reports a recurring task as rolled forward rather than as done"] = function()
-    with_dam(function(_, notifications)
+    with_dam(full({ fixtures = harness.fixtures("rolled") }), function(dam)
       done.send(app, { oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" })
       fake_process.settle(function()
-        return #notifications > 0
+        return #dam.said > 0
       end)
 
-      assert(notifications[1] == "damnit.nvim: rolled forward to 2026-10-02", vim.inspect(notifications))
-      for _, line in ipairs(notifications) do
+      assert(dam.said[1] == "damnit.nvim: rolled forward to 2026-10-02", vim.inspect(dam.said))
+      for _, line in ipairs(dam.said) do
         assert(not line:find("completed", 1, true), "a rolled forward task was not completed: " .. line)
       end
-    end, { fixtures = TESTS_DIR .. "/fixtures/rolled" })
+    end)
   end,
 }

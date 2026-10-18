@@ -1,11 +1,4 @@
-local SHARED_BY_EVERY_DOFILE = "damnit.tests.said"
-
-if package.loaded[SHARED_BY_EVERY_DOFILE] then
-  return package.loaded[SHARED_BY_EVERY_DOFILE]
-end
-
 local M = {}
-package.loaded[SHARED_BY_EVERY_DOFILE] = M
 
 local ELLIPSIS = "…"
 

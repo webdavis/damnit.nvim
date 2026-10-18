@@ -1,32 +1,25 @@
-local app = require("damnit").app()
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
+local harness = require("helpers.harness")
 local task_buffer = require("damnit.task_buffer")
 
 M.OID = "badb4903b653809e591c31118004e07de7c8183c"
 
-function M.with_task(run, opts)
-  local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full", fail = (opts or {}).fail })
+function M.opts(opts)
+  opts = opts or {}
 
-  local notifications = fake.said
+  return {
+    fixtures = harness.fixtures("full"),
+    fail = opts.fail,
+    open = function(app)
+      local open = opts.open or function(oid)
+        return task_buffer.open(app, oid)
+      end
 
-  local open = (opts or {}).open or function(oid)
-    return task_buffer.open(app, oid)
-  end
-  local buf = open(M.OID) or vim.api.nvim_get_current_buf()
-  fake_process.settle(function()
-    return vim.api.nvim_buf_line_count(buf) > 1
-  end)
-
-  local ok, err = pcall(run, buf, fake, notifications)
-
-  vim.cmd("silent! %bwipeout!")
-  fake_process.remove(fake)
-
-  assert(ok, err)
+      return open(M.OID) or vim.api.nvim_get_current_buf()
+    end,
+  }
 end
 
 function M.set_field(buf, key, value)

@@ -1,15 +1,17 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local poll = require("damnit.poll")
-local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local clock = require("helpers.clock")
+local recording = require("helpers.said")
 local function queue()
   return require("damnit").app().queue
 end
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
-local TODAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d")
-local YESTERDAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d", os.time() - 86400)
+local NOON_UTC_ON_THE_FIRST_OF_OCTOBER = 1790856000
+local THE_FIRST_OF_OCTOBER = "2026-10-01"
+local THE_LAST_OF_SEPTEMBER = "2026-09-30"
 
 local function open_task_due(oid, due)
   return { oid = oid, subject = "x", path = "inbox/", task = { done = false, due = due } }
@@ -33,43 +35,46 @@ end
 
 return {
   ["asks dam for the open objects due today or earlier, without a pull"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    with_dam({ fixtures = harness.fixtures("full") }, function(dam)
+      poll.refresh(app)
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
 
-    poll.refresh(app)
-    fake_process.settle(function()
-      return queue().running() == nil
+      local line = recorded_ls_line_or_nil(dam.fake)
+      poll.stop()
+
+      assert(
+        line == "ls !done & (due:today | overdue) --no-pull --json",
+        "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
+      )
     end)
-
-    local line = recorded_ls_line_or_nil(fake)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      line == "ls !done & (due:today | overdue) --no-pull --json",
-      "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
-    )
   end,
 
   ["counts what is due and what is overdue"] = function()
-    poll.apply(app, {
-      open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS),
-      open_task_due("bbbb2222", YESTERDAY_ON_THE_CLOCK_POLL_COUNTS_READS),
-    }, nil)
+    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
+      poll.apply(app, {
+        open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER),
+        open_task_due("bbbb2222", THE_LAST_OF_SEPTEMBER),
+      }, nil)
 
-    local shown = poll.status(app)
-    poll.stop()
+      local shown = poll.status(app)
+      poll.stop()
 
-    assert(shown == "1 due, 1 overdue", shown)
+      assert(shown == "1 due, 1 overdue", shown)
+    end)
   end,
 
   ["says dam ! rather than leaving a stale count standing"] = function()
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
-    poll.apply(app, nil, { kind = "error", code = 1, message = "storage: the store is locked" })
+    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
+      poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
+      poll.apply(app, nil, { kind = "error", code = 1, message = "storage: the store is locked" })
 
-    local shown = poll.status(app)
-    poll.stop()
+      local shown = poll.status(app)
+      poll.stop()
 
-    assert(shown == "dam !", shown)
+      assert(shown == "dam !", shown)
+    end)
   end,
 
   ["draws nothing at all when nothing is due"] = function()
@@ -106,59 +111,62 @@ return {
   end,
 
   ["shows the count rather than its own fetch while the poller is reading"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
+    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
+      with_dam({ fixtures = harness.fixtures("full") }, function()
+        poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
 
-    poll.refresh(app)
-    local shown = poll.status(app)
+        poll.refresh(app)
+        local shown = poll.status(app)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+        fake_process.settle(function()
+          return queue().running() == nil
+        end)
+        poll.stop()
+
+        assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
+      end)
     end)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
   end,
 
   ["shows the running operation instead of the count"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
+    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
+      with_dam({ fixtures = harness.fixtures("full") }, function()
+        poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
 
-    queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
+        queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
 
-    local shown = poll.status(app)
+        local shown = poll.status(app)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+        fake_process.settle(function()
+          return queue().running() == nil
+        end)
+        poll.stop()
+
+        assert(
+          shown:match("^dam: push todoist %d+%.%ds$"),
+          "a push in flight outranks a count that has not moved, and stays visible once its window closes: " .. shown
+        )
+      end)
     end)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      shown:match("^dam: push todoist %d+%.%ds$"),
-      "a push in flight outranks a count that has not moved, and stays visible once its window closes: " .. shown
-    )
   end,
 
   ["leaves the lane alone while another call holds it"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    with_dam({ fixtures = harness.fixtures("full") }, function(dam)
+      queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
+      poll.refresh(app)
 
-    queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
-    poll.refresh(app)
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+      local line = recorded_ls_line_or_nil(dam.fake)
+      poll.stop()
+
+      assert(
+        line == nil,
+        "a poll queued behind a push would answer about a store the push is still changing: " .. tostring(line)
+      )
     end)
-
-    local line = recorded_ls_line_or_nil(fake)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      line == nil,
-      "a poll queued behind a push would answer about a store the push is still changing: " .. tostring(line)
-    )
   end,
 
   ["says nothing about what was already overdue when the first fetch lands"] = function()
@@ -236,13 +244,15 @@ return {
   end,
 
   ["forgets its count when the poller stops, rather than freezing it"] = function()
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
-    assert(poll.counts().due == 1)
+    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
+      poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
+      assert(poll.counts().due == 1)
 
-    poll.stop()
+      poll.stop()
 
-    assert(poll.running() == false, "read through counts(), because status() would restart the poller")
-    assert(poll.counts().due == 0)
-    assert(poll.counts().overdue == 0)
+      assert(poll.running() == false, "read through counts(), because status() would restart the poller")
+      assert(poll.counts().due == 0)
+      assert(poll.counts().overdue == 0)
+    end)
   end,
 }

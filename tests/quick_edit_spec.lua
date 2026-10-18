@@ -1,47 +1,42 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local with_dam = require("helpers.harness").with_dam
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local quick_edit = require("damnit.quick_edit")
 
 local MILK = "c30414962aa4332b6e5dfc2e0360e2b328735efe"
 local CHILD = "8fbff8b04f0bdbd5eb5d9a1ee81c82ace01e65b1"
 
-local function argv_sent_by_pressing(key, prompt_answer, needle, calls_to_wait_for)
-  local new = {}
+local function argv_sent_by_pressing(key, prompt_answer, needle)
+  local new, said = {}, {}
 
-  list_buffer.with(function(buf, fake)
-    list_buffer.cursor_to(buf, needle or "buy oat milk")
-    local before = #fake_process.argv_log(fake)
+  local function input(_, on_answer)
+    on_answer(prompt_answer)
+  end
 
-    local input, select = vim.ui.input, vim.ui.select
-    vim.ui.input = function(_, on_answer)
-      on_answer(prompt_answer)
-    end
-    vim.ui.select = function(items, _, on_choice)
-      for index, item in ipairs(items) do
-        local named = type(item) == "table" and item.name or tostring(item)
+  local function select(items, _, on_choice)
+    for index, item in ipairs(items) do
+      local named = type(item) == "table" and item.name or tostring(item)
 
-        if named == prompt_answer then
-          return on_choice(item, index)
-        end
+      if named == prompt_answer then
+        return on_choice(item, index)
       end
-
-      on_choice(items[1], 1)
     end
+
+    on_choice(items[1], 1)
+  end
+
+  with_dam(list_buffer.opts({ input = input, select = select }), function(dam)
+    list_buffer.cursor_to(dam.buf, needle or "buy oat milk")
+    local before = #fake_process.argv_log(dam.fake)
 
     vim.api.nvim_feedkeys(key, "x", false)
-    if calls_to_wait_for == 0 then
-      fake_process.drain()
-    else
-      fake_process.drain()
-    end
+    fake_process.drain()
 
-    vim.ui.input, vim.ui.select = input, select
-    new = vim.list_slice(fake_process.argv_log(fake), before + 1)
+    new = vim.list_slice(fake_process.argv_log(dam.fake), before + 1)
+    said = dam.said
   end)
 
-  return new
+  return new, said
 end
 
 return {
@@ -52,7 +47,7 @@ return {
   end,
 
   ["dd on any other answer sends nothing"] = function()
-    local new = argv_sent_by_pressing("dd", "n", nil, 0)
+    local new = argv_sent_by_pressing("dd", "n")
 
     assert(#new == 0, vim.inspect(new))
   end,
@@ -75,11 +70,11 @@ return {
   end,
 
   ["l adds a label it does not have and removes one it does"] = function()
-    local added = argv_sent_by_pressing("l", "slow", nil, 2)
+    local added = argv_sent_by_pressing("l", "slow")
     assert(added[1] == "category list --json", vim.inspect(added))
     assert(added[2] == ("edit %s --label slow --json"):format(MILK), vim.inspect(added))
 
-    local removed = argv_sent_by_pressing("l", "home", nil, 2)
+    local removed = argv_sent_by_pressing("l", "home")
     assert(removed[2] == ("edit %s --unlabel home --json"):format(MILK), vim.inspect(removed))
   end,
 
@@ -114,9 +109,10 @@ return {
   end,
 
   ["< on a row this view draws at the top says why and moves nothing"] = function()
-    local new = argv_sent_by_pressing("<", nil, "- parent", 0)
+    local new, said = argv_sent_by_pressing("<", nil, "- parent")
 
     assert(#new == 0, vim.inspect(new))
+    assert(vim.deep_equal(said, { "damnit.nvim: already at the top level of this view" }), vim.inspect(said))
   end,
 
   ["X reopens a completed object, which dam edit takes a flag for"] = function()

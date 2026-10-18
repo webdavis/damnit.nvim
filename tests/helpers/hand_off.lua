@@ -2,7 +2,7 @@ local app = require("damnit").app()
 local M = {}
 
 local send = require("damnit.send")
-local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local recording = require("helpers.said")
 
 M.OID = "78b8950b02735107aa608659dcf19f6f50adfeb1"
 

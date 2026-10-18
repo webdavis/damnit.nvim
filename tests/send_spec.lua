@@ -1,11 +1,11 @@
+local with_dam = require("helpers.harness").with_dam
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local fake_process = require("helpers.fake_process")
+local hand_off = require("helpers.hand_off")
+local list_buffer = require("helpers.list_buffer")
 local send = require("damnit.send")
-local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 return {
   ["every notification ends by saying no record was written, since dam keeps no comments"] = function()
@@ -133,45 +133,44 @@ return {
   end,
 
   ["S in the list opens the note box on the object under the cursor"] = function()
-    list_buffer.with(function(buf, fake)
-      list_buffer.cursor_to(buf, "buy oat milk")
-      local before = #fake_process.argv_log(fake)
+    local asked = {}
+    local function input(opts)
+      table.insert(asked, opts.prompt)
+    end
 
-      local asked = {}
-      local real = vim.ui.input
-      vim.ui.input = function(opts)
-        table.insert(asked, opts.prompt)
-      end
+    with_dam(list_buffer.opts({ input = input }), function(dam)
+      list_buffer.cursor_to(dam.buf, "buy oat milk")
+      local before = #fake_process.argv_log(dam.fake)
 
       local ok, err = pcall(vim.api.nvim_feedkeys, "S", "x", false)
 
-      vim.ui.input = real
       assert(ok, err)
 
       assert(vim.deep_equal(asked, { "Note: " }), "the box opening is the only evidence: " .. vim.inspect(asked))
       assert(
-        #fake_process.argv_log(fake) == before,
-        "an unanswered box hands nothing over: " .. vim.inspect(fake_process.argv_log(fake))
+        #fake_process.argv_log(dam.fake) == before,
+        "an unanswered box hands nothing over: " .. vim.inspect(fake_process.argv_log(dam.fake))
       )
     end)
   end,
 
   ["S on a line holding no object sends nothing"] = function()
-    local list = require("damnit.list")
-    local real_under_cursor, real_input = list.object_under_cursor, vim.ui.input
     local asked = false
-
-    list.object_under_cursor = function()
-      return nil
-    end
-    vim.ui.input = function()
+    local function input()
       asked = true
     end
 
-    local ok, err = pcall(send.send, app)
+    with_dam(list_buffer.opts({ input = input }), function(dam)
+      local the_blank_line_under_the_title = 2
+      vim.api.nvim_win_set_cursor(0, { the_blank_line_under_the_title, 0 })
+      local before = #fake_process.argv_log(dam.fake)
 
-    list.object_under_cursor, vim.ui.input = real_under_cursor, real_input
-    assert(ok, err)
-    assert(not asked, "the note box opened with no object under the cursor")
+      vim.api.nvim_feedkeys("S", "x", false)
+      fake_process.drain()
+
+      assert(vim.api.nvim_get_current_line() == "", vim.api.nvim_get_current_line())
+      assert(not asked, "the note box opened with no object under the cursor")
+      assert(#fake_process.argv_log(dam.fake) == before, vim.inspect(fake_process.argv_log(dam.fake)))
+    end)
   end,
 }

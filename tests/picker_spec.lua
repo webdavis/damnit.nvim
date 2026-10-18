@@ -1,8 +1,8 @@
+local with_dam = require("helpers.harness").with_dam
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local picker = require("damnit.picker")
 
 local OBJECT = {
@@ -19,17 +19,12 @@ local function wait_until_the_answer_was_read_and_offered(offered, count)
   end)
 end
 
-local function with_select_recording_what_it_offered(body)
-  local real = vim.ui.select
+local function a_select_recording_what_it_offered()
   local offered = {}
-  vim.ui.select = function(entries)
+
+  return offered, function(entries)
     table.insert(offered, entries)
   end
-
-  local ok, err = pcall(body, offered)
-
-  vim.ui.select = real
-  assert(ok, err)
 end
 
 return {
@@ -49,46 +44,56 @@ return {
   end,
 
   ["follows the screen when it is given no name"] = function()
-    list_buffer.with(function(_, fake)
-      with_select_recording_what_it_offered(function(offered)
-        local before = #fake_process.argv_log(fake)
+    local offered, select = a_select_recording_what_it_offered()
+
+    with_dam(
+      list_buffer.opts({ views = { today = "due:today | overdue" }, name = "today", select = select }),
+      function(dam)
+        local before = #fake_process.argv_log(dam.fake)
         picker.pick(app, nil)
         wait_until_the_answer_was_read_and_offered(offered, 1)
 
         assert(
-          fake_process.argv_log(fake)[before + 1] == "ls due:today | overdue --json",
-          vim.inspect(fake_process.argv_log(fake))
+          fake_process.argv_log(dam.fake)[before + 1] == "ls due:today | overdue --json",
+          vim.inspect(fake_process.argv_log(dam.fake))
         )
 
         vim.cmd("silent! %bwipeout!")
-        local alone = #fake_process.argv_log(fake)
+        local alone = #fake_process.argv_log(dam.fake)
         picker.pick(app, nil)
         wait_until_the_answer_was_read_and_offered(offered, 2)
 
-        assert(fake_process.argv_log(fake)[alone + 1] == "ls !done --json", vim.inspect(fake_process.argv_log(fake)))
-      end)
-    end, { views = { today = "due:today | overdue" }, name = "today" })
+        assert(
+          fake_process.argv_log(dam.fake)[alone + 1] == "ls !done --json",
+          vim.inspect(fake_process.argv_log(dam.fake))
+        )
+      end
+    )
   end,
 
   ["says dam's own reason when the view it searches is refused, and offers nothing"] = function()
-    list_buffer.with(function(_, fake, notifications)
-      with_select_recording_what_it_offered(function(offered)
-        local logged_before = #fake_process.argv_log(fake)
-        local said_before = #notifications
+    local offered, select = a_select_recording_what_it_offered()
+
+    with_dam(
+      list_buffer.opts({
+        views = { today = "due:today | overdue" },
+        name = "today",
+        exit = 1,
+        stderr = '{"error": {"kind": "store", "rule": null, "message": "the store is locked", "oids": []}}',
+        select = select,
+      }),
+      function(dam)
+        local logged_before = #fake_process.argv_log(dam.fake)
+        local said_before = #dam.said
 
         picker.pick(app, "today")
         fake_process.settle(function()
-          return #fake_process.argv_log(fake) > logged_before and require("damnit").app().queue.running() == nil
+          return #fake_process.argv_log(dam.fake) > logged_before and require("damnit").app().queue.running() == nil
         end)
 
         assert(#offered == 0, "a refused view offered " .. vim.inspect(offered))
-        assert(notifications[said_before + 1] == "damnit.nvim: the store is locked", vim.inspect(notifications))
-      end)
-    end, {
-      views = { today = "due:today | overdue" },
-      name = "today",
-      exit = 1,
-      stderr = '{"error": {"kind": "store", "rule": null, "message": "the store is locked", "oids": []}}',
-    })
+        assert(dam.said[said_before + 1] == "damnit.nvim: the store is locked", vim.inspect(dam.said))
+      end
+    )
   end,
 }

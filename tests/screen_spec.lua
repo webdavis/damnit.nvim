@@ -1,20 +1,22 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local clock = require("helpers.clock")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local function queue()
   return require("damnit").app().queue
 end
-local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
+local screen = require("helpers.screen")
 local sidebar = require("damnit.sidebar")
-local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
-local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
+local sidebar_tab = require("helpers.sidebar_tab")
+local status_window = require("helpers.status_window")
 
 local TEN_AM_UTC_ON_THE_TWENTIETH = 1789898400
 
-local EIGHT_OBJECTS = TESTS_DIR .. "/fixtures/long"
+local EIGHT_OBJECTS = harness.fixtures("long")
 
 local function dam_list_in_a_window_that_wraps()
   vim.wo.wrap = true
@@ -34,7 +36,7 @@ end
 return {
   ["the staging window on the full fixtures draws this screen at 80x24"] = function()
     clock.at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
-      status_window.with(function()
+      with_dam(status_window.opts(), function()
         screen.matches_golden("staging")
       end)
     end)
@@ -42,9 +44,9 @@ return {
 
   ["a running call takes the help row and moves nothing else on the staging screen"] = function()
     clock.at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
-      status_window.with(function(fake)
+      with_dam(status_window.opts(), function(dam)
         screen.fix_size()
-        fake.hold = true
+        dam.fake.hold = true
         queue().submit({ args = { "status", "--json" }, label = "push fake" })
         assert(
           vim.wait(2000, function()
@@ -58,33 +60,36 @@ return {
         want[15] = "Running: push fake  0.0s     [C-c to cancel]"
         assert(vim.deep_equal(got, want), "--- got ---\n" .. table.concat(got, "\n"))
 
-        fake.release()
+        dam.fake.release()
         fake_process.drain()
       end)
     end)
   end,
 
   [":Dam list in a plain window draws this screen at 80x24"] = function()
-    list_buffer.with(function()
-      screen.matches_golden("list")
-    end, {
-      open = function()
-        vim.cmd("Dam list")
-        return vim.api.nvim_get_current_buf()
-      end,
-    })
+    with_dam(
+      list_buffer.opts({
+        open = function()
+          vim.cmd("Dam list")
+          return vim.api.nvim_get_current_buf()
+        end,
+      }),
+      function()
+        screen.matches_golden("list")
+      end
+    )
   end,
 
   [":Dam list at 80 columns cuts a long row at the edge and bars the current row"] = function()
-    list_buffer.with(function()
+    with_dam(list_buffer.opts({ fixtures = EIGHT_OBJECTS, open = dam_list_in_a_window_that_wraps }), function()
       screen.matches_golden("list_long")
       assert(vim.wo.cursorline, "the current row carries no bar")
       assert(not vim.wo.wrap, "the list wraps")
-    end, { fixtures = EIGHT_OBJECTS, open = dam_list_in_a_window_that_wraps })
+    end)
   end,
 
   ["the sidebar open on a view draws this screen at 80x24"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       screen.fix_size()
       sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle(app))
       screen.matches_golden("sidebar")
@@ -92,7 +97,7 @@ return {
   end,
 
   ["the sidebar keeps its view beside :Dam list and then :Dam done in the main window"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       screen.fix_size()
       sidebar_tab.wait_until_drawn_from_dams_answer(sidebar.toggle(app))
       vim.cmd("wincmd p")

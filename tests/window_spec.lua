@@ -1,11 +1,10 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
 local render = require("damnit.render")
 local window = require("damnit.window")
-
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
   window.tick(app, app.store)
@@ -14,7 +13,7 @@ end
 
 return {
   ["opens one buffer per store and focuses it rather than opening a second"] = function()
-    with_window(function()
+    with_dam(status_window.opts(), function()
       local first = window.buffer(app)
       vim.cmd("wincmd p")
       local second = window.open(app)
@@ -32,7 +31,7 @@ return {
   end,
 
   ["says how long ago each remote pulled, against the real clock"] = function()
-    with_window(function()
+    with_dam(status_window.opts(), function()
       local remotes = vim.api.nvim_buf_get_lines(window.buffer(app), 1, 2, false)[1]
 
       assert(remotes:find("fake %(1 unpushed, pulled %d+d ago%)"), remotes)
@@ -41,9 +40,9 @@ return {
   end,
 
   ["leaves the poller's own read out of the header"] = function()
-    with_window(function(fake)
+    with_dam(status_window.opts(), function(dam)
       local buf = window.buffer(app)
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
 
       app.queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
@@ -58,15 +57,15 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) > before and app.queue.running() == nil
       end)
     end)
   end,
 
   ["writes the running operation into the header on a tick"] = function()
-    with_window(function(fake)
+    with_dam(status_window.opts(), function(dam)
       local buf = window.buffer(app)
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
 
       app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
       tick_twice_by_hand_full_redraw_then_header_only()
@@ -81,17 +80,17 @@ return {
       end
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) > before and app.queue.running() == nil
       end)
     end)
   end,
 
   ["shows a running call in the header after setup, without a tick by hand"] = function()
-    with_window(function(fake)
+    with_dam(status_window.opts(), function(dam)
       require("damnit").setup({})
       local buf = window.buffer(app)
-      local before = #fake_process.argv_log(fake)
-      fake.hold = true
+      local before = #fake_process.argv_log(dam.fake)
+      dam.fake.hold = true
 
       app.queue.submit({ args = { "status", "--json" }, label = "push fake" })
 
@@ -105,23 +104,23 @@ return {
         "setup cut the queue off from the header: " .. row_3()
       )
 
-      fake.release()
+      dam.fake.release()
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) > before and app.queue.running() == nil
       end)
     end)
   end,
 
   ["- on the first of two Working entries leaves the cursor on the second"] = function()
-    with_window(function(fake)
+    with_dam(status_window.opts(), function(dam)
       vim.api.nvim_feedkeys("gu", "x", false)
       local line = vim.api.nvim_win_get_cursor(0)[1]
-      fake.fixtures = TESTS_DIR .. "/fixtures/staged_first"
-      local before = #fake_process.argv_log(fake)
+      dam.fake.fixtures = harness.fixtures("staged_first")
+      local before = #fake_process.argv_log(dam.fake)
 
       vim.api.nvim_feedkeys("-", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) >= before + 2 and app.queue.running() == nil
       end)
 
       local landed = vim.api.nvim_win_get_cursor(0)[1]
@@ -133,7 +132,7 @@ return {
   end,
 
   ["keeps a section the user folded closed when the re-read moves its heading"] = function()
-    with_window(function(fake)
+    with_dam(status_window.opts(), function(dam)
       local buf = window.buffer(app)
 
       local function heading_of(kind)
@@ -154,12 +153,12 @@ return {
       vim.cmd("normal! zc")
       assert(vim.fn.foldclosed(heading) == heading, ("fold at %d: %d"):format(heading, vim.fn.foldclosed(heading)))
 
-      local one_object_staged_so_the_staged_heading_slides_up = TESTS_DIR .. "/fixtures/shifted"
-      fake.fixtures = one_object_staged_so_the_staged_heading_slides_up
-      local before = #fake_process.argv_log(fake)
+      local one_object_staged_so_the_staged_heading_slides_up = harness.fixtures("shifted")
+      dam.fake.fixtures = one_object_staged_so_the_staged_heading_slides_up
+      local before = #fake_process.argv_log(dam.fake)
       vim.api.nvim_feedkeys("R", "x", false)
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) > before and app.queue.running() == nil
       end)
 
       local moved = heading_of("staged")
@@ -170,7 +169,7 @@ return {
   end,
 
   ["makes the buffer unmodifiable, unlisted and scratch"] = function()
-    with_window(function()
+    with_dam(status_window.opts(), function()
       local buf = window.buffer(app)
 
       assert(vim.bo[buf].filetype == "damstatus", vim.bo[buf].filetype)
@@ -183,10 +182,10 @@ return {
   end,
 
   [":Dam says its usage, prefixed, for a word it does not know"] = function()
-    with_window(function(_, notifications)
+    with_dam(status_window.opts(), function(dam)
       vim.cmd("Dam bogus")
 
-      local said = notifications[#notifications]
+      local said = dam.said[#dam.said]
       local one_member_of_a_list_that_grows_with_every_subcommand = ":Dam cancel"
       assert(vim.startswith(tostring(said), "damnit.nvim: usage is :Dam, "), tostring(said))
       assert(tostring(said):find(one_member_of_a_list_that_grows_with_every_subcommand, 1, true), tostring(said))
@@ -194,22 +193,22 @@ return {
   end,
 
   ["says so rather than raising E444 when the window is the only one"] = function()
-    with_window(function(_, notifications)
+    with_dam(status_window.opts(), function(dam)
       vim.cmd("only")
       local buf = window.buffer(app)
       vim.api.nvim_feedkeys("q", "x", false)
 
       assert(vim.api.nvim_win_get_buf(0) == buf, "the status window is still open")
       assert(
-        notifications[#notifications] == "damnit.nvim: the status window is the only window open",
-        tostring(notifications[#notifications])
+        dam.said[#dam.said] == "damnit.nvim: the status window is the only window open",
+        tostring(dam.said[#dam.said])
       )
     end)
   end,
 
   ["reads the status from dam rather than guessing at it"] = function()
-    with_window(function(fake)
-      local log = fake_process.argv_log(fake)
+    with_dam(status_window.opts(), function(dam)
+      local log = fake_process.argv_log(dam.fake)
 
       assert(vim.tbl_contains(log, "status --json"), vim.inspect(log))
       assert(vim.tbl_contains(log, "remote list --json"), vim.inspect(log))
@@ -218,22 +217,22 @@ return {
   end,
 
   ["R reads the remote list and the status again, so a pull made elsewhere shows its age"] = function()
-    with_window(function(fake)
-      local before = #fake_process.argv_log(fake)
+    with_dam(status_window.opts(), function(dam)
+      local before = #fake_process.argv_log(dam.fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) >= before + 2 and app.queue.running() == nil
+        return #fake_process.argv_log(dam.fake) >= before + 2 and app.queue.running() == nil
       end)
 
-      local log = fake_process.argv_log(fake)
+      local log = fake_process.argv_log(dam.fake)
       assert(log[before + 1] == "remote list --json", vim.inspect(log))
       assert(log[before + 2] == "status --json", vim.inspect(log))
     end)
   end,
 
   ["gu, gs and gc jump to a section, and a count picks the entry"] = function()
-    with_window(function()
+    with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("gu", "x", false)
       local unstaged = vim.api.nvim_win_get_cursor(0)[1]
       assert(vim.b[0].damnit_sections[unstaged] == "working", vim.inspect(vim.b[0].damnit_sections))
@@ -248,28 +247,31 @@ return {
   end,
 
   ["asks for the remote list again when the first read failed"] = function()
-    with_window(function(fake)
-      local before = #fake_process.argv_log(fake)
+    with_dam(status_window.opts({ fixtures = harness.fixtures("default") }), function(dam)
+      local before = #fake_process.argv_log(dam.fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before
+        return #fake_process.argv_log(dam.fake) > before
       end)
 
-      assert(fake_process.argv_log(fake)[before + 1] == "remote list --json", vim.inspect(fake_process.argv_log(fake)))
-    end, TESTS_DIR .. "/fixtures/default")
+      assert(
+        fake_process.argv_log(dam.fake)[before + 1] == "remote list --json",
+        vim.inspect(fake_process.argv_log(dam.fake))
+      )
+    end)
   end,
 
   ["refuses a jump to a section this status has none of"] = function()
-    with_window(function(_, notifications)
+    with_dam(status_window.opts({ fixtures = harness.fixtures("default") }), function(dam)
       vim.api.nvim_feedkeys("gs", "x", false)
 
-      assert(notifications[#notifications] == "damnit.nvim: no Staged section", notifications[#notifications])
-    end, TESTS_DIR .. "/fixtures/default")
+      assert(dam.said[#dam.said] == "damnit.nvim: no Staged section", dam.said[#dam.said])
+    end)
   end,
 
   ["q hides the window and keeps the buffer"] = function()
-    with_window(function()
+    with_dam(status_window.opts(), function()
       local buf = window.buffer(app)
       vim.api.nvim_feedkeys("q", "x", false)
 
@@ -281,10 +283,10 @@ return {
   end,
 
   [":Dam cancel says nothing is running when nothing is"] = function()
-    with_window(function(_, notifications)
+    with_dam(status_window.opts(), function(dam)
       vim.cmd("Dam cancel")
 
-      assert(notifications[#notifications] == "damnit.nvim: nothing is running", notifications[#notifications])
+      assert(dam.said[#dam.said] == "damnit.nvim: nothing is running", dam.said[#dam.said])
     end)
   end,
 }

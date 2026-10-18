@@ -1,6 +1,6 @@
 local status_model = require("damnit.status_model")
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local function fixture(name)
   local file = assert(io.open(("%s/fixtures/%s"):format(TESTS_DIR, name), "r"))

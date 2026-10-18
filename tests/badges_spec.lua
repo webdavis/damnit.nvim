@@ -1,8 +1,9 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 
-local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
+local clock = require("helpers.clock")
 local format = require("damnit.list_format")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local list_buffer = require("helpers.list_buffer")
 local render = require("damnit.render")
 
 local NOON_UTC_ON_THE_FIRST_OF_OCTOBER = 1790856000
@@ -33,16 +34,16 @@ end
 return {
   ["a list colours an overdue due date, a future one, the priority and each label over their columns"] = function()
     clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
-      list_buffer.with(function(buf)
-        local overdue = marks_on(buf, "- buy oat milk  (2026-09-25)  p1  @errand  inbox/")
+      with_dam(list_buffer.opts({ fixtures = harness.fixtures("badges") }), function(dam)
+        local overdue = marks_on(dam.buf, "- buy oat milk  (2026-09-25)  p1  @errand  inbox/")
         assert(
           vim.deep_equal(overdue, { { 16, 28, "DamOverdue" }, { 30, 32, "DamPriority1" }, { 34, 41, "DamLabel" } }),
           vim.inspect(overdue)
         )
 
-        local future = marks_on(buf, "- renew the passport  (2026-10-20)")
+        local future = marks_on(dam.buf, "- renew the passport  (2026-10-20)")
         assert(vim.deep_equal(future, { { 22, 34, "DamDue" } }), vim.inspect(future))
-      end, { fixtures = TESTS_DIR .. "/fixtures/badges" })
+      end)
     end)
   end,
 

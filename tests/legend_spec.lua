@@ -1,9 +1,8 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
+local with_dam = require("helpers.harness").with_dam
 local keymaps = require("damnit.keymaps")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local list_buffer = require("helpers.list_buffer")
 local render = require("damnit.render")
-local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
+local status_window = require("helpers.status_window")
 
 local STAGING_LEGEND = "g? help  - stage  cc commit  P push  p pull  R re-read"
 local LIST_LEGEND = "g? help  <CR> open  x done  p priority  s due  a add"
@@ -13,7 +12,7 @@ local function winbar_of(win)
 end
 
 local function the_help_float_closes_on(key)
-  list_buffer.with(function()
+  with_dam(list_buffer.opts(), function()
     vim.api.nvim_feedkeys("g?", "x", false)
     local float = vim.api.nvim_get_current_win()
     assert(vim.api.nvim_win_get_config(float).relative == "editor", "g? opened no float")
@@ -51,7 +50,7 @@ return {
   end,
 
   ["the staging window's third row is the legend, drawn faint"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       local buf = vim.api.nvim_get_current_buf()
       assert(vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1] == STAGING_LEGEND)
 
@@ -62,7 +61,7 @@ return {
   end,
 
   ["a 50-column staging window drops whole legend entries and cuts none"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       local win = vim.api.nvim_get_current_win()
       vim.cmd("vnew")
       vim.api.nvim_win_set_width(win, 50)
@@ -75,7 +74,7 @@ return {
   end,
 
   ["a list window carries the legend faint in its winbar, cut to the window's width"] = function()
-    list_buffer.with(function()
+    with_dam(list_buffer.opts(), function()
       local win = vim.api.nvim_get_current_win()
       vim.api.nvim_win_set_width(win, vim.o.columns)
       local bar = winbar_of(win)
