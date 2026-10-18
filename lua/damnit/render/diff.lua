@@ -46,6 +46,7 @@ function M.set_fields(object)
   return names
 end
 
+---@param entry damnit.StatusEntry
 function M.virt_lines(entry)
   local fields = entry.fields or {}
 

@@ -8,6 +8,24 @@ local row = require("damnit.render.row")
 
 M.COLUMNS = { verb = 2, oid = 11, subject = 20, fields = 48, path = 72 }
 
+---@class damnit.StatusEntry
+---@field kind "change"|"conflict"|"remote"|"notice"
+---@field oid? string
+---@field op? string
+---@field verb? string
+---@field object_kind? string
+---@field subject? string
+---@field path? string
+---@field fields? string[]
+---@field before? table
+---@field after? table
+---@field remote? string
+---@field commits? integer
+---@field ours? table
+---@field theirs? table
+---@field notice_kind? string
+---@field text? string
+
 local OP_GROUPS = { create = "DamOpNew", update = "DamOpChanged", delete = "DamOpRemoved" }
 
 local function blank()
@@ -71,6 +89,7 @@ local function section_line(section)
   return built.line("section")
 end
 
+---@param entry damnit.StatusEntry
 local function change_line(entry)
   local built = row.new()
 
@@ -91,6 +110,7 @@ local function change_line(entry)
   return built.line("change", entry.oid)
 end
 
+---@param entry damnit.StatusEntry
 local function remote_line(entry)
   local built = row.new()
   built.add(highlights.icon("remote"))
@@ -101,6 +121,7 @@ local function remote_line(entry)
   return built.line("remote")
 end
 
+---@param entry damnit.StatusEntry
 local function conflict_line(entry)
   local built = row.new()
   built.add(highlights.icon("conflict"))
@@ -112,6 +133,7 @@ local function conflict_line(entry)
   return built.line("conflict", entry.oid)
 end
 
+---@param entry damnit.StatusEntry
 local function notice_line(entry)
   local built = row.new()
   built.add("  ")

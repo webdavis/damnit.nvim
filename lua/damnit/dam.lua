@@ -36,6 +36,7 @@ function M.supported(text)
   return compare(parts, parts_of(M.MIN_VERSION)) >= 0 and compare(parts, parts_of(M.MAX_VERSION)) < 0
 end
 
+---@return damnit.Failure
 local function refusal_for(version)
   if not version then
     return { kind = "missing", code = -1, plugin = true, message = answer.MISSING }
@@ -53,6 +54,7 @@ local function refusal_for(version)
   }
 end
 
+---@type damnit.Failure
 local CANCELLED_BY_SETUP = {
   kind = "cancelled",
   code = -1,
@@ -125,6 +127,7 @@ function M.new(options, process, say)
     end)
   end
 
+  ---@param callback fun(data: table?, err: damnit.Failure?)
   function client.call(args, opts, callback)
     opts = opts or {}
 

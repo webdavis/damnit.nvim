@@ -39,6 +39,7 @@ local function configure(buf)
   })
 end
 
+---@param spec damnit.ListSpec
 function M.ensure(spec)
   local buf = scratch.named(buffer_name(spec), configure)
   local shown = scratch.state(buf)

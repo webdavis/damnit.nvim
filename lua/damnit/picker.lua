@@ -118,6 +118,7 @@ function M.show(app, entries, title)
   with_ui_select(app, entries, title)
 end
 
+---@param spec damnit.ListSpec
 local function search(app, spec)
   local title = format.title(spec)
 

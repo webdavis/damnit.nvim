@@ -59,6 +59,7 @@ local function fields_an_update_moved(change)
   return M.changed_fields(change.before, change.after)
 end
 
+---@return damnit.StatusEntry
 local function change_entry(change)
   local embedded_fallback = present(change.after) or present(change.before) or {}
 
@@ -76,6 +77,7 @@ local function change_entry(change)
   }
 end
 
+---@return damnit.StatusEntry
 local function conflict_entry(conflict)
   local ours = present(conflict.ours) or {}
 
@@ -117,10 +119,12 @@ function M.notice_text(notice)
   return table.concat(parts, " ")
 end
 
+---@return damnit.StatusEntry
 local function remote_entry(item)
   return { kind = "remote", remote = item.remote, commits = item.commits }
 end
 
+---@return damnit.StatusEntry
 local function notice_entry(item)
   return { kind = "notice", notice_kind = item.kind, text = M.notice_text(item) }
 end
