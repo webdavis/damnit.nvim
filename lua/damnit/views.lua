@@ -17,7 +17,6 @@ function M.declared()
   return names
 end
 
---- Every name `:Dam list` takes: the declared views and, once read, dam's saved filters.
 function M.known()
   local names = M.declared()
 
@@ -31,7 +30,6 @@ function M.known()
   return names
 end
 
---- Read `dam filter list` once per session, then call `on_loaded`.
 function M.load(on_loaded)
   on_loaded = on_loaded or function() end
 
@@ -97,7 +95,6 @@ function M.resolve(name)
   refuse(name)
 end
 
---- Resolve at once when no saved filter is needed, else after dam's list is read; nothing on a refusal.
 function M.resolve_then(name, on_spec)
   local needs_dams_list = name ~= nil and name ~= "" and type(declared_views()[name]) ~= "string"
 

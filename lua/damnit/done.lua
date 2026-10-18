@@ -66,7 +66,6 @@ local function ask_for_the_group_then_send(object)
   end)
 end
 
---- `children` is nil for a plain completion, or one of dam's `--children` values, which forces it.
 function M.send(object, children)
   require("damnit.queue").submit({
     args = verbs.done(object.oid, children),
