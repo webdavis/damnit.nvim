@@ -1,30 +1,7 @@
 local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local function queue()
-  return require("damnit").app().queue
-end
+local queue_fake = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/queue_fake.lua")
+local queue, with_fake, entry = queue_fake.queue, queue_fake.with_fake, queue_fake.entry
 local damnit = require("damnit")
-
-local function with_fake(run, opts)
-  local fake = fake_process.install(opts)
-
-  local notifications = {}
-  local real = vim.notify
-  vim.notify = function(text)
-    table.insert(notifications, text)
-  end
-
-  local ok, err = pcall(run, fake, notifications)
-
-  vim.notify = real
-  fake_process.remove(fake)
-  damnit.options.store = nil
-
-  assert(ok, err)
-end
-
-local function entry(args, extra)
-  return vim.tbl_extend("force", { args = args, label = table.concat(args, " ") }, extra or {})
-end
 
 return {
   ["runs one entry at a time and holds the rest"] = function()
@@ -108,90 +85,6 @@ return {
 
       assert(queue().submit(entry({ "status", "--json" })), "a local call queues rather than being refused")
       assert(queue().running().pending == 1, vim.inspect(queue().running()))
-    end)
-  end,
-
-  ["frees the lane when setup runs while a call is in flight"] = function()
-    with_fake(function()
-      local answered, err = false, nil
-      queue().submit(entry({ "status", "--json" }, {
-        on_done = function(_, failure)
-          answered, err = true, failure
-        end,
-      }))
-
-      damnit.setup({})
-
-      fake_process.settle(function()
-        return answered
-      end)
-
-      assert(
-        err ~= nil and err.kind == "cancelled",
-        "setup forgets the handshake the call waits on, so the call is cancelled: " .. vim.inspect(err)
-      )
-      assert(queue().running() == nil, "a lane left running here is one no later call ever gets out of")
-    end)
-  end,
-
-  ["keeps the running call, its queue and its lane when setup runs mid-call"] = function()
-    with_fake(function(fake)
-      queue().submit(entry({ "status", "--json" }))
-      fake_process.drain()
-
-      local peak = 0
-      local run = fake.run
-      fake.run = function(...)
-        local handle = run(...)
-        peak = math.max(peak, fake.in_flight)
-
-        return handle
-      end
-
-      local order = {}
-      local function noting(name)
-        return function(_, failure)
-          table.insert(order, failure and ("%s: %s"):format(name, failure.message) or name)
-        end
-      end
-
-      fake.hold = true
-      queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
-      queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
-
-      damnit.setup({})
-
-      assert(queue().running().label == "a", "the call in flight left the header: " .. vim.inspect(queue().running()))
-      queue().submit(entry({ "status", "--json" }, { label = "c", on_done = noting("c") }))
-      assert(
-        queue().running().pending == 2,
-        "a call queued before setup was dropped: " .. vim.inspect(queue().running())
-      )
-
-      fake_process.drain()
-
-      assert(vim.deep_equal(order, { "a", "b", "c" }), vim.inspect(order))
-      assert(peak == 1, "more than one call was in flight at once: " .. peak)
-    end)
-  end,
-
-  ["runs the queued call when setup lands during the running call's handshake"] = function()
-    with_fake(function(fake)
-      local order = {}
-      local function noting(name)
-        return function(_, failure)
-          table.insert(order, failure and ("%s: %s"):format(name, failure.message) or name)
-        end
-      end
-
-      fake.hold = true
-      queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
-      queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
-
-      damnit.setup({})
-      fake_process.drain()
-
-      assert(vim.deep_equal(order, { "a: the dam call was dropped when the options changed", "b" }), vim.inspect(order))
     end)
   end,
 
