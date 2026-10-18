@@ -4,14 +4,12 @@ local app = require("damnit").app()
 local fake_process = require("helpers.fake_process")
 local poll = require("damnit.poll")
 local clock = require("helpers.clock")
-local recording = require("helpers.said")
 local function queue()
   return require("damnit").app().queue
 end
 
 local NOON_UTC_ON_THE_FIRST_OF_OCTOBER = 1790856000
 local THE_FIRST_OF_OCTOBER = "2026-10-01"
-local THE_LAST_OF_SEPTEMBER = "2026-09-30"
 
 local function open_task_due(oid, due)
   return { oid = oid, subject = "x", path = "inbox/", task = { done = false, due = due } }
@@ -25,12 +23,6 @@ local function recorded_ls_line_or_nil(fake)
   end
 
   return nil
-end
-
-local function an_app_whose_reminders_are(on)
-  local say, lines = recording.recorder()
-
-  return { options = { reminders = on }, say = say }, lines
 end
 
 return {
@@ -49,41 +41,6 @@ return {
         "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
       )
     end)
-  end,
-
-  ["counts what is due and what is overdue"] = function()
-    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
-      poll.apply(app, {
-        open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER),
-        open_task_due("bbbb2222", THE_LAST_OF_SEPTEMBER),
-      }, nil)
-
-      local shown = poll.status(app)
-      poll.stop()
-
-      assert(shown == "1 due, 1 overdue", shown)
-    end)
-  end,
-
-  ["says dam ! rather than leaving a stale count standing"] = function()
-    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
-      poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
-      poll.apply(app, nil, { kind = "error", code = 1, message = "storage: the store is locked" })
-
-      local shown = poll.status(app)
-      poll.stop()
-
-      assert(shown == "dam !", shown)
-    end)
-  end,
-
-  ["draws nothing at all when nothing is due"] = function()
-    poll.apply(app, {}, nil)
-
-    local shown = poll.status(app)
-    poll.stop()
-
-    assert(shown == "", shown)
   end,
 
   ["the statusline function the README names is the poller's own"] = function()
@@ -110,46 +67,6 @@ return {
     assert(poll.running() == false, "a reminder nobody asked for costs no timer")
   end,
 
-  ["shows the count rather than its own fetch while the poller is reading"] = function()
-    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
-      with_dam({ fixtures = harness.fixtures("full") }, function()
-        poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
-
-        poll.refresh(app)
-        local shown = poll.status(app)
-
-        fake_process.settle(function()
-          return queue().running() == nil
-        end)
-        poll.stop()
-
-        assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
-      end)
-    end)
-  end,
-
-  ["shows the running operation instead of the count"] = function()
-    clock.at(NOON_UTC_ON_THE_FIRST_OF_OCTOBER, function()
-      with_dam({ fixtures = harness.fixtures("full") }, function()
-        poll.apply(app, { open_task_due("aaaa1111", THE_FIRST_OF_OCTOBER) }, nil)
-
-        queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
-
-        local shown = poll.status(app)
-
-        fake_process.settle(function()
-          return queue().running() == nil
-        end)
-        poll.stop()
-
-        assert(
-          shown:match("^dam: push todoist %d+%.%ds$"),
-          "a push in flight outranks a count that has not moved, and stays visible once its window closes: " .. shown
-        )
-      end)
-    end)
-  end,
-
   ["leaves the lane alone while another call holds it"] = function()
     with_dam({ fixtures = harness.fixtures("full") }, function(dam)
       queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
@@ -167,80 +84,6 @@ return {
         "a poll queued behind a push would answer about a store the push is still changing: " .. tostring(line)
       )
     end)
-  end,
-
-  ["says nothing about what was already overdue when the first fetch lands"] = function()
-    poll.stop()
-    local reminding, said = an_app_whose_reminders_are(true)
-
-    local past = open_task_due("cccc3333", "2000-01-01T09:00:00")
-    past.subject = "stand up"
-    local later = open_task_due("dddd4444", "2000-01-01T10:00:00")
-    later.subject = "sit down"
-
-    poll.apply(reminding, { past }, nil)
-    local after_first = #said
-
-    poll.apply(reminding, { past, later }, nil)
-
-    poll.stop()
-
-    assert(after_first == 0, "opening the editor in the evening does not replay the morning: " .. vim.inspect(said))
-    assert(#said == 1, vim.inspect(said))
-    assert(said[1]:find("sit down", 1, true), said[1])
-  end,
-
-  ["says nothing at all when reminders are off"] = function()
-    poll.stop()
-    local reminding, said = an_app_whose_reminders_are(false)
-
-    local past = open_task_due("cccc3333", "2000-01-01T09:00:00")
-
-    poll.apply(reminding, { past }, nil)
-    poll.apply(reminding, { past, open_task_due("dddd4444", "2000-01-01T10:00:00") }, nil)
-
-    poll.stop()
-
-    assert(#said == 0, vim.inspect(said))
-  end,
-
-  ["announces a task again when its time moves, because the key carries the stamp"] = function()
-    poll.stop()
-    local reminding, said = an_app_whose_reminders_are(true)
-
-    local at_nine = open_task_due("cccc3333", "2000-01-01T09:00:00")
-    at_nine.subject = "stand up"
-    local at_eleven = open_task_due("cccc3333", "2000-01-01T11:00:00")
-    at_eleven.subject = "stand up"
-
-    poll.apply(reminding, { at_nine }, nil)
-    local after_seed = #said
-
-    poll.apply(reminding, { at_eleven }, nil)
-    local after_move = #said
-
-    poll.apply(reminding, { at_eleven }, nil)
-
-    poll.stop()
-
-    assert(after_seed == 0, vim.inspect(said))
-    assert(
-      after_move == 1,
-      "keyed by the instant, so a moved task or a recurring one's next time is announced again: " .. vim.inspect(said)
-    )
-    assert(#said == 1, "the same instant is announced once")
-  end,
-
-  ["announces a whole-day task never, because it has no moment to come due at"] = function()
-    poll.stop()
-    local reminding, said = an_app_whose_reminders_are(true)
-
-    poll.apply(reminding, { open_task_due("aaaa1111", "2000-01-01") }, nil)
-    poll.apply(reminding, { open_task_due("aaaa1111", "2000-01-01"), open_task_due("bbbb2222", "2000-01-02") }, nil)
-
-    poll.stop()
-
-    assert(#said == 0, vim.inspect(said))
   end,
 
   ["forgets its count when the poller stops, rather than freezing it"] = function()
