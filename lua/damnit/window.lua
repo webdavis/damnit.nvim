@@ -5,6 +5,7 @@ local folds = require("damnit.folds")
 local layout = require("damnit.window.layout")
 local message = require("damnit.message")
 local queue = require("damnit.queue")
+local redraw = require("damnit.redraw")
 local render = require("damnit.render")
 local status_model = require("damnit.status_model")
 
@@ -107,38 +108,32 @@ function M.entry_under_cursor()
   return entries.at_line(buf, vim.api.nvim_win_get_cursor(0)[1], M.model())
 end
 
+local function oid_by_line(lines)
+  local oids = {}
+
+  for index, line in ipairs(lines) do
+    oids[index] = line.oid or false
+  end
+
+  return oids
+end
+
 local function draw(key, lines)
   local buf = buffer_by_store[key]
   local win = window_for(buf)
-  local oid = nil
-  local lnum = 1
 
   if win then
-    lnum = vim.api.nvim_win_get_cursor(win)[1]
-    oid = (vim.b[buf].damnit_oids or {})[lnum]
     folds.remember(key, win)
   end
 
-  render.draw(buf, lines)
-  require("damnit.render.diff").apply(buf, key, model_by_store[key])
+  redraw.keep_cursor(buf, oid_by_line(lines), function()
+    render.draw(buf, lines)
+    require("damnit.render.diff").apply(buf, key, model_by_store[key])
+  end)
 
-  if not win then
-    return
+  if win then
+    folds.apply(key, win)
   end
-
-  local target = lnum
-  if oid then
-    for index, each in ipairs(vim.b[buf].damnit_oids or {}) do
-      if each == oid then
-        target = index
-        break
-      end
-    end
-  end
-
-  local count = vim.api.nvim_buf_line_count(buf)
-  vim.api.nvim_win_set_cursor(win, { math.min(math.max(target, 1), count), 0 })
-  folds.apply(key, win)
 end
 
 function M.open_diffs(key)
