@@ -1,16 +1,16 @@
 local M = {}
 
 local function jump(name, heading)
-  return function()
-    require("damnit.actions").jump_to_section(name, heading, vim.v.count1)
+  return function(app)
+    require("damnit.actions").jump_to_section(app, name, heading, vim.v.count1)
   end
 end
 
 local function call(module, function_name, ...)
   local args = { ... }
 
-  return function()
-    require(module)[function_name](unpack(args))
+  return function(app)
+    require(module)[function_name](app, unpack(args))
   end
 end
 
@@ -124,9 +124,11 @@ function M.legend(filetype, width)
   return table.concat(shown, LEGEND_GAP)
 end
 
-function M.attach(buf, filetype)
+function M.attach(buf, filetype, app)
   for _, map in ipairs(M.MAPS[filetype] or {}) do
-    vim.keymap.set(map.mode, map.lhs, map.run, { buffer = buf, nowait = true, desc = "dam: " .. map.desc })
+    vim.keymap.set(map.mode, map.lhs, function()
+      map.run(app)
+    end, { buffer = buf, nowait = true, desc = "dam: " .. map.desc })
   end
 end
 

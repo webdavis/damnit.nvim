@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local M = {}
 
 local send = require("damnit.send")
@@ -63,7 +64,7 @@ function M.hand_over_to_a_double(env, object)
     table.insert(seen.said, text)
   end
 
-  local ok, err = pcall(send.hand_off, object or M.FULL, env.note, host)
+  local ok, err = pcall(send.hand_off, app, object or M.FULL, env.note, host)
 
   vim.notify = real_notify
   assert(ok, err)

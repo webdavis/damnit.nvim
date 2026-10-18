@@ -6,38 +6,40 @@ vim.g.loaded_damnit = true
 local SUBCOMMANDS_TAKING_A_VIEW = { list = true, pick = true }
 
 local SUBCOMMANDS = {
-  [""] = function()
-    require("damnit.window").open()
+  [""] = function(app)
+    require("damnit.window").open(app)
   end,
-  cancel = function()
-    require("damnit").app().queue.cancel()
+  cancel = function(app)
+    app.queue.cancel()
   end,
-  capture = function(_, cmd)
+  capture = function(app, _, cmd)
     local selection = cmd.range > 0 and { line1 = cmd.line1, line2 = cmd.line2 } or nil
 
-    require("damnit.capture").capture(selection)
+    require("damnit.capture").capture(app, selection)
   end,
-  done = function()
-    require("damnit").completed()
+  done = function(app)
+    require("damnit.list").open(app, require("damnit.views").COMPLETED)
   end,
-  list = function(args)
-    require("damnit").open(args[1])
+  list = function(app, args)
+    require("damnit.views").resolve_then(app, args[1], function(spec)
+      require("damnit.list").open(app, spec)
+    end)
   end,
-  pick = function(args)
-    require("damnit").pick(args[1])
+  pick = function(app, args)
+    require("damnit.picker").pick(app, args[1])
   end,
   messages = function()
     require("damnit.message").show()
   end,
-  toggle = function()
-    require("damnit").toggle()
+  toggle = function(app)
+    require("damnit.sidebar").toggle(app)
   end,
-  task = function(args)
+  task = function(app, args)
     if #args ~= 1 then
       return require("damnit.message").fail("usage is :Dam task <oid>")
     end
 
-    require("damnit.task_buffer").open(args[1])
+    require("damnit.task_buffer").open(app, args[1])
   end,
 }
 
@@ -57,13 +59,14 @@ local function complete(arg_lead, cmd_line)
   local typed = vim.split(vim.trim(cmd_line), "%s+")
 
   if #typed > 1 and SUBCOMMANDS_TAKING_A_VIEW[typed[2]] then
+    local app = require("damnit").app()
     local views = require("damnit.views")
     local the_next_tab_offers_dams_filters_too = views.load
-    the_next_tab_offers_dams_filters_too()
+    the_next_tab_offers_dams_filters_too(app)
 
     return vim.tbl_filter(function(name)
       return vim.startswith(name, arg_lead)
-    end, views.known())
+    end, views.known(app))
   end
 
   local names = {}
@@ -85,7 +88,7 @@ vim.api.nvim_create_user_command("Dam", function(cmd)
     return require("damnit.message").fail(usage())
   end
 
-  run(vim.list_slice(args, 2), cmd)
+  run(require("damnit").app(), vim.list_slice(args, 2), cmd)
 end, {
   nargs = "*",
   range = true,

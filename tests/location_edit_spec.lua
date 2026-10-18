@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local location_edit = require("damnit.location_edit")
 
 local function load_what_a_jump_reaches_while_the_relative_package_path_still_resolves()
@@ -37,7 +38,7 @@ local function jump_from_a_tabpage_of_its_own_in(root, parsed)
   vim.cmd("tabnew")
   vim.cmd.tcd(vim.fn.fnameescape(root))
 
-  local ok, jumped = pcall(location_edit.jump, parsed)
+  local ok, jumped = pcall(location_edit.jump, app, parsed)
 
   local opened = vim.fs.normalize(vim.api.nvim_buf_get_name(0))
   local line = vim.api.nvim_win_get_cursor(0)[1]

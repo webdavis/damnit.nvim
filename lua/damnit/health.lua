@@ -24,9 +24,9 @@ function M.settle(start)
   return true, boxed_answer.value, boxed_answer.err
 end
 
-local function call(args)
+local function call(app, args)
   return M.settle(function(done)
-    require("damnit").app().dam.call(args, nil, done)
+    app.dam.call(args, nil, done)
   end)
 end
 
@@ -34,10 +34,10 @@ local function nothing_to_speak_to(err)
   return err and (err.kind == "missing" or err.kind == "unsupported")
 end
 
-local function report_version_and_store()
+local function report_version_and_store(app)
   local dam = require("damnit.dam")
-  local client = require("damnit").app().dam
-  local finished, data, err = call(verbs.ls(nil, true))
+  local client = app.dam
+  local finished, data, err = call(app, verbs.ls(nil, true))
 
   if not finished then
     vim.health.error(("dam did not answer within %d seconds"):format(DEADLINE_MS / 1000))
@@ -70,8 +70,8 @@ local function report_version_and_store()
   return true
 end
 
-local function report_paths()
-  local options = require("damnit").options
+local function report_paths(app)
+  local options = app.options
 
   for _, flag in ipairs({ "store", "config" }) do
     local named = options[flag]
@@ -88,8 +88,8 @@ local function report_paths()
   end
 end
 
-local function report_remotes()
-  local finished, data, err = call(verbs.remote_list())
+local function report_remotes(app)
+  local finished, data, err = call(app, verbs.remote_list())
 
   if not finished or err then
     return vim.health.warn(("the remotes could not be read: %s"):format(err and err.message or "dam did not answer"))
@@ -122,8 +122,8 @@ local function report_remotes()
   end
 end
 
-local function report_filters()
-  local finished, data, err = call(verbs.filter_list())
+local function report_filters(app)
+  local finished, data, err = call(app, verbs.filter_list())
 
   if not finished or err then
     return vim.health.warn(
@@ -145,8 +145,8 @@ local function report_filters()
   vim.health.ok(("dam's own saved filters are %s, and :Dam list takes any of them"):format(table.concat(names, ", ")))
 end
 
-local function report_conflicts()
-  local finished, data, err = call(verbs.status())
+local function report_conflicts(app)
+  local finished, data, err = call(app, verbs.status())
 
   if not finished or err then
     return vim.health.warn(("the status could not be read: %s"):format(err and err.message or "dam did not answer"))
@@ -166,9 +166,9 @@ local function report_conflicts()
   )
 end
 
-local function report_views()
-  local views = require("damnit").options.views or {}
-  local declared = require("damnit.views").declared()
+local function report_views(app)
+  local views = app.options.views or {}
+  local declared = require("damnit.views").declared(app)
 
   if #declared == 0 then
     return vim.health.ok("no view is declared in setup")
@@ -176,7 +176,7 @@ local function report_views()
 
   for _, name in ipairs(declared) do
     local query = views[name]
-    local finished, _, err = call(verbs.ls(query, true))
+    local finished, _, err = call(app, verbs.ls(query, true))
 
     if not finished then
       vim.health.error(("the view %s did not answer"):format(name))
@@ -191,15 +191,17 @@ end
 function M.check()
   vim.health.start("damnit.nvim")
 
-  if not report_version_and_store() then
+  local app = require("damnit").app()
+
+  if not report_version_and_store(app) then
     return
   end
 
-  report_paths()
-  report_remotes()
-  report_filters()
-  report_conflicts()
-  report_views()
+  report_paths(app)
+  report_remotes(app)
+  report_filters(app)
+  report_conflicts(app)
+  report_views(app)
 end
 
 return M

@@ -2,7 +2,7 @@ local M = {}
 
 local HELP_CLOSE_KEYS = { "q", "g?", "<Esc>" }
 
-function M.open(filetype)
+function M.open(_, filetype)
   local rows = {}
   for _, map in ipairs(require("damnit.keys").MAPS[filetype] or {}) do
     rows[#rows + 1] = ("  %-8s %s"):format(map.lhs, map.desc)

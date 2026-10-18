@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
@@ -44,7 +45,7 @@ return {
     assert(seen.calls[3] == "agent focus w1:p2", vim.inspect(seen.calls))
     assert(seen.copied == nil, "the brief went to the clipboard as well")
     assert(
-      hand_off.send_text_without_its_paste_framing(seen) == send.brief(hand_off.FULL, nil),
+      hand_off.send_text_without_its_paste_framing(seen) == send.brief(app, hand_off.FULL, nil),
       hand_off.send_text_without_its_paste_framing(seen)
     )
     assert(seen.said[1] == "damnit.nvim: sent to claude, no hand-off record written", vim.inspect(seen.said))
@@ -54,7 +55,7 @@ return {
     local seen = hand_off.hand_over_to_a_double({ in_herdr = false })
 
     assert(#seen.calls == 0, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(app, hand_off.FULL, nil), tostring(seen.copied))
     assert(
       said.whole(seen.said[1], "damnit.nvim: copied the brief to the clipboard, no hand-off record written"),
       vim.inspect(seen.said)
@@ -81,7 +82,7 @@ return {
     local seen = hand_off.hand_over_to_a_double({ agent_list = hand_off.AGENT_LIST_WITH_NO_AGENT_HERE })
 
     assert(seen.calls[1] == "agent list" and #seen.calls == 1, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(app, hand_off.FULL, nil), tostring(seen.copied))
     assert(
       said.whole(
         seen.said[1],
@@ -94,7 +95,7 @@ return {
   ["a refused send falls back to the clipboard"] = function()
     local seen = hand_off.hand_over_to_a_double({ refusal_of_every_call_after_the_agent_list = "pane w1:p2 not found" })
 
-    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(app, hand_off.FULL, nil), tostring(seen.copied))
     assert(
       said.whole(
         seen.said[1],
@@ -108,7 +109,7 @@ return {
     local seen = hand_off.hand_over_to_a_double({ agent_list_failure = "herdr: no such file or directory" })
 
     assert(#seen.calls == 1, vim.inspect(seen.calls))
-    assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
+    assert(seen.copied == send.brief(app, hand_off.FULL, nil), tostring(seen.copied))
     assert(seen.said[1]:match("^damnit.nvim: herdr: no such file or directory; copied"), vim.inspect(seen.said))
   end,
 
@@ -117,7 +118,7 @@ return {
     vim.env.HERDR_BIN_PATH = "/no/such/herdr-binary"
 
     local seen = { done = false }
-    send.host().run({ "agent", "list" }, function(out, err)
+    send.host(app).run({ "agent", "list" }, function(out, err)
       seen.done, seen.out, seen.err = true, out, err
     end)
 
@@ -167,7 +168,7 @@ return {
       asked = true
     end
 
-    local ok, err = pcall(send.send)
+    local ok, err = pcall(send.send, app)
 
     list.object_under_cursor, vim.ui.input = real_under_cursor, real_input
     assert(ok, err)

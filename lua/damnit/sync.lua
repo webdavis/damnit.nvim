@@ -3,8 +3,8 @@ local M = {}
 local message = require("damnit.message")
 local verbs = require("damnit.dam.verbs")
 
-function M.remote_under_cursor()
-  local found = require("damnit.window").entry_under_cursor()
+function M.remote_under_cursor(app)
+  local found = require("damnit.window").entry_under_cursor(app)
 
   if found and found.entry.kind == "remote" then
     return found.entry.remote
@@ -60,8 +60,8 @@ local function one_line(verb, report)
   return table.concat(lines, "; ")
 end
 
-function M.sync(verb, remote)
-  require("damnit").app().queue.submit({
+function M.sync(app, verb, remote)
+  app.queue.submit({
     args = verbs[verb](remote),
     label = remote and ("%s %s"):format(verb, remote) or verb,
     verb = verb,
@@ -76,14 +76,14 @@ function M.sync(verb, remote)
       end
 
       local window = require("damnit.window")
-      window.forget_remotes()
-      window.refresh()
+      window.forget_remotes(app)
+      window.refresh(app)
     end,
   })
 end
 
-function M.push()
-  local model = require("damnit.window").model()
+function M.push(app)
+  local model = require("damnit.window").model(app)
   local any_remote_behind = false
 
   for _, remote in ipairs((model or {}).remotes or {}) do
@@ -94,21 +94,21 @@ function M.push()
     return message.say("nothing to push")
   end
 
-  M.sync("push", M.remote_under_cursor())
+  M.sync(app, "push", M.remote_under_cursor(app))
 end
 
-function M.pull()
-  M.sync("pull", M.remote_under_cursor())
+function M.pull(app)
+  M.sync(app, "pull", M.remote_under_cursor(app))
 end
 
-function M.resolve(side)
-  local found = require("damnit.window").entry_under_cursor()
+function M.resolve(app, side)
+  local found = require("damnit.window").entry_under_cursor(app)
 
   if not found or found.entry.kind ~= "conflict" then
     return message.warn("no conflict on this line")
   end
 
-  require("damnit.actions").write(verbs.resolve(found.entry.oid, side), "resolve")
+  require("damnit.actions").write(app, verbs.resolve(found.entry.oid, side), "resolve")
 end
 
 return M

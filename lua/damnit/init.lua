@@ -16,15 +16,17 @@ M.options = {
   },
 }
 
+local app
+
 local function tick_the_status_window(key)
-  require("damnit.window").tick(key)
+  require("damnit.window").tick(app, key)
 end
 
-local function client_for(app)
-  return require("damnit.dam").new(app.options, app.process)
+local function client_for(record)
+  return require("damnit.dam").new(record.options, record.process)
 end
 
-local app = { options = M.options, process = require("damnit.process") }
+app = { options = M.options, process = require("damnit.process") }
 app.dam = client_for(app)
 app.queue = require("damnit.queue").new(app, tick_the_status_window)
 
@@ -37,7 +39,7 @@ local function forget_dams_filters_read_from_the_old_store()
 end
 
 local function start_the_reader_reminders_ride_on()
-  require("damnit.poll").start()
+  require("damnit.poll").start(app)
 end
 
 function M.setup(opts, ports)
@@ -57,27 +59,29 @@ function M.setup(opts, ports)
 end
 
 function M.status()
-  return require("damnit.poll").status()
+  return require("damnit.poll").status(app)
 end
 
 function M.open_status()
-  return require("damnit.window").open()
+  return require("damnit.window").open(app)
 end
 
 function M.toggle()
-  require("damnit.sidebar").toggle()
+  require("damnit.sidebar").toggle(app)
 end
 
 function M.completed()
-  return require("damnit.list").open({ title = "completed", query = "done", flat = true })
+  return require("damnit.list").open(app, require("damnit.views").COMPLETED)
 end
 
 function M.pick(name)
-  require("damnit.picker").pick(name)
+  require("damnit.picker").pick(app, name)
 end
 
 function M.open(name)
-  return require("damnit.views").resolve_then(name, require("damnit.list").open)
+  return require("damnit.views").resolve_then(app, name, function(spec)
+    return require("damnit.list").open(app, spec)
+  end)
 end
 
 return M

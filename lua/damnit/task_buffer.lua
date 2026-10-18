@@ -47,10 +47,10 @@ local function line_named_by(refusal, header)
   return 1
 end
 
-local function run_in_order(buf, steps, header)
+local function run_in_order(app, buf, steps, header)
   local step = table.remove(steps, 1)
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = step.args,
     label = step.label,
     on_done = function(updated, failure)
@@ -66,12 +66,12 @@ local function run_in_order(buf, steps, header)
         return M.show(updated, buf)
       end
 
-      run_in_order(buf, steps, header)
+      run_in_order(app, buf, steps, header)
     end,
   })
 end
 
-function M.write(buf)
+function M.write(app, buf)
   local object = last_drawn_object_by_buf[buf]
   if not object then
     return message.warn("this buffer has no object to write")
@@ -105,10 +105,10 @@ function M.write(buf)
     steps[#steps + 1] = { args = verbs.mv(object.oid, changes.move), label = "mv" }
   end
 
-  run_in_order(buf, steps, header)
+  run_in_order(app, buf, steps, header)
 end
 
-local function configure(buf)
+local function configure(app, buf)
   vim.bo[buf].filetype = "damtask"
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].swapfile = false
@@ -117,13 +117,15 @@ local function configure(buf)
     buffer = buf,
     desc = "dam: write this object back",
     callback = function()
-      M.write(buf)
+      M.write(app, buf)
     end,
   })
 end
 
-function M.open(oid)
-  local buf, created = scratch.named(("damnit://task/%s"):format(oid), configure)
+function M.open(app, oid)
+  local buf, created = scratch.named(("damnit://task/%s"):format(oid), function(new)
+    configure(app, new)
+  end)
 
   if not scratch.focus(buf) then
     require("damnit.sidebar").leave_fixed_window()
@@ -135,7 +137,7 @@ function M.open(oid)
     return buf
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = verbs.show(oid),
     label = "show",
     on_done = function(object, err)

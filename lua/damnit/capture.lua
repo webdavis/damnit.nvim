@@ -57,12 +57,12 @@ function M.args(content, location)
   return verbs.new(content, INBOX, location and require("damnit.location").describe(location))
 end
 
-function M.create(content, where)
+function M.create(app, content, where)
   if content == "" then
     return message.warn("there is nothing to capture here")
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = M.args(content, where),
     label = "new",
     on_done = function(object, err)
@@ -79,13 +79,13 @@ function M.create(content, where)
   })
 end
 
-function M.capture(range)
+function M.capture(app, range)
   local buf = vim.api.nvim_get_current_buf()
   local first = range and range.line1 or vim.api.nvim_win_get_cursor(0)[1]
   local where = require("damnit.location_edit").of_buffer(buf, first)
 
   if range then
-    return M.create(M.content(vim.api.nvim_buf_get_lines(buf, range.line1 - 1, range.line2, false)), where)
+    return M.create(app, M.content(vim.api.nvim_buf_get_lines(buf, range.line1 - 1, range.line2, false)), where)
   end
 
   local line = vim.api.nvim_buf_get_lines(buf, first - 1, first, false)[1] or ""
@@ -97,7 +97,7 @@ function M.capture(range)
       return message.warn("nothing captured")
     end
 
-    M.create(vim.trim(answer), where)
+    M.create(app, vim.trim(answer), where)
   end)
 end
 

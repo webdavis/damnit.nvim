@@ -4,10 +4,6 @@ local message = require("damnit.message")
 
 local SIDEBAR_WINDOW_FLAG = "damnit_sidebar"
 
-local function options()
-  return require("damnit").options.sidebar
-end
-
 function M.window()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     if vim.w[win][SIDEBAR_WINDOW_FLAG] then
@@ -32,26 +28,26 @@ local function split_full_height_at(side)
   vim.cmd(side == "right" and "botright vsplit" or "topleft vsplit")
 end
 
-local function open_beside(spec, opts)
+local function open_beside(app, spec, opts)
   split_full_height_at(opts.side)
 
   local win = vim.api.nvim_get_current_win()
   vim.w[win][SIDEBAR_WINDOW_FLAG] = true
 
-  require("damnit.list").open(spec)
+  require("damnit.list").open(app, spec)
   hold(win, opts.width)
 
   return win
 end
 
-function M.open()
+function M.open(app)
   local existing = M.window()
   if existing then
     vim.api.nvim_set_current_win(existing)
     return existing
   end
 
-  local opts = options()
+  local opts = app.options.sidebar
 
   if opts.side ~= "left" and opts.side ~= "right" then
     return message.fail(('sidebar.side is %q, and it is either "left" or "right"'):format(tostring(opts.side)))
@@ -61,8 +57,8 @@ function M.open()
     return message.fail(("sidebar.width is %s, and it is a count of columns"):format(vim.inspect(opts.width)))
   end
 
-  return require("damnit.views").resolve_then(opts.view, function(spec)
-    return open_beside(spec, opts)
+  return require("damnit.views").resolve_then(app, opts.view, function(spec)
+    return open_beside(app, spec, opts)
   end)
 end
 
@@ -80,7 +76,7 @@ function M.leave_fixed_window()
   split_full_height_at("right")
 end
 
-function M.close()
+function M.close(_)
   local win = M.window()
   if not win then
     return false
@@ -97,14 +93,14 @@ function M.close()
   return true
 end
 
-function M.toggle()
+function M.toggle(app)
   if M.window() then
-    M.close()
+    M.close(app)
 
     return M.window()
   end
 
-  return M.open()
+  return M.open(app)
 end
 
 local function restore_the_width_once_another_window_takes_the_rest()
@@ -113,7 +109,7 @@ local function restore_the_width_once_another_window_takes_the_rest()
     return
   end
 
-  local width = options().width
+  local width = require("damnit").app().options.sidebar.width
   if type(width) == "number" and width >= 1 and vim.api.nvim_win_get_width(win) ~= width then
     vim.api.nvim_win_set_width(win, width)
   end

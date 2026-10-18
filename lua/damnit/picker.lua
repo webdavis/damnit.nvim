@@ -37,12 +37,12 @@ function M.entries(objects)
   return entries
 end
 
-function M.open_entry(entry)
-  require("damnit.task_buffer").open(entry.oid)
+function M.open_entry(app, entry)
+  require("damnit.task_buffer").open(app, entry.oid)
 end
 
-function M.complete_entry(entry)
-  require("damnit.done").send(entry.object)
+function M.complete_entry(app, entry)
+  require("damnit.done").send(app, entry.object)
 end
 
 function M.chosen_oid(selected)
@@ -51,8 +51,8 @@ function M.chosen_oid(selected)
   return type(line) == "string" and (line:match("^([^" .. OID_DELIMITER .. "]*)") or "") or ""
 end
 
-function M.fzf_lua()
-  local wanted = require("damnit").options.picker
+function M.fzf_lua(app)
+  local wanted = app.options.picker
 
   if wanted ~= "auto" and wanted ~= "fzf-lua" and wanted ~= "select" then
     message.warn(("picker %q is not auto, fzf-lua or select; using auto"):format(tostring(wanted)))
@@ -75,7 +75,7 @@ function M.fzf_lua()
   return nil
 end
 
-local function with_fzf_lua(fzf_lua, entries, title)
+local function with_fzf_lua(app, fzf_lua, entries, title)
   local lines, by_oid = {}, {}
 
   for _, entry in ipairs(entries) do
@@ -87,7 +87,7 @@ local function with_fzf_lua(fzf_lua, entries, title)
     return function(selected)
       local entry = by_oid[M.chosen_oid(selected)]
       if entry then
-        handler(entry)
+        handler(app, entry)
       end
     end
   end
@@ -99,7 +99,7 @@ local function with_fzf_lua(fzf_lua, entries, title)
   })
 end
 
-local function with_ui_select(entries, title)
+local function with_ui_select(app, entries, title)
   vim.ui.select(entries, {
     prompt = title,
     format_item = function(entry)
@@ -107,26 +107,26 @@ local function with_ui_select(entries, title)
     end,
   }, function(entry)
     if entry then
-      M.open_entry(entry)
+      M.open_entry(app, entry)
     end
   end)
 end
 
-function M.show(entries, title)
-  local fzf_lua = M.fzf_lua()
+function M.show(app, entries, title)
+  local fzf_lua = M.fzf_lua(app)
 
   if fzf_lua then
-    return with_fzf_lua(fzf_lua, entries, title)
+    return with_fzf_lua(app, fzf_lua, entries, title)
   end
 
-  with_ui_select(entries, title)
+  with_ui_select(app, entries, title)
 end
 
-local function search(spec)
+local function search(app, spec)
   local list = require("damnit.list")
   local title = format.title(spec)
 
-  list.fetch(spec, function(objects, err)
+  list.fetch(app, spec, function(objects, err)
     if err then
       return message.report(err)
     end
@@ -136,18 +136,20 @@ local function search(spec)
       return message.warn(("no objects in %s"):format(title))
     end
 
-    M.show(entries, title)
+    M.show(app, entries, title)
   end)
 end
 
-function M.pick(name)
+function M.pick(app, name)
   local list = require("damnit.list")
 
   if name == nil or name == "" then
-    return search(list.current_spec() or require("damnit.views").resolve(nil))
+    return search(app, list.current_spec() or require("damnit.views").resolve(app, nil))
   end
 
-  require("damnit.views").resolve_then(name, search)
+  require("damnit.views").resolve_then(app, name, function(spec)
+    search(app, spec)
+  end)
 end
 
 return M

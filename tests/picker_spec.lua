@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
@@ -51,7 +52,7 @@ return {
     list_buffer.with(function(_, fake)
       with_select_recording_what_it_offered(function(offered)
         local before = #fake_process.argv_log(fake)
-        picker.pick(nil)
+        picker.pick(app, nil)
         wait_until_the_answer_was_read_and_offered(offered, 1)
 
         assert(
@@ -61,7 +62,7 @@ return {
 
         vim.cmd("silent! %bwipeout!")
         local alone = #fake_process.argv_log(fake)
-        picker.pick(nil)
+        picker.pick(app, nil)
         wait_until_the_answer_was_read_and_offered(offered, 2)
 
         assert(fake_process.argv_log(fake)[alone + 1] == "ls !done --json", vim.inspect(fake_process.argv_log(fake)))
@@ -75,7 +76,7 @@ return {
         local logged_before = #fake_process.argv_log(fake)
         local said_before = #notifications
 
-        picker.pick("today")
+        picker.pick(app, "today")
         fake_process.settle(function()
           return #fake_process.argv_log(fake) > logged_before and require("damnit").app().queue.running() == nil
         end)

@@ -31,15 +31,15 @@ function M.of_buffer(buf, line)
   return { path = vim.fs.basename(path), line = line }
 end
 
-local function refuse(text)
+local function refuse(_, text)
   message.warn(text)
 
   return false
 end
 
-function M.jump(location)
+function M.jump(app, location)
   if not location then
-    return refuse("this task has no location in its body")
+    return refuse(app, "this task has no location in its body")
   end
 
   local cwd = vim.fs.normalize(vim.uv.cwd() or ".")
@@ -47,12 +47,12 @@ function M.jump(location)
   local here = vim.fs.basename(open_root)
 
   if location.repo and location.repo ~= here then
-    return refuse(("this task points into %s, and %s is what is open here"):format(location.repo, here))
+    return refuse(app, ("this task points into %s, and %s is what is open here"):format(location.repo, here))
   end
 
   local path = vim.fs.joinpath(open_root, location.path)
   if vim.fn.filereadable(path) == 0 then
-    return refuse(("there is no file at %s"):format(location.path))
+    return refuse(app, ("there is no file at %s"):format(location.path))
   end
 
   require("damnit.sidebar").leave_fixed_window()

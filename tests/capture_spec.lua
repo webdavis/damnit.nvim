@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
@@ -56,7 +57,7 @@ return {
       table.insert(said, text)
     end
 
-    capture.create("", nil)
+    capture.create(app, "", nil)
     fake_process.drain()
 
     vim.notify = real

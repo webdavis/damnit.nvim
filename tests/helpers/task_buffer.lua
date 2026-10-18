@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
@@ -16,7 +17,9 @@ function M.with_task(run, opts)
     table.insert(notifications, text)
   end
 
-  local open = (opts or {}).open or task_buffer.open
+  local open = (opts or {}).open or function(oid)
+    return task_buffer.open(app, oid)
+  end
   local buf = open(M.OID) or vim.api.nvim_get_current_buf()
   fake_process.settle(function()
     return vim.api.nvim_buf_line_count(buf) > 1

@@ -92,7 +92,7 @@ return {
     status_window.with(function(fake, notifications)
       local before = #fake_process.argv_log(fake)
 
-      require("damnit.open").unpushed({ kind = "remote", remote = "flaky", commits = 0 })
+      require("damnit.open").unpushed(require("damnit").app(), { kind = "remote", remote = "flaky", commits = 0 })
 
       assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(

@@ -1,3 +1,4 @@
+local app = require("damnit").app()
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
@@ -12,13 +13,13 @@ return {
     sidebar_tab.in_its_own_tabpage({}, function()
       local before = sidebar_tab.windows_in_this_tabpage()
 
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       assert(win, "toggle opened nothing")
       assert(sidebar_tab.windows_in_this_tabpage() == before + 1, "windows: " .. sidebar_tab.windows_in_this_tabpage())
       assert(vim.api.nvim_win_get_width(win) == sidebar_tab.CONFIGURED_WIDTH, vim.api.nvim_win_get_width(win))
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
-      sidebar.toggle()
+      sidebar.toggle(app)
       assert(
         sidebar_tab.windows_in_this_tabpage() == before,
         "windows after the second toggle: " .. sidebar_tab.windows_in_this_tabpage()
@@ -29,7 +30,7 @@ return {
 
   ["the width survives another window opening and an equalizing command"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
       vim.cmd("vsplit")
@@ -61,7 +62,7 @@ return {
 
   ["the width comes back once the only window in the tabpage has company"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
       vim.api.nvim_set_current_win(win)
@@ -77,13 +78,13 @@ return {
 
   ["the side comes from config"] = function()
     sidebar_tab.in_its_own_tabpage({ side = "left" }, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       assert(vim.api.nvim_win_get_position(win)[2] == 0, "a left sidebar is not at column 0")
     end)
 
     sidebar_tab.in_its_own_tabpage({ side = "right" }, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local column = vim.api.nvim_win_get_position(win)[2]
       assert(column + vim.api.nvim_win_get_width(win) >= vim.o.columns - 1, "a right sidebar is not at the far edge")
@@ -93,7 +94,7 @@ return {
   ["a side it cannot read leaves the layout alone"] = function()
     local _, notifications = sidebar_tab.in_its_own_tabpage({ side = "up" }, function()
       local before = sidebar_tab.windows_in_this_tabpage()
-      sidebar.toggle()
+      sidebar.toggle(app)
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
     end)
 
@@ -104,7 +105,7 @@ return {
   ["a width that is not a count of columns leaves the layout alone"] = function()
     local _, notifications = sidebar_tab.in_its_own_tabpage({ width = 0 }, function()
       local before = sidebar_tab.windows_in_this_tabpage()
-      sidebar.toggle()
+      sidebar.toggle(app)
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
     end)
 
@@ -115,7 +116,7 @@ return {
   ["a view in neither the setup nor dam's saved filters leaves the layout alone"] = function()
     local _, notifications = sidebar_tab.in_its_own_tabpage({ view = "tomorrow" }, function()
       local before = sidebar_tab.windows_in_this_tabpage()
-      sidebar.toggle()
+      sidebar.toggle(app)
       fake_process.settle(function()
         return queue().running() == nil
       end)
@@ -129,7 +130,7 @@ return {
 
   ["a sidebar closed with :q leaves no idea of an open one behind"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
       vim.api.nvim_set_current_win(win)
@@ -137,7 +138,7 @@ return {
 
       assert(not sidebar.window(), "the closed window is still the sidebar")
 
-      local reopened = sidebar.toggle()
+      local reopened = sidebar.toggle(app)
       assert(reopened and reopened ~= win, "toggle did not open a new sidebar")
       assert(vim.api.nvim_win_get_width(reopened) == sidebar_tab.CONFIGURED_WIDTH, vim.api.nvim_win_get_width(reopened))
     end)
@@ -145,7 +146,7 @@ return {
 
   ["it says it is loading while the first fetch is out"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local win = sidebar.toggle()
+      local win = sidebar.toggle(app)
       local lines = vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false)
 
       assert(lines[1]:find("today", 1, true), vim.inspect(lines))
@@ -155,11 +156,11 @@ return {
 
   ["toggle in another tabpage opens one there rather than closing the first"] = function()
     sidebar_tab.in_its_own_tabpage({}, function()
-      local first = sidebar.toggle()
+      local first = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(first)
 
       vim.cmd("tabnew")
-      local second = sidebar.toggle()
+      local second = sidebar.toggle(app)
 
       assert(second and second ~= first, "the second tabpage got no sidebar of its own")
       assert(vim.api.nvim_win_is_valid(first), "the first tabpage's sidebar was closed")

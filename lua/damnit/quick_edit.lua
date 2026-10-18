@@ -17,23 +17,23 @@ local function text(value)
   return tostring(value)
 end
 
-local function under_cursor()
-  return require("damnit.list").object_under_cursor()
+local function under_cursor(app)
+  return require("damnit.list").object_under_cursor(app)
 end
 
-local function send(args, said)
-  require("damnit.list").write(args, args[1], said)
+local function send(app, args, said)
+  require("damnit.list").write(app, args, args[1], said)
 end
 
-function M.reopen()
-  local object = under_cursor()
+function M.reopen(app)
+  local object = under_cursor(app)
 
   if object then
-    send(verbs.reopen(object.oid), "reopened " .. text(object.subject))
+    send(app, verbs.reopen(object.oid), "reopened " .. text(object.subject))
   end
 end
 
-function M.reopen_here()
+function M.reopen_here(app)
   local spec = require("damnit.list").current_spec()
 
   local showing_completed_history = spec and spec.flat
@@ -41,11 +41,11 @@ function M.reopen_here()
     return message.warn("u reopens in the completed history; X reopens an object here")
   end
 
-  M.reopen()
+  M.reopen(app)
 end
 
-function M.delete()
-  local object = under_cursor()
+function M.delete(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
@@ -57,7 +57,7 @@ function M.delete()
       return
     end
 
-    send(verbs.rm(object.oid), "removed " .. subject)
+    send(app, verbs.rm(object.oid), "removed " .. subject)
   end)
 end
 
@@ -71,19 +71,19 @@ function M.cycled(priority)
   return current - 1
 end
 
-function M.cycle_priority()
-  local object = under_cursor()
+function M.cycle_priority(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
 
   local next_priority = M.cycled(type(object.task) == "table" and object.task.priority or nil)
 
-  send(verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
+  send(app, verbs.priority(object.oid, next_priority), "priority p" .. next_priority)
 end
 
-function M.schedule()
-  local object = under_cursor()
+function M.schedule(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
@@ -93,7 +93,7 @@ function M.schedule()
       return
     end
 
-    send(verbs.due(object.oid, due), "due " .. due)
+    send(app, verbs.due(object.oid, due), "due " .. due)
   end)
 end
 
@@ -120,13 +120,13 @@ function M.label_choices(on, categories)
   return choices
 end
 
-function M.labels()
-  local object = under_cursor()
+function M.labels(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
 
-  require("damnit").app().queue.submit({
+  app.queue.submit({
     args = verbs.category_list(),
     label = "category list",
     on_done = function(data, err)
@@ -152,6 +152,7 @@ function M.labels()
         end
 
         send(
+          app,
           (choice.on and verbs.unlabel or verbs.label)(object.oid, choice.name),
           ("@%s %s"):format(choice.name, choice.on and "off" or "on")
         )
@@ -186,8 +187,8 @@ function M.paths_in_view()
   return paths
 end
 
-function M.move()
-  local object = under_cursor()
+function M.move(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
@@ -202,11 +203,11 @@ function M.move()
       return
     end
 
-    send(verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
+    send(app, verbs.mv(object.oid, path), ("moved %s"):format(text(object.subject)))
   end)
 end
 
-function M.add()
+function M.add(app)
   local path = require("damnit.list").path_under_cursor()
 
   vim.ui.input({ prompt = "New: " }, function(subject)
@@ -214,34 +215,34 @@ function M.add()
       return
     end
 
-    require("damnit.list").write(verbs.new(subject, path), "new", "added " .. vim.trim(subject))
+    require("damnit.list").write(app, verbs.new(subject, path), "new", "added " .. vim.trim(subject))
   end)
 end
 
-local function reparent(object, destination, refusal)
+local function reparent(app, object, destination, refusal)
   if not destination then
     return message.warn(refusal)
   end
 
-  send(verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
+  send(app, verbs.mv(object.oid, destination), ("moved %s"):format(text(object.subject)))
 end
 
-function M.indent()
-  local object = under_cursor()
+function M.indent(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
 
-  reparent(object, tree.indent_to(object, require("damnit.list").object_above_cursor()))
+  reparent(app, object, tree.indent_to(object, require("damnit.list").object_above_cursor()))
 end
 
-function M.promote()
-  local object = under_cursor()
+function M.promote(app)
+  local object = under_cursor(app)
   if not object then
     return
   end
 
-  reparent(object, tree.promote_to(object, tree.index(require("damnit.list").objects_in_view())))
+  reparent(app, object, tree.promote_to(object, tree.index(require("damnit.list").objects_in_view())))
 end
 
 return M
