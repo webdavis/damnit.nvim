@@ -1,6 +1,7 @@
 local M = {}
 
 local answer = require("damnit.answer")
+local one_read = require("damnit.one_read")
 local timeout_seconds = require("damnit.process").timeout_seconds
 local verbs = require("damnit.dam.verbs")
 
@@ -62,7 +63,7 @@ local CANCELLED_BY_SETUP = {
 function M.new(options, process, say)
   local client = { version = nil }
 
-  local handshake = { state = "unknown", refusal = nil, waiting = {} }
+  local handshake = { state = "unknown", refusal = nil, read = one_read.new() }
   local closed = false
 
   function client.argv(args)
@@ -84,15 +85,6 @@ function M.new(options, process, say)
     return process.run(client.argv(args), seconds, on_exit)
   end
 
-  local function settle_handshake(err)
-    local callbacks = handshake.waiting
-    handshake.waiting = {}
-
-    for _, callback in ipairs(callbacks) do
-      callback(err)
-    end
-  end
-
   local function read_the_banner(out)
     local banner = vim.trim(tostring(out.stdout or ""))
     local version = banner:match("dam%s+(%d+%.%d+%.%d+)")
@@ -108,7 +100,7 @@ function M.new(options, process, say)
       handshake.state, client.version = "ok", version
     end
 
-    settle_handshake(handshake.refusal)
+    handshake.read.settle(handshake.refusal)
   end
 
   local function shake_hands(callback)
@@ -124,15 +116,12 @@ function M.new(options, process, say)
       return callback(handshake.refusal)
     end
 
-    table.insert(handshake.waiting, callback)
-    if #handshake.waiting > 1 then
-      return
-    end
-
-    spawn(verbs.version(), timeout_seconds(options), function(out)
-      if not closed then
-        read_the_banner(out)
-      end
+    handshake.read.wait(callback, function()
+      spawn(verbs.version(), timeout_seconds(options), function(out)
+        if not closed then
+          read_the_banner(out)
+        end
+      end)
     end)
   end
 
@@ -158,7 +147,7 @@ function M.new(options, process, say)
 
   function client.close()
     closed = true
-    settle_handshake(CANCELLED_BY_SETUP)
+    handshake.read.settle(CANCELLED_BY_SETUP)
   end
 
   return client
