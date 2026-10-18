@@ -120,7 +120,7 @@ function M.toggle_fold()
 end
 
 function M.write(args, label, said)
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = args,
     label = label,
     on_done = function(_, err)
@@ -136,7 +136,7 @@ function M.write(args, label, said)
 end
 
 function M.fetch(spec, callback)
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = require("damnit.views").query_args(spec),
     label = "ls",
     on_done = function(data, err)

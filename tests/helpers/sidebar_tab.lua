@@ -2,16 +2,18 @@ local M = {}
 
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local damnit = require("damnit")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 
 M.CONFIGURED_WIDTH = 34
 
 local function cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  if queue.running() then
-    queue.cancel()
+  if queue().running() then
+    queue().cancel()
   end
 end
 
@@ -33,11 +35,7 @@ function M.in_its_own_tabpage(opts, body)
     },
   })
 
-  local fake = fake_dam.install({
-    fixtures = TESTS_DIR .. "/fixtures/full",
-    sleep = opts.slow_first_fetch and "5" or nil,
-  })
-  queue.reset()
+  local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
   views.reset()
 
   local notifications = {}
@@ -59,14 +57,13 @@ function M.in_its_own_tabpage(opts, body)
   end
 
   vim.o.columns = columns
-  vim.notify = real_notify
   vim.cmd("silent! %bwipeout!")
 
   cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  queue.reset()
   views.reset()
-  fake_dam.remove(fake)
   damnit.options = options
+  fake_process.remove(fake)
+  vim.notify = real_notify
 
   assert(ok, result)
 
@@ -74,7 +71,7 @@ function M.in_its_own_tabpage(opts, body)
 end
 
 function M.wait_until_drawn_from_dams_answer(win)
-  fake_dam.settle(function()
+  fake_process.settle(function()
     return vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win)) > 3
   end)
 end

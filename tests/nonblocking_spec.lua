@@ -1,10 +1,11 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 
 return {
   ["returns at once and leaves the loop turning while dam runs"] = function()
     local fake = fake_dam.install({ sleep = "0.4" })
-    queue.reset()
 
     local ticks = 0
     local observer = vim.uv.new_timer()
@@ -14,7 +15,7 @@ return {
 
     local answered = false
     local began = vim.uv.hrtime()
-    queue.submit({
+    queue().submit({
       args = { "push", "--json" },
       label = "push todoist",
       verb = "push",
@@ -33,7 +34,6 @@ return {
     observer:close()
     local log = fake_dam.argv_log(fake)
     fake_dam.remove(fake)
-    queue.reset()
 
     assert(submit_ms < 100, ("submit took %.1fms, so something waited"):format(submit_ms))
     assert(ticks >= 5, ("the loop ticked %d times while dam ran, and a blocking call ticks none"):format(ticks))
@@ -42,12 +42,11 @@ return {
 
   ["cancels with SIGINT, which dam answers with exit 3"] = function()
     local fake = fake_dam.install({ sleep = "5" })
-    queue.reset()
-    local grace = queue.GRACE_MS
-    queue.GRACE_MS = 20
+    local grace = queue().GRACE_MS
+    queue().GRACE_MS = 20
 
     local answered, err = false, nil
-    queue.submit({
+    queue().submit({
       args = { "push", "--json" },
       label = "push todoist",
       verb = "push",
@@ -62,29 +61,27 @@ return {
       return #fake_dam.argv_log(fake) >= handshake_then_push
     end)
 
-    assert(queue.cancel())
+    assert(queue().cancel())
 
     fake_dam.settle(function()
       return answered
     end)
 
-    queue.GRACE_MS = grace
+    queue().GRACE_MS = grace
     fake_dam.remove(fake)
-    queue.reset()
 
     assert(err ~= nil and err.kind == "cancelled", vim.inspect(err))
     assert(err.code == 3, tostring(err.code))
-    assert(queue.running() == nil, "the lane is empty once the cancelled entry exits")
+    assert(queue().running() == nil, "the lane is empty once the cancelled entry exits")
   end,
 
   ["cancels a call with no settle first, while the version handshake it waits on is in flight"] = function()
     local fake = fake_dam.install({ sleep = "5" })
-    queue.reset()
-    local grace = queue.GRACE_MS
-    queue.GRACE_MS = 20
+    local grace = queue().GRACE_MS
+    queue().GRACE_MS = 20
 
     local answered, data, err = false, nil, nil
-    queue.submit({
+    queue().submit({
       args = { "push", "--json" },
       label = "push todoist",
       verb = "push",
@@ -94,29 +91,27 @@ return {
       end,
     })
 
-    assert(queue.cancel())
+    assert(queue().cancel())
 
     fake_dam.settle(function()
       return answered
     end)
 
-    queue.GRACE_MS = grace
+    queue().GRACE_MS = grace
     fake_dam.remove(fake)
-    queue.reset()
 
     assert(data == nil, "a cancelled push must not answer with a result: " .. vim.inspect(data))
     assert(err ~= nil and err.kind == "cancelled", vim.inspect(err))
-    assert(queue.running() == nil, "the lane is empty once the cancelled entry exits")
+    assert(queue().running() == nil, "the lane is empty once the cancelled entry exits")
   end,
 
   ["drops the pending entries when the running one is cancelled"] = function()
     local fake = fake_dam.install({ sleep = "5" })
-    queue.reset()
-    local grace = queue.GRACE_MS
-    queue.GRACE_MS = 20
+    local grace = queue().GRACE_MS
+    queue().GRACE_MS = 20
 
     local ran = 0
-    queue.submit({
+    queue().submit({
       args = { "push", "--json" },
       label = "push todoist",
       verb = "push",
@@ -125,24 +120,23 @@ return {
         ran = ran + 1
       end,
     })
-    queue.submit({ args = { "status", "--json" }, label = "status" })
-    queue.submit({ args = { "status", "--json" }, label = "status" })
+    queue().submit({ args = { "status", "--json" }, label = "status" })
+    queue().submit({ args = { "status", "--json" }, label = "status" })
 
     fake_dam.settle(function()
       return #fake_dam.argv_log(fake) >= 2
     end)
 
-    assert(queue.running().pending == 2, vim.inspect(queue.running()))
-    queue.cancel()
+    assert(queue().running().pending == 2, vim.inspect(queue().running()))
+    queue().cancel()
 
     fake_dam.settle(function()
-      return queue.running() == nil
+      return queue().running() == nil
     end)
 
-    queue.GRACE_MS = grace
+    queue().GRACE_MS = grace
     local log = fake_dam.argv_log(fake)
     fake_dam.remove(fake)
-    queue.reset()
 
     assert(ran == 1, "the cancelled entry is still answered")
     for _, line in ipairs(log) do

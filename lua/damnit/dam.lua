@@ -2,37 +2,11 @@ local M = {}
 
 local answer = require("damnit.answer")
 local message = require("damnit.message")
-local process = require("damnit.process")
+local timeout_seconds = require("damnit.process").timeout_seconds
 local verbs = require("damnit.dam.verbs")
 
 M.MIN_VERSION = "0.2.0"
 M.MAX_VERSION = "0.3.0"
-
-M.version = nil
-
-local handshake_state = "unknown"
-
-local handshake_refusal = nil
-
-local waiting_on_handshake = {}
-
-local options_generation = 0
-
-function M.argv(args)
-  local options = require("damnit").options
-  local argv = { "dam" }
-
-  for _, flag in ipairs({ "store", "config" }) do
-    local value = options[flag]
-    if type(value) == "string" and value ~= "" then
-      vim.list_extend(argv, { "--" .. flag, value })
-    end
-  end
-
-  vim.list_extend(argv, args)
-
-  return argv
-end
 
 local function parts_of(text)
   local major, minor, patch = tostring(text):match("^(%d+)%.(%d+)%.(%d+)$")
@@ -62,112 +36,133 @@ function M.supported(text)
   return compare(parts, parts_of(M.MIN_VERSION)) >= 0 and compare(parts, parts_of(M.MAX_VERSION)) < 0
 end
 
-local function timeout_seconds()
-  return process.timeout_seconds(require("damnit").options)
+local function refusal_for(version)
+  if not version then
+    return { kind = "missing", code = -1, plugin = true, message = answer.MISSING }
+  end
+
+  return {
+    kind = "unsupported",
+    code = 0,
+    plugin = true,
+    message = ("dam %s is outside the supported range >=%s <%s; update damnit.nvim"):format(
+      version,
+      M.MIN_VERSION,
+      M.MAX_VERSION
+    ),
+  }
 end
 
-local function spawn(args, seconds, on_exit)
-  return process.run(M.argv(args), seconds, on_exit)
-end
+local CANCELLED_BY_SETUP = {
+  kind = "cancelled",
+  code = -1,
+  plugin = true,
+  message = "the dam call was dropped when the options changed",
+}
 
-local function settle_handshake(err)
-  local callbacks = waiting_on_handshake
-  waiting_on_handshake = {}
+function M.new(options, process)
+  local client = { version = nil }
 
-  for _, callback in ipairs(callbacks) do
-    callback(err)
-  end
-end
+  local handshake = { state = "unknown", refusal = nil, waiting = {} }
+  local closed = false
 
-local function handshake(callback)
-  if handshake_state == "ok" then
-    return callback(nil)
-  end
+  function client.argv(args)
+    local argv = { "dam" }
 
-  if handshake_state == "refused" then
-    return callback(handshake_refusal)
-  end
-
-  table.insert(waiting_on_handshake, callback)
-  if #waiting_on_handshake > 1 then
-    return
-  end
-
-  local generation_at_start = options_generation
-
-  spawn(verbs.version(), timeout_seconds(), function(out)
-    local began_under_old_options = generation_at_start ~= options_generation
-    if began_under_old_options then
-      return
+    for _, flag in ipairs({ "store", "config" }) do
+      local value = options[flag]
+      if type(value) == "string" and value ~= "" then
+        vim.list_extend(argv, { "--" .. flag, value })
+      end
     end
 
+    vim.list_extend(argv, args)
+
+    return argv
+  end
+
+  local function spawn(args, seconds, on_exit)
+    return process.run(client.argv(args), seconds, on_exit)
+  end
+
+  local function settle_handshake(err)
+    local callbacks = handshake.waiting
+    handshake.waiting = {}
+
+    for _, callback in ipairs(callbacks) do
+      callback(err)
+    end
+  end
+
+  local function read_the_banner(out)
     local banner = vim.trim(tostring(out.stdout or ""))
     local version = banner:match("dam%s+(%d+%.%d+%.%d+)")
 
     if out.missing or (out.code ~= 0 and not version) then
-      handshake_state = "refused"
-      handshake_refusal = { kind = "missing", code = -1, plugin = true, message = answer.MISSING }
+      handshake.state, handshake.refusal = "refused", refusal_for(nil)
     elseif not version then
-      handshake_state = "ok"
-      M.version = nil
+      handshake.state = "ok"
       message.warn(("dam --version printed %q, which is not a version; going on anyway"):format(banner))
     elseif not M.supported(version) then
-      handshake_state = "refused"
-      handshake_refusal = {
-        kind = "unsupported",
-        code = 0,
-        plugin = true,
-        message = ("dam %s is outside the supported range >=%s <%s; update damnit.nvim"):format(
-          version,
-          M.MIN_VERSION,
-          M.MAX_VERSION
-        ),
-      }
+      handshake.state, handshake.refusal = "refused", refusal_for(version)
     else
-      handshake_state = "ok"
-      M.version = version
+      handshake.state, client.version = "ok", version
     end
 
-    settle_handshake(handshake_state == "ok" and nil or handshake_refusal)
-  end)
-end
+    settle_handshake(handshake.refusal)
+  end
 
-local function release_callers_of_the_old_handshake()
-  settle_handshake({
-    kind = "cancelled",
-    code = -1,
-    plugin = true,
-    message = "the dam call was dropped when the options changed",
-  })
-end
-
-function M.forget()
-  options_generation = options_generation + 1
-  handshake_state = "unknown"
-  handshake_refusal = nil
-  M.version = nil
-
-  release_callers_of_the_old_handshake()
-end
-
-function M.call(args, opts, callback)
-  opts = opts or {}
-
-  handshake(function(err)
-    if err then
-      return callback(nil, err)
+  local function shake_hands(callback)
+    if closed then
+      return callback(CANCELLED_BY_SETUP)
     end
 
-    local seconds = timeout_seconds()
+    if handshake.state == "ok" then
+      return callback(nil)
+    end
 
-    local handle = spawn(args, seconds, function(out)
-      callback(answer.interpret(out, opts.label, seconds))
+    if handshake.state == "refused" then
+      return callback(handshake.refusal)
+    end
+
+    table.insert(handshake.waiting, callback)
+    if #handshake.waiting > 1 then
+      return
+    end
+
+    spawn(verbs.version(), timeout_seconds(options), function(out)
+      if not closed then
+        read_the_banner(out)
+      end
     end)
+  end
 
-    if opts.on_spawn then
-      opts.on_spawn(handle)
-    end
-  end)
+  function client.call(args, opts, callback)
+    opts = opts or {}
+
+    shake_hands(function(err)
+      if err then
+        return callback(nil, err)
+      end
+
+      local seconds = timeout_seconds(options)
+
+      local handle = spawn(args, seconds, function(out)
+        callback(answer.interpret(out, opts.label, seconds))
+      end)
+
+      if opts.on_spawn then
+        opts.on_spawn(handle)
+      end
+    end)
+  end
+
+  function client.close()
+    closed = true
+    settle_handshake(CANCELLED_BY_SETUP)
+  end
+
+  return client
 end
 
 return M

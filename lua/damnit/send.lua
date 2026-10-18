@@ -25,7 +25,7 @@ function M.brief(object, note)
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
     "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
-    "store: " .. window.store_display(require("damnit.queue").key()),
+    "store: " .. window.store_display(require("damnit").app().queue.key()),
   }
 
   local path = text(object.path)

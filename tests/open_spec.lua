@@ -1,4 +1,4 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
 local function open_buffer_names()
@@ -48,16 +48,16 @@ return {
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gp", "x", false)
       local status_buf = vim.api.nvim_get_current_buf()
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("\r", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "log --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_process.argv_log(fake)[before + 1] == "log --json", vim.inspect(fake_process.argv_log(fake)))
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return vim.api.nvim_buf_get_name(0):find("damnit://unpushed/fake", 1, true) ~= nil
       end)
 
@@ -90,11 +90,11 @@ return {
 
   ["refuses a remote with nothing unpushed rather than reading the log"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       require("damnit.open").unpushed({ kind = "remote", remote = "flaky", commits = 0 })
 
-      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(
         notifications[#notifications] == "damnit.nvim: this remote has no commit on this line",
         notifications[#notifications]
@@ -105,11 +105,11 @@ return {
   ["does nothing on a heading or a notice"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gn", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       local windows = #vim.api.nvim_list_wins()
       vim.api.nvim_feedkeys("\r", "x", false)
 
-      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(#vim.api.nvim_list_wins() == windows, "nothing was opened")
     end)
   end,

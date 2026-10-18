@@ -1,8 +1,10 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local capture = require("damnit.capture")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
@@ -46,8 +48,7 @@ return {
   end,
 
   ["an empty subject is refused rather than sent"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    queue.reset()
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
     local said = {}
     local real = vim.notify
@@ -56,21 +57,19 @@ return {
     end
 
     capture.create("", nil)
-    fake_dam.wait_long_enough_to_catch_a_stray_call(fake, 0)
+    fake_process.drain()
 
     vim.notify = real
-    local log = fake_dam.argv_log(fake)
+    local log = fake_process.argv_log(fake)
 
-    queue.reset()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(#log == 0, vim.inspect(log))
     assert(said[#said] == "damnit.nvim: there is nothing to capture here", vim.inspect(said))
   end,
 
   [":Dam capture over a range sends that argv and says what it captured"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    queue.reset()
+    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
 
     local said = {}
     local real = vim.notify
@@ -89,17 +88,16 @@ return {
     vim.api.nvim_win_set_buf(0, buf)
 
     vim.cmd("1,1Dam capture")
-    fake_dam.settle(function()
-      return queue.running() == nil and #said > 0
+    fake_process.settle(function()
+      return queue().running() == nil and #said > 0
     end)
 
     vim.notify = real
     vim.ui.input = real_input
-    local log = fake_dam.argv_log(fake)
+    local log = fake_process.argv_log(fake)
 
     vim.cmd("silent! %bwipeout!")
-    queue.reset()
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(prompts_opened == 0, "a range makes the selection the subject, so nothing should have been asked for")
     assert(

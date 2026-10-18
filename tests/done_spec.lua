@@ -1,7 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local done = require("damnit.done")
 
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }
@@ -23,12 +22,11 @@ local REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP = table.concat({
 local function with_dam(run, opts)
   opts = opts or {}
 
-  local fake = fake_dam.install({
+  local fake = fake_process.install({
     fixtures = opts.fixtures or (TESTS_DIR .. "/fixtures/full"),
     exit = opts.exit,
     stderr = opts.stderr,
   })
-  queue.reset()
 
   local notifications = {}
   local real = vim.notify
@@ -38,11 +36,10 @@ local function with_dam(run, opts)
 
   local ok, err = pcall(run, fake, notifications)
 
-  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
+  fake_process.drain()
 
   vim.notify = real
-  queue.reset()
-  fake_dam.remove(fake)
+  fake_process.remove(fake)
 
   assert(ok, err)
 end
@@ -73,12 +70,10 @@ return {
       end
 
       done.send(TAXES)
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= 3
-      end)
+      fake_process.drain()
       vim.ui.select = real
 
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
       assert(log[2] == ("done %s --json"):format(TAXES.oid), vim.inspect(log))
       assert(
         log[3] == ("done %s --force --children keep --json"):format(TAXES.oid),
@@ -99,14 +94,12 @@ return {
       end
 
       done.send(TAXES)
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= 3
-      end)
+      fake_process.drain()
       vim.ui.select = real
 
       assert(#offered == 4, vim.inspect(offered))
       assert(offered[4] == "Cancel", vim.inspect(offered))
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
       assert(log[3] == ("done %s --force --children up --json"):format(TAXES.oid), vim.inspect(log))
     end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
@@ -122,12 +115,10 @@ return {
       end
 
       done.send(TAXES)
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= 3
-      end)
+      fake_process.drain()
       vim.ui.select, vim.ui.input = real_select, real_input
 
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
       assert(log[3] == ("done %s --force --children into:leftovers --json"):format(TAXES.oid), vim.inspect(log))
     end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
@@ -143,12 +134,10 @@ return {
       end
 
       done.send(TAXES)
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= 3
-      end, 200)
+      fake_process.drain()
       vim.ui.select, vim.ui.input = real_select, real_input
 
-      assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
+      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
     end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
 
@@ -160,12 +149,10 @@ return {
       end
 
       done.send(TAXES)
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= 3
-      end, 200)
+      fake_process.drain()
       vim.ui.select = real
 
-      assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
+      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
     end, { exit = 4, stderr = REFUSAL_FOR_A_PARENT_WHOSE_CHILD_IS_OPEN })
   end,
 
@@ -179,7 +166,7 @@ return {
       end
 
       done.send(STANDUP)
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #notifications > 0
       end)
       vim.ui.select = real
@@ -189,14 +176,14 @@ return {
         notifications[1] == "damnit.nvim: a070c36 is an event; events are not completed",
         vim.inspect(notifications)
       )
-      assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
+      assert(#fake_process.argv_log(fake) == 2, vim.inspect(fake_process.argv_log(fake)))
     end, { exit = 4, stderr = REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP })
   end,
 
   ["says what it completed"] = function()
     with_dam(function(_, notifications)
       done.send(TAXES)
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #notifications > 0
       end)
 
@@ -207,7 +194,7 @@ return {
   ["reports a recurring task as rolled forward rather than as done"] = function()
     with_dam(function(_, notifications)
       done.send({ oid = "f9ba2bac64c810e11b76102ec45902c2c615c074", subject = "water the plants" })
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #notifications > 0
       end)
 

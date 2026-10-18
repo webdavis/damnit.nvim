@@ -1,21 +1,25 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
-local dam = require("damnit.dam")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+
+local function dam()
+  return require("damnit").app().dam
+end
+
 local damnit = require("damnit")
 
 local function call_through_a_fake(fake_opts, args)
-  local fake = fake_dam.install(fake_opts)
+  local fake = fake_process.install(fake_opts)
 
   local answered, data, err = false, nil, nil
-  dam.call(args, nil, function(value, failure)
+  dam().call(args, nil, function(value, failure)
     answered, data, err = true, value, failure
   end)
 
-  fake_dam.settle(function()
+  fake_process.settle(function()
     return answered
   end)
 
-  local log = fake_dam.argv_log(fake)
-  fake_dam.remove(fake)
+  local log = fake_process.argv_log(fake)
+  fake_process.remove(fake)
 
   return data, err, log
 end
@@ -24,13 +28,13 @@ return {
   ["builds an argv with no store flags when neither option is set"] = function()
     damnit.options.store, damnit.options.config = nil, nil
 
-    assert(vim.deep_equal(dam.argv({ "status", "--json" }), { "dam", "status", "--json" }))
+    assert(vim.deep_equal(dam().argv({ "status", "--json" }), { "dam", "status", "--json" }))
   end,
 
   ["passes --store and --config through as global flags, before the subcommand"] = function()
     damnit.options.store, damnit.options.config = "/store/dam.db", "/config/dam.toml"
 
-    local argv = dam.argv({ "status", "--json" })
+    local argv = dam().argv({ "status", "--json" })
     damnit.options.store, damnit.options.config = nil, nil
 
     assert(
@@ -127,22 +131,17 @@ return {
   end,
 
   ["calls an undecodable answer on a clean exit malformed rather than raising"] = function()
-    local fake = fake_dam.install()
-    vim.env.DAMNIT_TEST_FIXTURES = fake.script_dir
-
-    local file = assert(io.open(fake.script_dir .. "/status.json", "w"))
-    file:write("not json at all\n")
-    file:close()
+    local fake = fake_process.install({ stdout = "not json at all\n" })
 
     local answered, err = false, nil
-    dam.call({ "status", "--json" }, nil, function(_, failure)
+    dam().call({ "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 
-    fake_dam.settle(function()
+    fake_process.settle(function()
       return answered
     end)
-    fake_dam.remove(fake)
+    fake_process.remove(fake)
 
     assert(err.kind == "malformed", vim.inspect(err))
     assert(err.plugin == true, "the plugin wrote this one")
@@ -151,19 +150,22 @@ return {
   ["reports a dam that is not on PATH instead of raising"] = function()
     local saved = vim.env.PATH
     vim.env.PATH = "/nonexistent-for-this-spec"
-    dam.forget()
+    require("damnit").setup({})
 
     local answered, err = false, nil
-    local ok = pcall(dam.call, { "status", "--json" }, nil, function(_, failure)
+    local ok = pcall(dam().call, { "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 
-    fake_dam.settle(function()
-      return answered
-    end)
+    assert(
+      vim.wait(1000, function()
+        return answered
+      end),
+      "the missing dam never answered"
+    )
 
     vim.env.PATH = saved
-    dam.forget()
+    require("damnit").setup({})
 
     assert(ok, "a missing binary must not raise out of dam.call")
     assert(err.kind == "missing", vim.inspect(err))

@@ -1,5 +1,5 @@
 local commit_buffer = require("damnit.commit_buffer")
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
 local function said(notifications, text)
@@ -40,19 +40,19 @@ return {
       local buf = vim.api.nvim_get_current_buf()
       vim.api.nvim_buf_set_lines(buf, 0, 1, false, { "buy the milk" })
 
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.cmd("write")
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == "commit -m buy the milk --json",
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == "commit -m buy the milk --json",
+        vim.inspect(fake_process.argv_log(fake))
       )
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return said(notifications, "damnit.nvim: 7257572 committed, 2 changes")
       end)
 
@@ -65,11 +65,11 @@ return {
       vim.api.nvim_feedkeys("cc", "x", false)
       vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, 1, false, { "buy the oat milk" })
 
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.cmd("write")
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and said(notifications, "damnit.nvim: aa5fbcb committed, 1 change")
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and said(notifications, "damnit.nvim: aa5fbcb committed, 1 change")
       end)
     end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/one_change")
   end,
@@ -78,11 +78,11 @@ return {
     status_window.with(function(fake, notifications)
       vim.api.nvim_feedkeys("cc", "x", false)
       local buf = vim.api.nvim_get_current_buf()
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       vim.cmd("write")
 
-      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(vim.api.nvim_buf_is_valid(buf), "the buffer stays open to be fixed")
       assert(
         notifications[#notifications] == "damnit.nvim: no commit message; the commit was not made",
@@ -93,10 +93,10 @@ return {
 
   ["says nothing is staged when nothing is"] = function()
     status_window.with(function(fake, notifications)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("cc", "x", false)
 
-      assert(#fake_dam.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(vim.bo.filetype == "damstatus", "no message buffer opened")
       assert(notifications[#notifications] == "damnit.nvim: nothing is staged to commit", notifications[#notifications])
     end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")

@@ -23,7 +23,7 @@ function M.write(buf)
     return message.warn("no commit message; the commit was not made")
   end
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.commit(text),
     label = "commit",
     on_done = function(report, err)
@@ -79,7 +79,8 @@ function M.open(key)
     return nil
   end
 
-  local buf, created = scratch.named(("damnit://commit/%s"):format(key or require("damnit.queue").key()), configure)
+  local buf, created =
+    scratch.named(("damnit://commit/%s"):format(key or require("damnit").app().queue.key()), configure)
 
   if scratch.focus(buf) then
     return buf

@@ -10,7 +10,7 @@ local SUBCOMMANDS = {
     require("damnit.window").open()
   end,
   cancel = function()
-    require("damnit.queue").cancel()
+    require("damnit").app().queue.cancel()
   end,
   capture = function(_, cmd)
     local selection = cmd.range > 0 and { line1 = cmd.line1, line2 = cmd.line2 } or nil

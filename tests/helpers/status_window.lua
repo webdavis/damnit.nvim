@@ -5,8 +5,10 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local function queue()
+  return require("damnit").app().queue
+end
 local window = require("damnit.window")
 
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
@@ -23,8 +25,7 @@ local function forget_the_diffs_remembered_for_the_session()
 end
 
 function M.with(run, fixtures)
-  local fake = fake_dam.install({ fixtures = fixtures or M.FIXTURES })
-  queue.reset()
+  local fake = fake_process.install({ fixtures = fixtures or M.FIXTURES })
 
   forget_the_remote_list_cached_per_store()
   forget_the_diffs_remembered_for_the_session()
@@ -36,17 +37,16 @@ function M.with(run, fixtures)
   end
 
   local buf = window.open()
-  fake_dam.settle(function()
-    return queue.running() == nil and vim.api.nvim_buf_line_count(buf) > 1
+  fake_process.settle(function()
+    return queue().running() == nil and vim.api.nvim_buf_line_count(buf) > 1
   end)
 
   local ok, err = pcall(run, fake, notifications)
 
-  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
+  fake_process.drain()
   vim.notify = real
   vim.cmd("silent! %bwipeout!")
-  queue.reset()
-  fake_dam.remove(fake)
+  fake_process.remove(fake)
 
   assert(ok, err)
 end

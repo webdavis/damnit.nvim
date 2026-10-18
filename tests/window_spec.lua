@@ -1,6 +1,8 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local render = require("damnit.render")
 local window = require("damnit.window")
 
@@ -8,8 +10,8 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
-  window.tick(queue.key())
-  window.tick(queue.key())
+  window.tick(queue().key())
+  window.tick(queue().key())
 end
 
 return {
@@ -43,9 +45,9 @@ return {
   ["leaves the poller's own read out of the header"] = function()
     with_window(function(fake)
       local buf = window.buffer()
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
-      queue.submit({ args = { "ls", "--json" }, label = "ls", background = true })
+      queue().submit({ args = { "ls", "--json" }, label = "ls", background = true })
 
       tick_twice_by_hand_full_redraw_then_header_only()
 
@@ -57,8 +59,8 @@ return {
         )
       end
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
@@ -66,9 +68,9 @@ return {
   ["writes the running operation into the header on a tick"] = function()
     with_window(function(fake)
       local buf = window.buffer()
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
-      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+      queue().submit({ args = { "status", "--json" }, label = "push fake" })
       tick_twice_by_hand_full_redraw_then_header_only()
 
       local header = vim.api.nvim_buf_get_lines(buf, 0, 4, false)
@@ -80,20 +82,20 @@ return {
         assert(#marks > 0, ("the header-only rewrite replaced row %d and left it with no mark"):format(lnum))
       end
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
 
   ["shows a running call in the header after queue.reset without a tick by hand"] = function()
     with_window(function(fake)
-      queue.reset()
+      require("damnit").setup({})
       local buf = window.buffer()
-      local before = #fake_dam.argv_log(fake)
-      vim.env.DAMNIT_TEST_SLEEP = "1"
+      local before = #fake_process.argv_log(fake)
+      fake.hold = true
 
-      queue.submit({ args = { "status", "--json" }, label = "push fake" })
+      queue().submit({ args = { "status", "--json" }, label = "push fake" })
 
       local function row_3()
         return vim.api.nvim_buf_get_lines(buf, 2, 3, false)[1]
@@ -105,8 +107,9 @@ return {
         "reset dropped the header's tick listener: " .. row_3()
       )
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      fake.release()
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and queue().running() == nil
       end)
     end)
   end,
@@ -115,12 +118,12 @@ return {
     with_window(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
       local line = vim.api.nvim_win_get_cursor(0)[1]
-      vim.env.DAMNIT_TEST_FIXTURES = TESTS_DIR .. "/fixtures/staged_first"
-      local before = #fake_dam.argv_log(fake)
+      fake.fixtures = TESTS_DIR .. "/fixtures/staged_first"
+      local before = #fake_process.argv_log(fake)
 
       vim.api.nvim_feedkeys("-", "x", false)
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
       end)
 
       local landed = vim.api.nvim_win_get_cursor(0)[1]
@@ -154,11 +157,11 @@ return {
       assert(vim.fn.foldclosed(heading) == heading, ("fold at %d: %d"):format(heading, vim.fn.foldclosed(heading)))
 
       local one_object_staged_so_the_staged_heading_slides_up = TESTS_DIR .. "/fixtures/shifted"
-      vim.env.DAMNIT_TEST_FIXTURES = one_object_staged_so_the_staged_heading_slides_up
-      local before = #fake_dam.argv_log(fake)
+      fake.fixtures = one_object_staged_so_the_staged_heading_slides_up
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and queue.running() == nil
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and queue().running() == nil
       end)
 
       local moved = heading_of("staged")
@@ -208,7 +211,7 @@ return {
 
   ["reads the status from dam rather than guessing at it"] = function()
     with_window(function(fake)
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
 
       assert(vim.tbl_contains(log, "status --json"), vim.inspect(log))
       assert(vim.tbl_contains(log, "remote list --json"), vim.inspect(log))
@@ -218,14 +221,14 @@ return {
 
   ["R reads the remote list and the status again, so a pull made elsewhere shows its age"] = function()
     with_window(function(fake)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= before + 2 and queue.running() == nil
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) >= before + 2 and queue().running() == nil
       end)
 
-      local log = fake_dam.argv_log(fake)
+      local log = fake_process.argv_log(fake)
       assert(log[before + 1] == "remote list --json", vim.inspect(log))
       assert(log[before + 2] == "status --json", vim.inspect(log))
     end)
@@ -248,14 +251,14 @@ return {
 
   ["asks for the remote list again when the first read failed"] = function()
     with_window(function(fake)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "remote list --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(fake_process.argv_log(fake)[before + 1] == "remote list --json", vim.inspect(fake_process.argv_log(fake)))
     end, TESTS_DIR .. "/fixtures/default")
   end,
 

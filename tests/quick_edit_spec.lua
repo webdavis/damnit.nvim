@@ -1,6 +1,6 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local quick_edit = require("damnit.quick_edit")
 
@@ -12,7 +12,7 @@ local function argv_sent_by_pressing(key, prompt_answer, needle, calls_to_wait_f
 
   list_buffer.with(function(buf, fake)
     list_buffer.cursor_to(buf, needle or "buy oat milk")
-    local before = #fake_dam.argv_log(fake)
+    local before = #fake_process.argv_log(fake)
 
     local input, select = vim.ui.input, vim.ui.select
     vim.ui.input = function(_, on_answer)
@@ -32,15 +32,13 @@ local function argv_sent_by_pressing(key, prompt_answer, needle, calls_to_wait_f
 
     vim.api.nvim_feedkeys(key, "x", false)
     if calls_to_wait_for == 0 then
-      fake_dam.wait_long_enough_to_catch_a_stray_call(fake, before)
+      fake_process.drain()
     else
-      pcall(fake_dam.settle, function()
-        return #fake_dam.argv_log(fake) >= before + (calls_to_wait_for or 1)
-      end)
+      fake_process.drain()
     end
 
     vim.ui.input, vim.ui.select = input, select
-    new = vim.list_slice(fake_dam.argv_log(fake), before + 1)
+    new = vim.list_slice(fake_process.argv_log(fake), before + 1)
   end)
 
   return new

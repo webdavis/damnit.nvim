@@ -1,5 +1,5 @@
 local diff = require("damnit.render.diff")
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
 local render = require("damnit.render")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
 
@@ -89,14 +89,17 @@ return {
   ["= reads the whole objects and draws the fields that moved"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("=", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
       end)
 
-      assert(fake_dam.argv_log(fake)[before + 1] == "status --full --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(
+        fake_process.argv_log(fake)[before + 1] == "status --full --json",
+        vim.inspect(fake_process.argv_log(fake))
+      )
 
       local drawn = table.concat(drawn_virtual_lines_as_text(), "\n")
       assert(drawn:find("subject", 1, true), drawn)
@@ -108,42 +111,45 @@ return {
   ["a second = closes the fields and goes back to the lean read, with nothing left to compare"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("=", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before and #drawn_virtual_lines_as_text() > 0
       end)
 
       vim.api.nvim_feedkeys("=", "x", false)
       assert(#drawn_virtual_lines_as_text() == 0, vim.inspect(drawn_virtual_lines_as_text()))
 
-      local closed = #fake_dam.argv_log(fake)
+      local closed = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) >= closed + 2
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) >= closed + 2
       end)
 
       local after_the_remote_list = closed + 2
-      assert(fake_dam.argv_log(fake)[after_the_remote_list] == "status --json", vim.inspect(fake_dam.argv_log(fake)))
+      assert(
+        fake_process.argv_log(fake)[after_the_remote_list] == "status --json",
+        vim.inspect(fake_process.argv_log(fake))
+      )
     end)
   end,
 
   ["keeps an open diff across a re-read"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
-      local opened = #fake_dam.argv_log(fake)
+      local opened = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("=", "x", false)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > opened and #drawn_virtual_lines_as_text() > 0
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > opened and #drawn_virtual_lines_as_text() > 0
       end)
 
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       vim.api.nvim_feedkeys("R", "x", false)
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(#drawn_virtual_lines_as_text() > 0, "the diff was forgotten by the re-read")
@@ -153,19 +159,19 @@ return {
   ["X removes an uncommitted create after a confirm"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gs", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       status_window.answer_input("y", function()
         vim.api.nvim_feedkeys("X", "x", false)
       end)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == ("rm %s --json"):format(STAGED_CREATE),
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == ("rm %s --json"):format(STAGED_CREATE),
+        vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,
@@ -173,20 +179,20 @@ return {
   ["X sends nothing when the confirm is answered no"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gs", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       status_window.answer_input(nil, function()
         vim.api.nvim_feedkeys("X", "x", false)
       end)
 
-      assert(#fake_dam.argv_log(fake) == before, vim.inspect(fake_dam.argv_log(fake)))
+      assert(#fake_process.argv_log(fake) == before, vim.inspect(fake_process.argv_log(fake)))
     end)
   end,
 
   ["X restores an update to its committed state after a confirm"] = function()
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
       local asked
 
       status_window.answer_input("y", function()
@@ -195,13 +201,13 @@ return {
         asked = prompt
       end)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_UPDATE),
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_UPDATE),
+        vim.inspect(fake_process.argv_log(fake))
       )
       assert(asked:find("back to its last commit", 1, true), asked)
     end)
@@ -211,19 +217,19 @@ return {
     status_window.with(function(fake)
       vim.api.nvim_feedkeys("gu", "x", false)
       vim.api.nvim_feedkeys("j", "x", false)
-      local before = #fake_dam.argv_log(fake)
+      local before = #fake_process.argv_log(fake)
 
       status_window.answer_input("y", function()
         vim.api.nvim_feedkeys("X", "x", false)
       end)
 
-      fake_dam.settle(function()
-        return #fake_dam.argv_log(fake) > before
+      fake_process.settle(function()
+        return #fake_process.argv_log(fake) > before
       end)
 
       assert(
-        fake_dam.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_DELETE),
-        vim.inspect(fake_dam.argv_log(fake))
+        fake_process.argv_log(fake)[before + 1] == ("restore %s --json"):format(UNSTAGED_DELETE),
+        vim.inspect(fake_process.argv_log(fake))
       )
     end)
   end,

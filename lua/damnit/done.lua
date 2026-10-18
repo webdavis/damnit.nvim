@@ -67,7 +67,7 @@ local function ask_for_the_group_then_send(object)
 end
 
 function M.send(object, children)
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.done(object.oid, children),
     label = "done",
     on_done = function(report, err)

@@ -3,7 +3,7 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local harness = dofile(TESTS_DIR .. "/helpers/task_buffer.lua")
 local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
 local task_buffer = require("damnit.task_buffer")
@@ -32,8 +32,8 @@ return {
   ["reads the object with dam show and draws its frontmatter"] = function()
     harness.with_task(function(buf, fake)
       assert(
-        vim.tbl_contains(fake_dam.argv_log(fake), "show " .. OID .. " --json"),
-        vim.inspect(fake_dam.argv_log(fake))
+        vim.tbl_contains(fake_process.argv_log(fake), "show " .. OID .. " --json"),
+        vim.inspect(fake_process.argv_log(fake))
       )
       assert(vim.bo[buf].filetype == "damtask", vim.bo[buf].filetype)
       assert(vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == "---")
@@ -47,8 +47,8 @@ return {
   [":Dam task opens the same buffer the keymap does"] = function()
     harness.with_task(function(buf, fake)
       assert(
-        vim.tbl_contains(fake_dam.argv_log(fake), "show " .. OID .. " --json"),
-        vim.inspect(fake_dam.argv_log(fake))
+        vim.tbl_contains(fake_process.argv_log(fake), "show " .. OID .. " --json"),
+        vim.inspect(fake_process.argv_log(fake))
       )
       assert(vim.bo[buf].filetype == "damtask", vim.bo[buf].filetype)
     end, {
@@ -69,7 +69,7 @@ return {
         "the wrong argv"
       )
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return vim.bo[buf].modified == false
       end)
       assert(vim.bo[buf].modified == false, "a landed write leaves the buffer unmodified")
@@ -121,11 +121,11 @@ return {
   ["puts dam's own refusal on line one and leaves the buffer modified"] = function()
     harness.with_task(function(buf, fake)
       harness.set_field(buf, "depends", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77")
-      vim.env.DAMNIT_TEST_EXIT = "4"
-      vim.env.DAMNIT_TEST_STDERR = REFUSAL_FOR_A_DEPENDENCY_THAT_WOULD_CLOSE_A_LOOP
+      fake.exit = 4
+      fake.stderr = REFUSAL_FOR_A_DEPENDENCY_THAT_WOULD_CLOSE_A_LOOP
 
       assert(harness.argv_the_write_sent_or_nil(fake) ~= nil, "the edit went out")
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #harness.diagnostics(buf) > 0
       end)
 
@@ -182,7 +182,7 @@ return {
       harness.set_field(buf, "subject", "buy the oat milk")
       vim.cmd("new")
       local empty = vim.api.nvim_get_current_buf()
-      local calls = #fake_dam.argv_log(fake)
+      local calls = #fake_process.argv_log(fake)
 
       local again = task_buffer.open(OID)
 
@@ -191,7 +191,7 @@ return {
       assert(#vim.api.nvim_list_wins() == 2, "a window was opened or closed")
       assert(vim.api.nvim_win_get_buf(vim.fn.bufwinid(empty)) == empty, "the other window lost its buffer")
       assert(harness.field_line(buf, "subject") == "subject: buy the oat milk", harness.field_line(buf, "subject"))
-      assert(#fake_dam.argv_log(fake) == calls, "the second open asked dam again")
+      assert(#fake_process.argv_log(fake) == calls, "the second open asked dam again")
     end)
   end,
 }

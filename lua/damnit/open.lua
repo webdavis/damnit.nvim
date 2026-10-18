@@ -54,7 +54,7 @@ function M.unpushed(entry)
     return message.warn("this remote has no commit on this line")
   end
 
-  require("damnit.queue").submit({
+  require("damnit").app().queue.submit({
     args = verbs.log(),
     label = "log",
     on_done = function(data, err)

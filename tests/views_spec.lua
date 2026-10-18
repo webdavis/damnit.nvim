@@ -2,15 +2,16 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 dofile(TESTS_DIR .. "/../plugin/damnit.lua")
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
-local queue = require("damnit.queue")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 local damnit = require("damnit")
 local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
 local function with_views(declared, run)
-  local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-  queue.reset()
+  local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
   views.reset()
   damnit.options.views = declared
 
@@ -22,13 +23,12 @@ local function with_views(declared, run)
 
   local ok, err = pcall(run, notifications, fake)
 
-  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
+  fake_process.drain()
 
   vim.notify = real
   damnit.options.views = {}
   views.reset()
-  queue.reset()
-  fake_dam.remove(fake)
+  fake_process.remove(fake)
 
   assert(ok, err)
 end
@@ -39,8 +39,8 @@ local function resolved(name)
   views.resolve_then(name, function(found)
     spec, answered = found, true
   end)
-  fake_dam.settle(function()
-    return answered or queue.running() == nil
+  fake_process.settle(function()
+    return answered or queue().running() == nil
   end)
 
   return spec
@@ -49,7 +49,7 @@ end
 local function times_sent(fake, argv)
   return #vim.tbl_filter(function(line)
     return line == argv
-  end, fake_dam.argv_log(fake))
+  end, fake_process.argv_log(fake))
 end
 
 return {
@@ -67,7 +67,7 @@ return {
 
       assert(spec.query == "due:today | overdue", spec.query)
       assert(vim.deep_equal(views.query_args(spec), { "ls", "due:today | overdue", "--json" }))
-      assert(times_sent(fake, "filter list --json") == 0, vim.inspect(fake_dam.argv_log(fake)))
+      assert(times_sent(fake, "filter list --json") == 0, vim.inspect(fake_process.argv_log(fake)))
     end)
   end,
 
@@ -79,8 +79,8 @@ return {
       assert(spec and spec.title == "inbox" and spec.query == "inbox", vim.inspect(spec))
 
       resolved("today")
-      fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
-      assert(times_sent(fake, "filter list --json") == 1, vim.inspect(fake_dam.argv_log(fake)))
+      fake_process.drain()
+      assert(times_sent(fake, "filter list --json") == 1, vim.inspect(fake_process.argv_log(fake)))
     end)
   end,
 
@@ -93,8 +93,8 @@ return {
 
       local filter_lists = vim.tbl_filter(function(line)
         return vim.endswith(line, "filter list --json")
-      end, fake_dam.argv_log(fake))
-      assert(#filter_lists == 2, vim.inspect(fake_dam.argv_log(fake)))
+      end, fake_process.argv_log(fake))
+      assert(#filter_lists == 2, vim.inspect(fake_process.argv_log(fake)))
     end)
   end,
 
@@ -102,8 +102,8 @@ return {
     with_views({ work = "path:work/" }, function(notifications, fake)
       assert(resolved("tomorrow") == nil, "a name in neither source is refused")
 
-      assert(times_sent(fake, "filter list --json") == 1, vim.inspect(fake_dam.argv_log(fake)))
-      for _, line in ipairs(fake_dam.argv_log(fake)) do
+      assert(times_sent(fake, "filter list --json") == 1, vim.inspect(fake_process.argv_log(fake)))
+      for _, line in ipairs(fake_process.argv_log(fake)) do
         assert(not vim.startswith(line, "ls "), "a refused name cost an ls: " .. line)
       end
       assert(#notifications == 1, vim.inspect(notifications))
@@ -137,7 +137,7 @@ return {
     with_views({ work = "path:work/" }, function(_, fake)
       assert(vim.deep_equal(vim.fn.getcompletion("Dam list ", "cmdline"), { "work" }))
 
-      fake_dam.settle(function()
+      fake_process.settle(function()
         return #vim.fn.getcompletion("Dam list ", "cmdline") == 3
       end)
       assert(vim.deep_equal(vim.fn.getcompletion("Dam pick t", "cmdline"), { "today" }))

@@ -35,7 +35,7 @@ return {
 
   ["names the store the window's header names"] = function()
     local brief = send.brief({ oid = hand_off.OID, subject = "x", path = "inbox/" }, nil)
-    local store = require("damnit.window").store_display(require("damnit.queue").key())
+    local store = require("damnit.window").store_display(require("damnit").app().queue.key())
 
     assert(brief:find("store: " .. store, 1, true), brief)
   end,

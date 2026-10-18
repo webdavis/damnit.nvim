@@ -16,8 +16,20 @@ M.options = {
   },
 }
 
-local function forget_the_handshake_made_under_old_options()
-  require("damnit.dam").forget()
+local function tick_the_status_window(key)
+  require("damnit.window").tick(key)
+end
+
+local function client_for(app)
+  return require("damnit.dam").new(app.options, app.process)
+end
+
+local app = { options = M.options, process = require("damnit.process") }
+app.dam = client_for(app)
+app.queue = require("damnit.queue").new(app, tick_the_status_window)
+
+function M.app()
+  return app
 end
 
 local function forget_dams_filters_read_from_the_old_store()
@@ -28,10 +40,15 @@ local function start_the_reader_reminders_ride_on()
   require("damnit.poll").start()
 end
 
-function M.setup(opts)
+function M.setup(opts, ports)
   M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 
-  forget_the_handshake_made_under_old_options()
+  local old_dam = app.dam
+  app.options = M.options
+  app.process = ports and ports.process or app.process
+  app.dam = client_for(app)
+  old_dam.close()
+
   forget_dams_filters_read_from_the_old_store()
 
   if M.options.reminders then

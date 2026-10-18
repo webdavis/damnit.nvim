@@ -5,9 +5,11 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local damnit = require("damnit")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local views = require("damnit.views")
 
 M.FIXTURES = TESTS_DIR .. "/fixtures/full"
@@ -19,12 +21,11 @@ end
 function M.with(run, opts)
   opts = opts or {}
 
-  local fake = fake_dam.install({
+  local fake = fake_process.install({
     fixtures = opts.fixtures or M.FIXTURES,
     exit = opts.exit,
     stderr = opts.stderr,
   })
-  queue.reset()
 
   forget_the_refused_view_names()
   damnit.options.views = opts.views or {}
@@ -36,20 +37,19 @@ function M.with(run, opts)
   end
 
   local buf = opts.open and opts.open() or damnit.open(opts.name)
-  fake_dam.settle(function()
-    return queue.running() == nil
+  fake_process.settle(function()
+    return queue().running() == nil
   end)
 
   local ok, err = pcall(run, buf, fake, notifications)
 
-  fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
+  fake_process.drain()
 
   vim.notify = real
   damnit.options.views = {}
   vim.cmd("silent! %bwipeout!")
-  queue.reset()
   views.reset()
-  fake_dam.remove(fake)
+  fake_process.remove(fake)
 
   assert(ok, err)
 end

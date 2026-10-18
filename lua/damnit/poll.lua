@@ -100,7 +100,7 @@ function M.apply(fetched, err)
 end
 
 function M.refresh()
-  local queue = require("damnit.queue")
+  local queue = require("damnit").app().queue
 
   local another_call_holds_the_store = queue.running()
   if another_call_holds_the_store then
@@ -160,7 +160,7 @@ end
 function M.status()
   M.start()
 
-  local running = require("damnit.queue").foreground()
+  local running = require("damnit").app().queue.foreground()
   if running then
     return ("dam: %s %.1fs"):format(running.label, running.elapsed)
   end

@@ -1,9 +1,11 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
-local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
+local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
-local queue = require("damnit.queue")
+local function queue()
+  return require("damnit").app().queue
+end
 local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
 local sidebar = require("damnit.sidebar")
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
@@ -39,10 +41,10 @@ return {
 
   ["a running call takes the help row and moves nothing else on the staging screen"] = function()
     clock.at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
-      status_window.with(function()
+      status_window.with(function(fake)
         screen.fix_size()
-        vim.env.DAMNIT_TEST_SLEEP = "1"
-        queue.submit({ args = { "status", "--json" }, label = "push fake" })
+        fake.hold = true
+        queue().submit({ args = { "status", "--json" }, label = "push fake" })
         assert(
           vim.wait(2000, function()
             return vim.api.nvim_buf_get_lines(0, 2, 3, false)[1]:find("Running:", 1, true) ~= nil
@@ -55,7 +57,8 @@ return {
         want[15] = "Running: push fake  0.0s     [C-c to cancel]"
         assert(vim.deep_equal(got, want), "--- got ---\n" .. table.concat(got, "\n"))
 
-        fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
+        fake.release()
+        fake_process.drain()
       end)
     end)
   end,
