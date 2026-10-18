@@ -99,20 +99,22 @@ return {
   end,
 
   ["co and ct resolve the conflict under the cursor"] = function()
-    with_dam(status_window.opts(), function(dam)
-      vim.api.nvim_feedkeys("gc", "x", false)
-      local before = #fake_process.argv_log(dam.fake)
-      vim.api.nvim_feedkeys("co", "x", false)
+    for key, side in pairs({ co = "--ours", ct = "--theirs" }) do
+      with_dam(status_window.opts(), function(dam)
+        vim.api.nvim_feedkeys("gc", "x", false)
+        local before = #fake_process.argv_log(dam.fake)
+        vim.api.nvim_feedkeys(key, "x", false)
 
-      fake_process.settle(function()
-        return #fake_process.argv_log(dam.fake) > before
+        fake_process.settle(function()
+          return #fake_process.argv_log(dam.fake) > before
+        end)
+
+        assert(
+          fake_process.argv_log(dam.fake)[before + 1] == ("resolve %s %s --json"):format(CONFLICT, side),
+          key .. " sent " .. vim.inspect(fake_process.argv_log(dam.fake))
+        )
       end)
-
-      assert(
-        fake_process.argv_log(dam.fake)[before + 1] == ("resolve %s --ours --json"):format(CONFLICT),
-        vim.inspect(fake_process.argv_log(dam.fake))
-      )
-    end)
+    end
   end,
 
   ["ct anywhere else sends nothing"] = function()

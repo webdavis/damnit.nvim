@@ -155,21 +155,22 @@ return {
   end,
 
   ["S on a line holding no object sends nothing"] = function()
-    local list = require("damnit.list")
-    local real_under_cursor, real_input = list.object_under_cursor, vim.ui.input
     local asked = false
-
-    list.object_under_cursor = function()
-      return nil
-    end
-    vim.ui.input = function()
+    local function input()
       asked = true
     end
 
-    local ok, err = pcall(send.send, app)
+    with_dam(list_buffer.opts({ input = input }), function(dam)
+      local the_blank_line_under_the_title = 2
+      vim.api.nvim_win_set_cursor(0, { the_blank_line_under_the_title, 0 })
+      local before = #fake_process.argv_log(dam.fake)
 
-    list.object_under_cursor, vim.ui.input = real_under_cursor, real_input
-    assert(ok, err)
-    assert(not asked, "the note box opened with no object under the cursor")
+      vim.api.nvim_feedkeys("S", "x", false)
+      fake_process.drain()
+
+      assert(vim.api.nvim_get_current_line() == "", vim.api.nvim_get_current_line())
+      assert(not asked, "the note box opened with no object under the cursor")
+      assert(#fake_process.argv_log(dam.fake) == before, vim.inspect(fake_process.argv_log(dam.fake)))
+    end)
   end,
 }

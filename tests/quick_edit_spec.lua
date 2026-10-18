@@ -7,7 +7,7 @@ local MILK = "c30414962aa4332b6e5dfc2e0360e2b328735efe"
 local CHILD = "8fbff8b04f0bdbd5eb5d9a1ee81c82ace01e65b1"
 
 local function argv_sent_by_pressing(key, prompt_answer, needle)
-  local new = {}
+  local new, said = {}, {}
 
   local function input(_, on_answer)
     on_answer(prompt_answer)
@@ -33,9 +33,10 @@ local function argv_sent_by_pressing(key, prompt_answer, needle)
     fake_process.drain()
 
     new = vim.list_slice(fake_process.argv_log(dam.fake), before + 1)
+    said = dam.said
   end)
 
-  return new
+  return new, said
 end
 
 return {
@@ -108,9 +109,10 @@ return {
   end,
 
   ["< on a row this view draws at the top says why and moves nothing"] = function()
-    local new = argv_sent_by_pressing("<", nil, "- parent")
+    local new, said = argv_sent_by_pressing("<", nil, "- parent")
 
     assert(#new == 0, vim.inspect(new))
+    assert(vim.deep_equal(said, { "damnit.nvim: already at the top level of this view" }), vim.inspect(said))
   end,
 
   ["X reopens a completed object, which dam edit takes a flag for"] = function()
