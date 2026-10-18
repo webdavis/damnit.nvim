@@ -155,24 +155,10 @@ function M.argv_log(fake)
   return lines
 end
 
--- vim.wait returns the moment `done` holds, so only a case that is already failing waits this long.
--- Two seconds was too short on a loaded machine, where a spawned shell can take that long to answer.
 M.SETTLE_CAP_MS = 15000
 
 function M.settle(done, ms)
   assert(vim.wait(ms or M.SETTLE_CAP_MS, done, 5), "the dam call never answered")
-end
-
-function M.wait_long_enough_to_catch_a_stray_call(fake, logged_before)
-  return vim.wait(200, function()
-    return #M.argv_log(fake) > logged_before
-  end, 5)
-end
-
-function M.drain_the_lane_so_no_answer_lands_in_the_next_case()
-  pcall(M.settle, function()
-    return require("damnit").app().queue.running() == nil
-  end)
 end
 
 function M.remove(fake)
