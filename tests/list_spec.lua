@@ -2,6 +2,7 @@ local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
 local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
 local function indent_of(line)
   return #line:match("^%s*")
@@ -128,7 +129,10 @@ return {
           .. vim.inspect(fake_dam.argv_log(fake))
       )
       assert(
-        notifications[#notifications] == "damnit.nvim: u reopens in the completed history; X reopens an object here",
+        said.whole(
+          notifications[#notifications],
+          "damnit.nvim: u reopens in the completed history; X reopens an object here"
+        ),
         vim.inspect(notifications)
       )
     end)

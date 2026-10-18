@@ -71,6 +71,7 @@ the options below. A later call merges over the earlier one, and the next comman
 | `:Dam toggle` | Open or close the sidebar. |
 | `:Dam capture` | Capture a task from the code in front of you. Takes a range. |
 | `:Dam cancel` | Cancel the running operation. |
+| `:Dam messages` | Every message the plugin showed, in full, newest last. |
 
 `:Dam` completes its subcommands, and after `list` or `pick` it completes your declared view names.
 The command is declared at load rather than behind `setup`, so `nvim +"Dam task <oid>"` works in an

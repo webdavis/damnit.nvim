@@ -4,6 +4,7 @@ local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
 local send = require("damnit.send")
+local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
 return {
   ["every notification ends by saying no record was written, since dam keeps no comments"] = function()
@@ -19,7 +20,7 @@ return {
       local seen = hand_off.hand_over_to_a_double(env)
 
       assert(#seen.said == 1, vim.inspect(seen.said))
-      assert(seen.said[1]:find("no hand-off record written", 1, true), seen.said[1])
+      assert(said.whole_text(seen.said[1]):find("no hand-off record written", 1, true), seen.said[1])
     end
   end,
 
@@ -55,7 +56,7 @@ return {
     assert(#seen.calls == 0, vim.inspect(seen.calls))
     assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
-      seen.said[1] == "damnit.nvim: copied the brief to the clipboard, no hand-off record written",
+      said.whole(seen.said[1], "damnit.nvim: copied the brief to the clipboard, no hand-off record written"),
       vim.inspect(seen.said)
     )
   end,
@@ -67,9 +68,11 @@ return {
     })
 
     assert(
-      seen.said[1]
-        == "damnit.nvim: no agent pane in this workspace; copied the brief to the unnamed register, "
-          .. "no clipboard provider, no hand-off record written",
+      said.whole(
+        seen.said[1],
+        "damnit.nvim: no agent pane in this workspace; copied the brief to the unnamed register, "
+          .. "no clipboard provider, no hand-off record written"
+      ),
       vim.inspect(seen.said)
     )
   end,
@@ -80,9 +83,10 @@ return {
     assert(seen.calls[1] == "agent list" and #seen.calls == 1, vim.inspect(seen.calls))
     assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
-      seen.said[1]
-        == "damnit.nvim: no agent pane in this workspace; copied the brief to the clipboard, "
-          .. "no hand-off record written",
+      said.whole(
+        seen.said[1],
+        "damnit.nvim: no agent pane in this workspace; copied the brief to the clipboard, no hand-off record written"
+      ),
       vim.inspect(seen.said)
     )
   end,
@@ -92,9 +96,10 @@ return {
 
     assert(seen.copied == send.brief(hand_off.FULL, nil), tostring(seen.copied))
     assert(
-      seen.said[1]
-        == "damnit.nvim: herdr refused the send to w1:p2; copied the brief to the clipboard, "
-          .. "no hand-off record written",
+      said.whole(
+        seen.said[1],
+        "damnit.nvim: herdr refused the send to w1:p2; copied the brief to the clipboard, no hand-off record written"
+      ),
       vim.inspect(seen.said)
     )
   end,

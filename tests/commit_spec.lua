@@ -60,6 +60,20 @@ return {
     end)
   end,
 
+  ["counts one change in the singular"] = function()
+    status_window.with(function(fake, notifications)
+      vim.api.nvim_feedkeys("cc", "x", false)
+      vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, 1, false, { "buy the oat milk" })
+
+      local before = #fake_dam.argv_log(fake)
+      vim.cmd("write")
+
+      fake_dam.settle(function()
+        return #fake_dam.argv_log(fake) > before and said(notifications, "damnit.nvim: aa5fbcb committed, 1 change")
+      end)
+    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/one_change")
+  end,
+
   ["refuses to commit an empty message and keeps the buffer open"] = function()
     status_window.with(function(fake, notifications)
       vim.api.nvim_feedkeys("cc", "x", false)

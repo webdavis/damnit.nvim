@@ -6,6 +6,8 @@ local task_format = require("damnit.task_format")
 
 M.NAMESPACE = vim.api.nvim_create_namespace("damnit.diagnostics")
 
+vim.diagnostic.config({ virtual_text = true }, M.NAMESPACE)
+
 local last_drawn_object_by_buf = {}
 
 local function diagnose(buf, text, line)
@@ -32,7 +34,19 @@ function M.show(object, buf)
   return buf
 end
 
-local function run_in_order(buf, steps)
+local function line_named_by(refusal, header)
+  local flag = refusal:match("^(%-%-?[%w%-]+):")
+
+  for key, flags in pairs(task_format.FLAGS) do
+    if flag == flags.set or flag == flags.clear then
+      return (header[key] or {}).line or 1
+    end
+  end
+
+  return 1
+end
+
+local function run_in_order(buf, steps, header)
   local step = table.remove(steps, 1)
 
   require("damnit.queue").submit({
@@ -44,14 +58,14 @@ local function run_in_order(buf, steps)
       end
 
       if failure then
-        return diagnose(buf, failure.message, 1)
+        return diagnose(buf, failure.message, line_named_by(failure.message, header))
       end
 
       if #steps == 0 then
         return M.show(updated, buf)
       end
 
-      run_in_order(buf, steps)
+      run_in_order(buf, steps, header)
     end,
   })
 end
@@ -94,7 +108,7 @@ function M.write(buf)
     steps[#steps + 1] = { args = { "mv", object.oid, changes.move, "--json" }, label = "mv" }
   end
 
-  run_in_order(buf, steps)
+  run_in_order(buf, steps, header)
 end
 
 local function configure(buf)
@@ -117,6 +131,7 @@ function M.open(oid)
   if not scratch.focus(buf) then
     require("damnit.sidebar").leave_fixed_window()
     vim.api.nvim_win_set_buf(0, buf)
+    vim.wo[0][0].signcolumn = "yes:1"
   end
 
   if not created then

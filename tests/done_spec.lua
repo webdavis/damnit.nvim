@@ -185,7 +185,10 @@ return {
       vim.ui.select = real
 
       assert(not offered, "an event is not blocked, so no force was offered")
-      assert(notifications[1] == "a070c36 is an event; events are not completed", vim.inspect(notifications))
+      assert(
+        notifications[1] == "damnit.nvim: a070c36 is an event; events are not completed",
+        vim.inspect(notifications)
+      )
       assert(#fake_dam.argv_log(fake) == 2, vim.inspect(fake_dam.argv_log(fake)))
     end, { exit = 4, stderr = REFUSAL_FOR_AN_EVENT_NO_FORCE_CAN_HELP })
   end,

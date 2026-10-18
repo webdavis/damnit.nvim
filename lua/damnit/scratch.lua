@@ -30,6 +30,27 @@ function M.state(buf)
   return state_by_buf[buf]
 end
 
+local function unlisted_and_gone_when_hidden(buf)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+end
+
+function M.read_only(name, lines, split)
+  local buf = M.named(name, unlisted_and_gone_when_hidden)
+
+  vim.bo[buf].modifiable = true
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
+
+  if not M.focus(buf) then
+    vim.cmd(split)
+    vim.api.nvim_win_set_buf(0, buf)
+  end
+
+  return buf
+end
+
 function M.focus(buf)
   local win = vim.fn.bufwinid(buf)
 

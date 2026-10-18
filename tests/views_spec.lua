@@ -6,6 +6,7 @@ local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local queue = require("damnit.queue")
 local views = require("damnit.views")
 local damnit = require("damnit")
+local said = dofile(TESTS_DIR .. "/helpers/said.lua")
 
 local function with_views(declared, run)
   local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
@@ -106,9 +107,14 @@ return {
         assert(not vim.startswith(line, "ls "), "a refused name cost an ls: " .. line)
       end
       assert(#notifications == 1, vim.inspect(notifications))
-      assert(notifications[1]:find('no view named "tomorrow"', 1, true), notifications[1])
-      assert(notifications[1]:find("declared views are work", 1, true), notifications[1])
-      assert(notifications[1]:find("dam's saved filters are inbox, today", 1, true), notifications[1])
+      assert(
+        said.whole(
+          notifications[1],
+          'damnit.nvim: there is no view named "tomorrow"; declared views are work; '
+            .. "dam's saved filters are inbox, today"
+        ),
+        notifications[1]
+      )
     end)
   end,
 
@@ -116,7 +122,14 @@ return {
     with_views({}, function(notifications)
       resolved("tomorrow")
 
-      assert(notifications[1]:find("no views are declared in setup", 1, true), notifications[1])
+      assert(
+        said.whole(
+          notifications[1],
+          'damnit.nvim: there is no view named "tomorrow"; no views are declared in setup; '
+            .. "dam's saved filters are inbox, today"
+        ),
+        notifications[1]
+      )
     end)
   end,
 
