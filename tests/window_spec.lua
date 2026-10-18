@@ -75,7 +75,7 @@ return {
       assert(header[3]:find("Running: push fake", 1, true), vim.inspect(header))
       assert(header[3]:find("[C-c to cancel]", 1, true), header[3])
 
-      for lnum = 0, 3 do
+      for lnum = 0, 2 do
         local marks = vim.api.nvim_buf_get_extmarks(buf, render.NAMESPACE, { lnum, 0 }, { lnum, -1 }, {})
         assert(#marks > 0, ("the header-only rewrite replaced row %d and left it with no mark"):format(lnum))
       end

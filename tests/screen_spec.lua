@@ -1,6 +1,8 @@
 local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
+local fake_dam = dofile(TESTS_DIR .. "/helpers/fake_dam.lua")
 local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local queue = require("damnit.queue")
 local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
 local sidebar = require("damnit.sidebar")
 local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
@@ -15,6 +17,14 @@ local function dam_list_in_a_window_that_wraps()
   vim.cmd("Dam list")
 
   return vim.api.nvim_get_current_buf()
+end
+
+local function golden_rows(name)
+  local file = assert(io.open(("%s/golden/screen/%s.txt"):format(TESTS_DIR, name), "r"))
+  local rows = vim.split(file:read("*a"), "\n")
+  file:close()
+
+  return rows
 end
 
 local function with_the_clock_at(epoch, body)
@@ -34,6 +44,29 @@ return {
     with_the_clock_at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
       status_window.with(function()
         screen.matches_golden("staging")
+      end)
+    end)
+  end,
+
+  ["a running call takes the help row and moves nothing else on the staging screen"] = function()
+    with_the_clock_at(TEN_AM_UTC_ON_THE_TWENTIETH, function()
+      status_window.with(function()
+        screen.fix_size()
+        vim.env.DAMNIT_TEST_SLEEP = "1"
+        queue.submit({ args = { "status", "--json" }, label = "push fake" })
+        assert(
+          vim.wait(2000, function()
+            return vim.api.nvim_buf_get_lines(0, 2, 3, false)[1]:find("Running:", 1, true) ~= nil
+          end, 50),
+          "no tick wrote the running call into the header"
+        )
+
+        local got = vim.split((screen.dump():gsub("%d+%.%ds", "0.0s", 1)), "\n")
+        local want = golden_rows("staging")
+        want[15] = "Running: push fake  0.0s     [C-c to cancel]"
+        assert(vim.deep_equal(got, want), "--- got ---\n" .. table.concat(got, "\n"))
+
+        fake_dam.drain_the_lane_so_no_answer_lands_in_the_next_case()
       end)
     end)
   end,

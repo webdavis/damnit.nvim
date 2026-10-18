@@ -217,35 +217,16 @@ function M.tick(key)
 
   local lines = render.lines(model_by_store[key], header_state(key))
 
-  local header_count = 0
-  for _, line in ipairs(lines) do
+  local head, text = {}, {}
+  for index, line in ipairs(lines) do
     if line.kind ~= "header" then
       break
     end
-    header_count = header_count + 1
-  end
-
-  local drawn_header_count = 0
-  for _, kind in ipairs(vim.b[buf].damnit_kinds or {}) do
-    if kind ~= "header" then
-      break
-    end
-    drawn_header_count = drawn_header_count + 1
-  end
-
-  if header_count ~= drawn_header_count then
-    return draw(key, lines)
-  end
-
-  local head = {}
-  local text = {}
-  for index = 1, header_count do
-    head[index] = lines[index]
-    text[index] = lines[index].text
+    head[index], text[index] = line, line.text
   end
 
   vim.bo[buf].modifiable = true
-  vim.api.nvim_buf_set_lines(buf, 0, header_count, false, text)
+  vim.api.nvim_buf_set_lines(buf, 0, #head, false, text)
   vim.bo[buf].modifiable = false
 
   render.mark(buf, head, 0)
