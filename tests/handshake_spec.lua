@@ -1,5 +1,6 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local dam = require("damnit.dam")
+local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)
   local fake = fake_dam.install({ version = version_banner })
@@ -55,7 +56,13 @@ return {
 
     assert(err == nil, err and err.message)
     assert(#notifications == 1, vim.inspect(notifications))
-    assert(notifications[1]:find("is not a version", 1, true), notifications[1])
+    assert(
+      said.whole(
+        notifications[1],
+        'damnit.nvim: dam --version printed "dam banana", which is not a version; going on anyway'
+      ),
+      notifications[1]
+    )
     assert(log[2] == "status --json", vim.inspect(log))
   end,
 

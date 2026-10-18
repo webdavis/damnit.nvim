@@ -81,7 +81,7 @@ return {
         end)
 
         assert(#offered == 0, "a refused view offered " .. vim.inspect(offered))
-        assert(notifications[said_before + 1] == "the store is locked", vim.inspect(notifications))
+        assert(notifications[said_before + 1] == "damnit.nvim: the store is locked", vim.inspect(notifications))
       end)
     end, {
       views = { today = "due:today | overdue" },

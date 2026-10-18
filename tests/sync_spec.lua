@@ -1,5 +1,6 @@
 local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
 local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
 
 local CONFLICT = "f3784324d2d2793b7daa6c532887b034bd365ddf"
 
@@ -18,9 +19,14 @@ return {
       assert(log[before + 2] == "remote list --json", "a push moves what each remote last had: " .. vim.inspect(log))
       assert(log[before + 3] == "status --json", vim.inspect(log))
 
-      local said = table.concat(notifications, "\n")
-      assert(said:find("fake: 3 sent, 3 ok, 0 failed, 0 skipped", 1, true), said)
-      assert(said:find("flaky: 7 sent, 6 ok, 1 failed, 0 skipped", 1, true), said)
+      assert(
+        said.any(notifications, "damnit.nvim: fake: 3 sent, 3 ok, 0 failed, 0 skipped"),
+        vim.inspect(notifications)
+      )
+      assert(
+        said.any(notifications, "damnit.nvim: flaky: 7 sent, 6 ok, 1 failed, 0 skipped"),
+        vim.inspect(notifications)
+      )
     end)
   end,
 
@@ -73,11 +79,18 @@ return {
       vim.env.DAMNIT_TEST_EXIT = ""
 
       fake_dam.settle(function()
-        return table.concat(notifications, "\n"):find("fix the source in dam's config", 1, true) ~= nil
+        return #notifications >= 2
       end)
 
-      local said = table.concat(notifications, "\n")
-      assert(said:find('no credential for remote "fake"', 1, true), said)
+      assert(said.any(notifications, 'damnit.nvim: no credential for remote "fake"'), vim.inspect(notifications))
+      assert(
+        said.any(
+          notifications,
+          "damnit.nvim: dam could not resolve this remote's credential; if its source is a command that prompts, "
+            .. "run dam pull in a terminal, and otherwise fix the source in dam's config"
+        ),
+        vim.inspect(notifications)
+      )
     end)
   end,
 
