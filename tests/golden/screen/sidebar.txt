@@ -1,11 +1,11 @@
  [No Name]  2 d//l/today                                                       X
-dam: today  (due:today | overdue) │
+g? help  <CR> open  x done        │
+dam: today  (due:today | overdue) │~
                                   │~
 - parent  work/parent/            │~
   - child  work/parent/child/     │~
 - buy oat milk  (2026-09-25)  p1  │~
 - hold the sidebar width  ⌖       │~
-~                                 │~
 ~                                 │~
 ~                                 │~
 ~                                 │~

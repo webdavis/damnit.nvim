@@ -27,6 +27,7 @@ M.HIGHLIGHTS = {
   DamDiffOld = "DiffDelete",
   DamDiffNew = "DiffAdd",
   DamRunning = "MoreMsg",
+  DamLegend = "Comment",
 }
 
 local OP_GROUPS = { create = "DamOpNew", update = "DamOpChanged", delete = "DamOpRemoved" }
@@ -180,6 +181,13 @@ local function running_line(running)
   return built.line("header")
 end
 
+local function legend_line()
+  local built = row()
+  built.add(require("damnit.keys").legend("damstatus"), "DamLegend")
+
+  return built.line("header")
+end
+
 local function section_line(section)
   local built = row()
   built.add(("%s (%d)"):format(section.name, #section.entries), "DamSection")
@@ -247,7 +255,7 @@ function M.lines(model, state)
   local lines = {
     header_line("Store:", state.store),
     remotes_line(model.remotes, model.remotes_known, state.now),
-    state.running and running_line(state.running) or header_line("Help:", "g?"),
+    state.running and running_line(state.running) or legend_line(),
     blank(),
   }
 
