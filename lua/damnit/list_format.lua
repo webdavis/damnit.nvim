@@ -89,6 +89,7 @@ function M.object_line(object, indent, folded, today)
   return table.concat(parts, BADGE_GAP), marks
 end
 
+---@param spec damnit.ListSpec
 function M.title(spec)
   local query = spec.expands_to or spec.query
   if query and query ~= spec.title then
@@ -98,6 +99,7 @@ function M.title(spec)
   return "dam: " .. spec.title
 end
 
+---@param spec damnit.ListSpec
 function M.refusal(spec, err)
   return { M.title(spec), "", "dam refused this view:", "", "  " .. err.message:match("^[^\n]*") }
 end
@@ -128,6 +130,7 @@ function M.by_completion(objects)
   return ordered
 end
 
+---@param spec damnit.ListSpec
 function M.render(spec, objects, collapsed, today)
   local folds = collapsed or {}
   local index = tree.index(objects or {})
