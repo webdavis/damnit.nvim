@@ -30,7 +30,10 @@ function M.write(buf)
         return message.report(err)
       end
 
-      message.say(("%s committed, %d changes"):format(tostring(report.id):sub(1, 7), #(report.changes or {})))
+      local count = #(report.changes or {})
+      message.say(
+        ("%s committed, %d %s"):format(tostring(report.id):sub(1, 7), count, count == 1 and "change" or "changes")
+      )
 
       vim.bo[buf].modified = false
       vim.api.nvim_buf_delete(buf, { force = true })

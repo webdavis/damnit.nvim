@@ -76,7 +76,7 @@ local function refuse(name)
     known = known .. "; dam's saved filters are " .. table.concat(dam_filters_this_session, ", ")
   end
 
-  message.fail(("there is no view named %q. %s"):format(name, known))
+  message.fail(("there is no view named %q; %s"):format(name, known))
 end
 
 function M.resolve(name)

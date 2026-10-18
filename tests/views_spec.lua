@@ -110,7 +110,7 @@ return {
       assert(
         said.whole(
           notifications[1],
-          'damnit.nvim: there is no view named "tomorrow". declared views are work; '
+          'damnit.nvim: there is no view named "tomorrow"; declared views are work; '
             .. "dam's saved filters are inbox, today"
         ),
         notifications[1]
@@ -125,7 +125,7 @@ return {
       assert(
         said.whole(
           notifications[1],
-          'damnit.nvim: there is no view named "tomorrow". no views are declared in setup; '
+          'damnit.nvim: there is no view named "tomorrow"; no views are declared in setup; '
             .. "dam's saved filters are inbox, today"
         ),
         notifications[1]

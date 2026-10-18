@@ -60,7 +60,7 @@ function M.object_line(object, indent, folded)
 end
 
 function M.title(spec)
-  if spec.query then
+  if spec.query and spec.query ~= spec.title then
     return ("dam: %s  (%s)"):format(spec.title, spec.query)
   end
 

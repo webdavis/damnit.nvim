@@ -41,9 +41,10 @@ local function joined(lines)
 end
 
 return {
-  ["names the view, and the query when there is one"] = function()
+  ["names the view, and the query when it differs from the name"] = function()
     assert(format.title({ title = "all open tasks" }) == "dam: all open tasks")
     assert(format.title({ title = "today", query = "due:today | overdue" }) == "dam: today  (due:today | overdue)")
+    assert(format.title({ title = "today", query = "today" }) == "dam: today")
   end,
 
   ["puts an object's due date, priority and labels on its line"] = function()
