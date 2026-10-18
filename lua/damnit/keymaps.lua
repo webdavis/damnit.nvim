@@ -16,6 +16,10 @@ local function edit(name)
   return call("quick_edit", name)
 end
 
+local function move(name)
+  return call("quick_move", name)
+end
+
 M.MAPS = {
   damstatus = {
     {
@@ -89,10 +93,10 @@ M.MAPS = {
     { mode = "n", lhs = "u", run = edit("reopen_here"), desc = "reopen this object, in the completed history" },
     { mode = "n", lhs = "dd", run = edit("delete"), desc = "remove this object, after the confirm" },
     { mode = "n", lhs = "l", run = edit("labels"), desc = "toggle a label on this object" },
-    { mode = "n", lhs = "m", run = edit("move"), desc = "move this object into another path" },
+    { mode = "n", lhs = "m", run = move("move"), desc = "move this object into another path" },
     { mode = "n", lhs = "S", run = call("send", "send"), desc = "hand this object to the agent pane" },
-    { mode = "n", lhs = ">", run = edit("indent"), desc = "move this object under the one above" },
-    { mode = "n", lhs = "<", run = edit("promote"), desc = "move this object out from under its parent" },
+    { mode = "n", lhs = ">", run = move("indent"), desc = "move this object under the one above" },
+    { mode = "n", lhs = "<", run = move("promote"), desc = "move this object out from under its parent" },
   },
 }
 
