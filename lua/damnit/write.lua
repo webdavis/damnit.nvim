@@ -1,5 +1,17 @@
 local M = {}
 
+---@class damnit.QueueEntry
+---@field args string[]
+---@field label string
+---@field on_done fun(data: table?, err: damnit.Failure?)
+---@field verb? string
+---@field network? boolean
+---@field background? boolean
+---@field handle? vim.SystemObj
+---@field started_at? integer
+---@field finished? boolean
+---@field cancelled? boolean
+
 function M.submit(app, request)
   local on_error = request.on_error or app.say.report
 

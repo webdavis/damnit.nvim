@@ -67,6 +67,7 @@ function M.new(notify)
     say.tell(vim.log.levels.ERROR, text)
   end
 
+  ---@param err damnit.Failure
   function say.report(err)
     say.tell(err.kind == "missing" and vim.log.levels.ERROR or vim.log.levels.WARN, err.message)
   end

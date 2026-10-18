@@ -106,6 +106,7 @@ function M.new(app, on_tick)
     end)
   end
 
+  ---@param entry damnit.QueueEntry
   function queue.submit(entry)
     local key = app.store
     local lane = lane_for(key)

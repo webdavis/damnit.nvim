@@ -74,6 +74,7 @@ local function view_on_screen_in_this_tabpage()
   return nil
 end
 
+---@return damnit.ListSpec?
 function M.current_spec()
   local shown = view.of(vim.api.nvim_get_current_buf()) or view_on_screen_in_this_tabpage()
 
@@ -136,6 +137,7 @@ function M.write(app, args, label, said)
   })
 end
 
+---@param spec damnit.ListSpec
 function M.fetch(app, spec, callback)
   app.queue.submit({
     args = views.query_args(spec),
@@ -178,6 +180,7 @@ function M.refresh(app)
   end
 end
 
+---@param spec damnit.ListSpec
 function M.open(app, spec)
   local buf, shown = view.ensure(spec)
 

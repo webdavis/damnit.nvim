@@ -69,7 +69,7 @@ function M.sync(app, verb, remote)
     network = true,
     on_done = function(report, err)
       if err and err.kind == "credential" then
-        app.say.report({ kind = err.kind, message = err.message .. "; " .. credential_advice(verb) })
+        app.say.report({ kind = err.kind, code = err.code, message = err.message .. "; " .. credential_advice(verb) })
       elseif err then
         app.say.report(err)
       else

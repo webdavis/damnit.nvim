@@ -8,6 +8,14 @@ local TIMEOUT_EXIT_CODE = 124
 
 local KIND_BY_EXIT_CODE = { [1] = "error", [2] = "usage", [3] = "cancelled", [4] = "refused" }
 
+---@class damnit.Failure
+---@field kind string
+---@field code integer
+---@field message string
+---@field plugin? boolean
+---@field rule? string
+---@field oids? string[]
+
 function M.message_of(stderr)
   local text = vim.trim(tostring(stderr or ""))
 
@@ -56,6 +64,8 @@ local function killed_by_a_signal(out)
   return out.code == 0 and (out.signal or 0) ~= 0
 end
 
+---@return table?
+---@return damnit.Failure?
 function M.interpret(out, label, seconds)
   if out.missing then
     return nil, { kind = "missing", code = -1, plugin = true, message = M.MISSING }

@@ -1,5 +1,11 @@
 local M = {}
 
+---@class damnit.ListSpec
+---@field title string
+---@field query? string
+---@field flat? boolean
+
+---@type damnit.ListSpec
 M.COMPLETED = { title = "completed", query = "done", flat = true }
 
 local one_read = require("damnit.one_read")
@@ -75,6 +81,7 @@ local function refuse(app, name)
   app.say.fail(("there is no view named %q; %s"):format(name, known))
 end
 
+---@return damnit.ListSpec?
 function M.resolve(app, name)
   if name == nil or name == "" then
     return { title = "all open tasks" }
@@ -92,6 +99,7 @@ function M.resolve(app, name)
   refuse(app, name)
 end
 
+---@param on_spec fun(spec: damnit.ListSpec): any
 function M.resolve_then(app, name, on_spec)
   local needs_dams_list = name ~= nil and name ~= "" and type(declared_views(app)[name]) ~= "string"
 
@@ -113,6 +121,7 @@ function M.reset()
   the_filter_list = one_read.new()
 end
 
+---@param spec damnit.ListSpec
 function M.query_args(spec)
   if spec.query == nil or spec.query == "" then
     return verbs.ls("!done")
