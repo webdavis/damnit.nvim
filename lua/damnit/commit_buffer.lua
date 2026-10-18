@@ -1,4 +1,5 @@
 local M = {}
+local dam_object = require("damnit.object")
 
 local scratch = require("damnit.scratch")
 local verbs = require("damnit.dam.verbs")
@@ -33,7 +34,7 @@ function M.write(app, buf)
 
       local count = #(report.changes or {})
       app.say.info(
-        ("%s committed, %d %s"):format(tostring(report.id):sub(1, 7), count, count == 1 and "change" or "changes")
+        ("%s committed, %d %s"):format(dam_object.short_oid(report.id), count, count == 1 and "change" or "changes")
       )
 
       vim.bo[buf].modified = false
@@ -90,7 +91,7 @@ function M.open(app, key)
   if created then
     local lines = { "", "# Staged" }
     for _, entry in ipairs(section.entries) do
-      lines[#lines + 1] = ("# %-8s %s  %s"):format(entry.verb, entry.oid:sub(1, 7), entry.subject)
+      lines[#lines + 1] = ("# %-8s %s  %s"):format(entry.verb, dam_object.short_oid(entry.oid), entry.subject)
     end
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   end

@@ -1,8 +1,6 @@
 local M = {}
 
-M.FIELDS = { "subject", "body", "path", "labels", "depends", "reminders", "recurrence" }
-M.TASK_FIELDS = { "done", "priority", "due", "deadline" }
-M.EVENT_FIELDS = { "start", "end", "timezone", "location", "transparency" }
+local dam_object = require("damnit.object")
 
 M.VERBS = { create = "new", update = "changed", delete = "removed" }
 
@@ -14,13 +12,7 @@ local NOTICE_TEXT_BY_KIND = {
   kind_changed = "kind changed upstream",
 }
 
-local function present(value)
-  if value == nil or value == vim.NIL then
-    return nil
-  end
-
-  return value
-end
+local present = dam_object.present
 
 local function same(left, right)
   left, right = present(left), present(right)
@@ -36,17 +28,16 @@ function M.changed_fields(before, after)
   before, after = before or {}, after or {}
   local names = {}
 
-  for _, name in ipairs(M.FIELDS) do
+  for _, name in ipairs(dam_object.FIELDS.object) do
     if not same(before[name], after[name]) then
       names[#names + 1] = name
     end
   end
 
-  for _, group in ipairs({ { "task", M.TASK_FIELDS }, { "event", M.EVENT_FIELDS } }) do
-    local left = present(before[group[1]]) or {}
-    local right = present(after[group[1]]) or {}
+  for _, group in ipairs({ "task", "event" }) do
+    local left, right = dam_object[group](before), dam_object[group](after)
 
-    for _, name in ipairs(group[2]) do
+    for _, name in ipairs(dam_object.FIELDS[group]) do
       if not same(left[name], right[name]) then
         names[#names + 1] = name
       end
@@ -110,7 +101,7 @@ function M.notice_text(notice)
   end
 
   if type(notice.oid) == "string" then
-    parts[#parts + 1] = notice.oid:sub(1, 7)
+    parts[#parts + 1] = dam_object.short_oid(notice.oid)
   end
 
   parts[#parts + 1] = NOTICE_TEXT_BY_KIND[notice.kind] or tostring(notice.kind)

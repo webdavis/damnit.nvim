@@ -1,5 +1,7 @@
 local M = {}
 
+local dam_object = require("damnit.object")
+local text = dam_object.text
 local format = require("damnit.list_format")
 local list = require("damnit.list")
 local store = require("damnit.store")
@@ -8,24 +10,14 @@ local timeout_seconds = require("damnit.process").timeout_seconds
 local BRACKETED_PASTE_START = "\27[200~"
 local BRACKETED_PASTE_END = "\27[201~"
 
-local SHORT_OID_LENGTH = 7
-
 local DEFAULT_LEAST_URGENT_PRIORITY = 4
 
 local NO_RECORD = "no hand-off record written"
 
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
-
 function M.brief(app, object, note)
   local lines = {
     "dam task: " .. vim.trim(text(object.subject)),
-    "oid: " .. text(object.oid):sub(1, SHORT_OID_LENGTH),
+    "oid: " .. dam_object.short_oid(object.oid),
     "store: " .. store.display(app.store),
   }
 
@@ -39,7 +31,7 @@ function M.brief(app, object, note)
     lines[#lines + 1] = "due: " .. due
   end
 
-  local priority = tonumber(type(object.task) == "table" and object.task.priority or nil)
+  local priority = tonumber(dam_object.task(object).priority)
   if priority and priority < DEFAULT_LEAST_URGENT_PRIORITY then
     lines[#lines + 1] = ("priority: p%d"):format(priority)
   end

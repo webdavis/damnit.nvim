@@ -1,11 +1,10 @@
 local M = {}
 
+local dam_object = require("damnit.object")
+local text = dam_object.text
 local tree = require("damnit.tree")
 
 M.FENCE = "---"
-
-M.TASK_KEYS = { "subject", "path", "done", "priority", "due", "deadline", "labels", "depends", "recurrence" }
-M.EVENT_KEYS = { "subject", "path", "start", "end", "location", "labels", "depends" }
 
 local CANNOT_BE_CLEARED = false
 
@@ -20,16 +19,8 @@ M.FLAGS = {
   location = { set = "--location", clear = "--no-location" },
 }
 
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
-
 local function field_value(object, field)
-  local group = object.kind == "event" and object.event or object.task
+  local group = object.kind == "event" and dam_object.event(object) or dam_object.task(object)
 
   if field == "labels" or field == "depends" then
     return table.concat(object[field] or {}, ", ")
@@ -39,7 +30,7 @@ local function field_value(object, field)
     return text(object[field])
   end
 
-  return text((group or {})[field])
+  return text(group[field])
 end
 
 local function header_line_without_trailing_space(key, value)
@@ -50,14 +41,10 @@ local function header_line_without_trailing_space(key, value)
   return ("%s: %s"):format(key, value)
 end
 
-function M.keys(object)
-  return object.kind == "event" and M.EVENT_KEYS or M.TASK_KEYS
-end
-
 function M.render(object)
   local lines = { M.FENCE }
 
-  for _, key in ipairs(M.keys(object)) do
+  for _, key in ipairs(dam_object.header(object)) do
     lines[#lines + 1] = header_line_without_trailing_space(key, field_value(object, key))
   end
 
@@ -221,7 +208,7 @@ local function append_flags(object, key, entry, edit)
 end
 
 local function refusal_in(object, header)
-  local allowed = M.keys(object)
+  local allowed = dam_object.header(object)
 
   for key, entry in pairs(header) do
     if not vim.tbl_contains(allowed, key) then
@@ -276,7 +263,7 @@ function M.changes(object, header, body)
     move = destination
   end
 
-  for _, key in ipairs(M.keys(object)) do
+  for _, key in ipairs(dam_object.header(object)) do
     local entry = header[key]
 
     if entry and key ~= "path" and entry.value ~= field_value(object, key) then

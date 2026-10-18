@@ -1,4 +1,5 @@
 local M = {}
+local dam_object = require("damnit.object")
 local civil = require("damnit.civil")
 local keymaps = require("damnit.keymaps")
 
@@ -194,7 +195,7 @@ local function change_line(entry)
   built.add(M.icon(entry.object_kind or "task"))
   built.add(" ", nil, M.COLUMNS.verb)
   built.add(entry.verb, OP_GROUPS[entry.op], M.COLUMNS.oid)
-  built.add(entry.oid:sub(1, 7), "DamOid", M.COLUMNS.subject)
+  built.add(dam_object.short_oid(entry.oid), "DamOid", M.COLUMNS.subject)
   built.add(entry.subject, "DamSubject", M.COLUMNS.fields)
 
   if #entry.fields > 0 then
@@ -222,7 +223,7 @@ local function conflict_line(entry)
   local built = row()
   built.add(M.icon("conflict"))
   built.add(" ", nil, M.COLUMNS.verb)
-  built.add(entry.oid:sub(1, 7), "DamOid", M.COLUMNS.subject)
+  built.add(dam_object.short_oid(entry.oid), "DamOid", M.COLUMNS.subject)
   built.add(entry.subject, "DamConflict", M.COLUMNS.fields)
   built.add(entry.remote, "DamRemote")
 

@@ -1,5 +1,6 @@
 local M = {}
 
+local text = require("damnit.object").text
 local done = require("damnit.done")
 local format = require("damnit.list_format")
 local list = require("damnit.list")
@@ -9,14 +10,6 @@ local views = require("damnit.views")
 local OID_DELIMITER = "\t"
 
 local FIELDS_AFTER_THE_OID = "2.."
-
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
 
 function M.line(object)
   local parts = { text(object.subject) }

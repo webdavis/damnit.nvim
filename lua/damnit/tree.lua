@@ -1,14 +1,8 @@
 local M = {}
 
+local text = require("damnit.object").text
+
 local ROOT = ""
-
-local function text(value)
-  if value == nil or value == vim.NIL then
-    return ""
-  end
-
-  return tostring(value)
-end
 
 function M.parent_path(path)
   local trimmed = (text(path):gsub("/$", ""))

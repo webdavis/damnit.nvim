@@ -1,7 +1,7 @@
 local M = {}
 
 local render = require("damnit.render")
-local status_model = require("damnit.status_model")
+local dam_object = require("damnit.object")
 
 local open_diffs_by_store = {}
 
@@ -15,29 +15,27 @@ function M.value(object, field)
   local value = object[field]
 
   if value == nil then
-    value = (object.task or {})[field]
+    value = dam_object.task(object)[field]
   end
 
   if value == nil then
-    value = (object.event or {})[field]
-  end
-
-  if value == nil or value == vim.NIL or value == "" then
-    return UNSET
+    value = dam_object.event(object)[field]
   end
 
   if type(value) == "table" then
     return #value > 0 and table.concat(value, ", ") or UNSET
   end
 
-  return tostring(value)
+  local shown = dam_object.text(value)
+
+  return shown == "" and UNSET or shown
 end
 
 function M.set_fields(object)
   local names = {}
 
-  for _, group in ipairs({ status_model.FIELDS, status_model.TASK_FIELDS, status_model.EVENT_FIELDS }) do
-    for _, field in ipairs(group) do
+  for _, group in ipairs({ "object", "task", "event" }) do
+    for _, field in ipairs(dam_object.FIELDS[group]) do
       if M.value(object, field) ~= UNSET then
         names[#names + 1] = field
       end
