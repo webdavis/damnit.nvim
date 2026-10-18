@@ -1,12 +1,12 @@
 local app = require("damnit").app()
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local function queue()
   return require("damnit").app().queue
 end

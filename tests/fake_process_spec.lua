@@ -1,4 +1,4 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 
 local function queue()
   return require("damnit").app().queue

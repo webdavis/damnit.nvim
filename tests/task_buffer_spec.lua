@@ -1,12 +1,12 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP = TESTS_DIR .. "/../plugin/damnit.lua"
 dofile(PLUGIN_FILE_THAT_DECLARES_DAM_RATHER_THAN_SETUP)
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local harness = dofile(TESTS_DIR .. "/helpers/task_buffer.lua")
-local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
+local fake_process = require("helpers.fake_process")
+local harness = require("helpers.task_buffer")
+local screen = require("helpers.screen")
 local task_buffer = require("damnit.task_buffer")
 
 local OID = harness.OID

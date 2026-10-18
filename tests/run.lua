@@ -2,7 +2,12 @@ local tests_dir = arg[0]:match("(.*)/") or "."
 local project_root = tests_dir .. "/.."
 local only = arg[1]
 
-package.path = ("%s/lua/?.lua;%s/lua/?/init.lua;%s"):format(project_root, project_root, package.path)
+package.path = ("%s/lua/?.lua;%s/lua/?/init.lua;%s/?.lua;%s"):format(
+  project_root,
+  project_root,
+  tests_dir,
+  package.path
+)
 
 local function spec_files_to_run()
   if only then

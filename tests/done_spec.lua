@@ -1,7 +1,7 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local done = require("damnit.done")
 
 local TAXES = { oid = "cfdc36e6c43673b75f02ea89501cba466e96625b", subject = "file taxes" }

@@ -1,8 +1,8 @@
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local damnit = require("damnit")
 local function queue()
   return require("damnit").app().queue

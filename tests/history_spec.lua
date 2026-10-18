@@ -1,7 +1,7 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local damnit = require("damnit")
 
 local REPORT = "37b186f6e73ed2c4d25a4854023c694e6bec8715"

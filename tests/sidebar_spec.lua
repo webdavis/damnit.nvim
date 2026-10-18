@@ -1,9 +1,8 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
+local sidebar_tab = require("helpers.sidebar_tab")
 local sidebar = require("damnit.sidebar")
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local function queue()
   return require("damnit").app().queue
 end

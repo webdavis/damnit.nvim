@@ -1,8 +1,8 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
-local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
+local said = require("helpers.said")
 
 local function indent_of(line)
   return #line:match("^%s*")

@@ -1,6 +1,6 @@
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 M.COLUMNS = 80
 M.LINES = 24

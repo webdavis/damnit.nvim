@@ -1,7 +1,7 @@
 local diff = require("damnit.render.diff")
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local render = require("damnit.render")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local status_window = require("helpers.status_window")
 
 local BEFORE = { subject = "oat milk", labels = { "home" }, task = { priority = 1 } }
 local AFTER = { subject = "buy oat milk", labels = { "errand", "home" }, task = { priority = 1, due = "2026-09-25" } }

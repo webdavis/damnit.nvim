@@ -1,5 +1,5 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
 
 local WORKING_UPDATE = "badb4903b653809e591c31118004e07de7c8183c"
 local WORKING_DELETE = "e648ce077ff286a30e5d984a2d93a24739e090ad"
@@ -118,6 +118,6 @@ return {
 
       assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(notifications[#notifications] == "damnit.nvim: nothing is staged", notifications[#notifications])
-    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
+    end, require("helpers.paths").TESTS .. "/fixtures/default")
   end,
 }

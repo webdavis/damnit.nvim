@@ -1,10 +1,10 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 
 local function dam()
   return require("damnit").app().dam
 end
 
-local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)
   local fake = fake_process.install({ version = version_banner })

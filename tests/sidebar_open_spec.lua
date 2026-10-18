@@ -1,7 +1,6 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
+local sidebar_tab = require("helpers.sidebar_tab")
 local list = require("damnit.list")
 local location_edit = require("damnit.location_edit")
 local sidebar = require("damnit.sidebar")

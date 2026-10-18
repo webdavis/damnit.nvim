@@ -1,12 +1,12 @@
 local app = require("damnit").app()
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local poll = require("damnit.poll")
-local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local recording = require("helpers.said")
 local function queue()
   return require("damnit").app().queue
 end
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local TODAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d")
 local YESTERDAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d", os.time() - 86400)

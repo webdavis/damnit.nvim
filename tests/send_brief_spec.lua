@@ -1,7 +1,6 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
+local hand_off = require("helpers.hand_off")
 local send = require("damnit.send")
 
 return {

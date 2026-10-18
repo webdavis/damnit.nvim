@@ -1,5 +1,5 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
 
 local function open_buffer_names()
   local names = {}

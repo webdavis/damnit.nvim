@@ -1,8 +1,8 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
+local clock = require("helpers.clock")
 local format = require("damnit.list_format")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local list_buffer = require("helpers.list_buffer")
 local render = require("damnit.render")
 
 local NOON_UTC_ON_THE_FIRST_OF_OCTOBER = 1790856000

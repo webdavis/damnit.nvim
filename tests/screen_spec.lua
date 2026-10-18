@@ -1,16 +1,16 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local clock = dofile(TESTS_DIR .. "/helpers/clock.lua")
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local clock = require("helpers.clock")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local function queue()
   return require("damnit").app().queue
 end
-local screen = dofile(TESTS_DIR .. "/helpers/screen.lua")
+local screen = require("helpers.screen")
 local sidebar = require("damnit.sidebar")
-local sidebar_tab = dofile(TESTS_DIR .. "/helpers/sidebar_tab.lua")
-local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
+local sidebar_tab = require("helpers.sidebar_tab")
+local status_window = require("helpers.status_window")
 
 local TEN_AM_UTC_ON_THE_TWENTIETH = 1789898400
 

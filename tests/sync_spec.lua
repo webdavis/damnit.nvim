@@ -1,6 +1,6 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
-local said = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
+local said = require("helpers.said")
 
 local CONFLICT = "f3784324d2d2793b7daa6c532887b034bd365ddf"
 
@@ -129,7 +129,7 @@ return {
       assert(#fake_process.argv_log(fake) == before)
       assert(notifications[#notifications] == "damnit.nvim: nothing to push", notifications[#notifications])
       assert(fake.levels[#notifications] == vim.log.levels.INFO, tostring(fake.levels[#notifications]))
-    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
+    end, require("helpers.paths").TESTS .. "/fixtures/default")
   end,
 
   ["says there is nothing to pull when dam has no remote"] = function()
@@ -142,6 +142,6 @@ return {
       end)
 
       assert(vim.deep_equal(notifications, { "damnit.nvim: nothing to pull" }), vim.inspect(notifications))
-    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
+    end, require("helpers.paths").TESTS .. "/fixtures/default")
   end,
 }

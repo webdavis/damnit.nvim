@@ -1,9 +1,9 @@
 local app = require("damnit").app()
 local M = {}
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local task_buffer = require("damnit.task_buffer")
 
 M.OID = "badb4903b653809e591c31118004e07de7c8183c"

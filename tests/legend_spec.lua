@@ -1,9 +1,7 @@
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
-
 local keymaps = require("damnit.keymaps")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local list_buffer = require("helpers.list_buffer")
 local render = require("damnit.render")
-local status_window = dofile(TESTS_DIR .. "/helpers/status_window.lua")
+local status_window = require("helpers.status_window")
 
 local STAGING_LEGEND = "g? help  - stage  cc commit  P push  p pull  R re-read"
 local LIST_LEGEND = "g? help  <CR> open  x done  p priority  s due  a add"

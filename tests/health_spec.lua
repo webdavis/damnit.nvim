@@ -1,8 +1,8 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
+local fake_dam = require("helpers.fake_dam")
+local fake_process = require("helpers.fake_process")
 local health = require("damnit.health")
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local REFUSAL_DAM_WRITES_ON_STDERR_UNDER_JSON =
   '{"error": {"kind": "refused", "rule": "bad_query", "message": "\\"nonsense\\" is not a declared category", "oids": []}}'

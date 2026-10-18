@@ -1,11 +1,10 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local hand_off = dofile(TESTS_DIR .. "/helpers/hand_off.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local fake_process = require("helpers.fake_process")
+local hand_off = require("helpers.hand_off")
+local list_buffer = require("helpers.list_buffer")
 local send = require("damnit.send")
-local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 return {
   ["every notification ends by saying no record was written, since dam keeps no comments"] = function()

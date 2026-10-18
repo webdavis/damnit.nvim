@@ -1,4 +1,4 @@
-local recording = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/said.lua")
+local recording = require("helpers.said")
 local location_edit = require("damnit.location_edit")
 
 local function load_what_a_jump_reaches_while_the_relative_package_path_still_resolves()

@@ -83,7 +83,7 @@ find_the_fixture_preferring_the_full_or_open_shape_when_asked_for "$@"
 cat "$fixture"
 ]==]
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 local HOME_VARIABLES_SANDBOXED_TO_THE_SCRIPT_DIR = { "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME" }
 

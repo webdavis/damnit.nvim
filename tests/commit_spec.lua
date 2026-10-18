@@ -1,6 +1,6 @@
 local commit_buffer = require("damnit.commit_buffer")
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
 
 local function said(notifications, text)
   return vim.tbl_contains(notifications, text)
@@ -71,7 +71,7 @@ return {
       fake_process.settle(function()
         return #fake_process.argv_log(fake) > before and said(notifications, "damnit.nvim: aa5fbcb committed, 1 change")
       end)
-    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/one_change")
+    end, require("helpers.paths").TESTS .. "/fixtures/one_change")
   end,
 
   ["refuses to commit an empty message and keeps the buffer open"] = function()
@@ -99,7 +99,7 @@ return {
       assert(#fake_process.argv_log(fake) == before, "nothing was sent")
       assert(vim.bo.filetype == "damstatus", "no message buffer opened")
       assert(notifications[#notifications] == "damnit.nvim: nothing is staged to commit", notifications[#notifications])
-    end, (arg[0]:match("(.*)/") or ".") .. "/fixtures/default")
+    end, require("helpers.paths").TESTS .. "/fixtures/default")
   end,
 
   ["cc twice keeps the one message buffer and what was typed in it"] = function()

@@ -1,8 +1,7 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
-local list_buffer = dofile(TESTS_DIR .. "/helpers/list_buffer.lua")
+local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local picker = require("damnit.picker")
 
 local OBJECT = {

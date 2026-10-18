@@ -1,15 +1,15 @@
 local app = require("damnit").app()
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 
 dofile(TESTS_DIR .. "/../plugin/damnit.lua")
 
-local fake_process = dofile(TESTS_DIR .. "/helpers/fake_process.lua")
+local fake_process = require("helpers.fake_process")
 local function queue()
   return require("damnit").app().queue
 end
 local views = require("damnit.views")
 local damnit = require("damnit")
-local said = dofile(TESTS_DIR .. "/helpers/said.lua")
+local said = require("helpers.said")
 
 local function with_views(declared, run)
   local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })

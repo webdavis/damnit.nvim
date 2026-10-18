@@ -1,4 +1,4 @@
-local fake_dam = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_dam.lua")
+local fake_dam = require("helpers.fake_dam")
 local function queue()
   return require("damnit").app().queue
 end

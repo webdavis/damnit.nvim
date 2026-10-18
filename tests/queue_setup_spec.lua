@@ -1,5 +1,5 @@
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local queue_fake = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/queue_fake.lua")
+local fake_process = require("helpers.fake_process")
+local queue_fake = require("helpers.queue_fake")
 local queue, with_fake, entry = queue_fake.queue, queue_fake.with_fake, queue_fake.entry
 local damnit = require("damnit")
 

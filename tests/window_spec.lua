@@ -1,10 +1,10 @@
 local app = require("damnit").app()
-local fake_process = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/fake_process.lua")
-local status_window = dofile((arg[0]:match("(.*)/") or ".") .. "/helpers/status_window.lua")
+local fake_process = require("helpers.fake_process")
+local status_window = require("helpers.status_window")
 local render = require("damnit.render")
 local window = require("damnit.window")
 
-local TESTS_DIR = arg[0]:match("(.*)/") or "."
+local TESTS_DIR = require("helpers.paths").TESTS
 local with_window = status_window.with
 
 local function tick_twice_by_hand_full_redraw_then_header_only()
