@@ -1,29 +1,26 @@
+local with_dam = require("helpers.harness").with_dam
 local fake_process = require("helpers.fake_process")
 
-local function dam()
+local function client()
   return require("damnit").app().dam
 end
 
 local said = require("helpers.said")
 
 local function first_call_to_a_dam_whose_version_says(version_banner)
-  local fake = fake_process.install({ version = version_banner })
-
-  local notifications = fake.said
-
   local answered, err = false, nil
-  dam().call({ "status", "--json" }, nil, function(_, failure)
-    answered, err = true, failure
+
+  local dam = with_dam({ version = version_banner }, function()
+    client().call({ "status", "--json" }, nil, function(_, failure)
+      answered, err = true, failure
+    end)
+
+    fake_process.settle(function()
+      return answered
+    end)
   end)
 
-  fake_process.settle(function()
-    return answered
-  end)
-
-  local log = fake_process.argv_log(fake)
-  fake_process.remove(fake)
-
-  return err, notifications, log
+  return err, dam.said, dam.sent
 end
 
 return {
@@ -66,28 +63,27 @@ return {
   end,
 
   ["runs the handshake once per session, not once per call"] = function()
-    local fake = fake_process.install()
-
-    for _ = 1, 3 do
-      local answered = false
-      dam().call({ "status", "--json" }, nil, function()
-        answered = true
-      end)
-      fake_process.settle(function()
-        return answered
-      end)
-    end
-
-    local log = fake_process.argv_log(fake)
-    fake_process.remove(fake)
-
-    local versions = 0
-    for _, line in ipairs(log) do
-      if line == "--version" then
-        versions = versions + 1
+    with_dam({}, function(dam)
+      for _ = 1, 3 do
+        local answered = false
+        client().call({ "status", "--json" }, nil, function()
+          answered = true
+        end)
+        fake_process.settle(function()
+          return answered
+        end)
       end
-    end
 
-    assert(versions == 1, vim.inspect(log))
+      local log = fake_process.argv_log(dam.fake)
+
+      local versions = 0
+      for _, line in ipairs(log) do
+        if line == "--version" then
+          versions = versions + 1
+        end
+      end
+
+      assert(versions == 1, vim.inspect(log))
+    end)
   end,
 }

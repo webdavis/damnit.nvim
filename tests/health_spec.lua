@@ -1,8 +1,7 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local fake_dam = require("helpers.fake_dam")
-local fake_process = require("helpers.fake_process")
 local health = require("damnit.health")
-
-local TESTS_DIR = require("helpers.paths").TESTS
 
 local REFUSAL_DAM_WRITES_ON_STDERR_UNDER_JSON =
   '{"error": {"kind": "refused", "rule": "bad_query", "message": "\\"nonsense\\" is not a declared category", "oids": []}}'
@@ -40,7 +39,7 @@ end
 
 return {
   ["reports dam, its version, the supported range and what the store holds"] = function()
-    local fake = fake_dam.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    local fake = fake_dam.install({ fixtures = harness.fixtures("full") })
     local lines = report(health.check)
     fake_dam.remove(fake)
 
@@ -84,111 +83,102 @@ return {
   end,
 
   ["names DAM_STORE and DAM_CONFIG when no option sets either"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
-    vim.env.DAM_STORE = "/from/the/environment.db"
-    vim.env.DAM_CONFIG = "/from/the/environment.toml"
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
+      vim.env.DAM_STORE = "/from/the/environment.db"
+      vim.env.DAM_CONFIG = "/from/the/environment.toml"
 
-    local lines = report(health.check)
+      local lines = report(health.check)
 
-    vim.env.DAM_STORE = saved.store
-    vim.env.DAM_CONFIG = saved.config
-    fake_process.remove(fake)
+      vim.env.DAM_STORE = saved.store
+      vim.env.DAM_CONFIG = saved.config
 
-    assert(said(lines, "ok", "the store is /from/the/environment.db, from DAM_STORE"), vim.inspect(lines))
-    assert(said(lines, "ok", "the config is /from/the/environment.toml, from DAM_CONFIG"), vim.inspect(lines))
+      assert(said(lines, "ok", "the store is /from/the/environment.db, from DAM_STORE"), vim.inspect(lines))
+      assert(said(lines, "ok", "the config is /from/the/environment.toml, from DAM_CONFIG"), vim.inspect(lines))
+    end)
   end,
 
   ["prefers the setup option over the environment, as dam's flag beats its own env fallback"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
-    vim.env.DAM_STORE = "/from/the/environment.db"
-    vim.env.DAM_CONFIG = "/from/the/environment.toml"
-    require("damnit").setup({ store = "/from/setup.db", config = "/from/setup.toml" })
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      local saved = { store = vim.env.DAM_STORE, config = vim.env.DAM_CONFIG }
+      vim.env.DAM_STORE = "/from/the/environment.db"
+      vim.env.DAM_CONFIG = "/from/the/environment.toml"
+      require("damnit").setup({ store = "/from/setup.db", config = "/from/setup.toml" })
 
-    local lines = report(health.check)
+      local lines = report(health.check)
 
-    require("damnit").options.store = nil
-    require("damnit").options.config = nil
-    vim.env.DAM_STORE = saved.store
-    vim.env.DAM_CONFIG = saved.config
-    fake_process.remove(fake)
+      vim.env.DAM_STORE = saved.store
+      vim.env.DAM_CONFIG = saved.config
 
-    assert(said(lines, "ok", "the store is /from/setup.db, from setup"), vim.inspect(lines))
-    assert(said(lines, "ok", "the config is /from/setup.toml, from setup"), vim.inspect(lines))
-    assert(not said(lines, "ok", "from DAM_STORE"), vim.inspect(lines))
-    assert(not said(lines, "ok", "from DAM_CONFIG"), vim.inspect(lines))
+      assert(said(lines, "ok", "the store is /from/setup.db, from setup"), vim.inspect(lines))
+      assert(said(lines, "ok", "the config is /from/setup.toml, from setup"), vim.inspect(lines))
+      assert(not said(lines, "ok", "from DAM_STORE"), vim.inspect(lines))
+      assert(not said(lines, "ok", "from DAM_CONFIG"), vim.inspect(lines))
+    end)
   end,
 
   ["refuses a dam outside the supported range and says which one it found"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full", version = "0.1.0" })
-    local lines = report(health.check)
-    fake_process.remove(fake)
+    with_dam({ fixtures = harness.fixtures("full"), version = "0.1.0" }, function()
+      local lines = report(health.check)
 
-    assert(said(lines, "error", "dam 0.1.0 is outside the supported range"), vim.inspect(lines))
-    assert(#lines == 2, "nothing is asked of a dam this plugin will not speak to")
+      assert(said(lines, "error", "dam 0.1.0 is outside the supported range"), vim.inspect(lines))
+      assert(#lines == 2, "nothing is asked of a dam this plugin will not speak to")
+    end)
   end,
 
   ["warns with the count when the store holds a conflict"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    local lines = report(health.check)
-    fake_process.remove(fake)
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      local lines = report(health.check)
 
-    assert(said(lines, "warn", "1 object is in conflict"), vim.inspect(lines))
+      assert(said(lines, "warn", "1 object is in conflict"), vim.inspect(lines))
+    end)
   end,
 
   ["names the store and the config the plugin passes, and where each came from, since dam prints neither"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    require("damnit").setup({ store = "/somewhere/dam.db", config = "/somewhere/config.toml" })
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      require("damnit").setup({ store = "/somewhere/dam.db", config = "/somewhere/config.toml" })
 
-    local lines = report(health.check)
+      local lines = report(health.check)
 
-    require("damnit").options.store = nil
-    require("damnit").options.config = nil
-    fake_process.remove(fake)
-
-    assert(said(lines, "ok", "/somewhere/dam.db"), vim.inspect(lines))
-    assert(said(lines, "ok", "/somewhere/config.toml"), vim.inspect(lines))
-    assert(said(lines, "ok", "from setup"), vim.inspect(lines))
+      assert(said(lines, "ok", "/somewhere/dam.db"), vim.inspect(lines))
+      assert(said(lines, "ok", "/somewhere/config.toml"), vim.inspect(lines))
+      assert(said(lines, "ok", "from setup"), vim.inspect(lines))
+    end)
   end,
 
   ["says dam resolves the store and the config itself when no option names one"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    local lines = report(health.check)
-    fake_process.remove(fake)
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      local lines = report(health.check)
 
-    assert(said(lines, "ok", "the store is dam's own"), vim.inspect(lines))
-    assert(said(lines, "ok", "the config is dam's own"), vim.inspect(lines))
+      assert(said(lines, "ok", "the store is dam's own"), vim.inspect(lines))
+      assert(said(lines, "ok", "the config is dam's own"), vim.inspect(lines))
+    end)
   end,
 
   ["errors naming each declared view dam refuses, and carries dam's own words"] = function()
-    local fake = fake_process.install({
-      fixtures = TESTS_DIR .. "/fixtures/full",
+    with_dam({
+      fixtures = harness.fixtures("full"),
       stderr = REFUSAL_DAM_WRITES_ON_STDERR_UNDER_JSON,
       exit = 4,
       version = "0.2.0",
-    })
-    require("damnit").setup({ views = { broken = "nonsense:zzz" } })
+    }, function()
+      require("damnit").setup({ views = { broken = "nonsense:zzz" } })
 
-    local lines = report(health.check)
+      local lines = report(health.check)
 
-    require("damnit").options.views = {}
-    fake_process.remove(fake)
-
-    assert(said(lines, "error", "broken"), vim.inspect(lines))
-    assert(said(lines, "error", '"nonsense" is not a declared category'), "dam's own line is carried verbatim")
-    assert(said(lines, "error", "the store did not answer"), "the same refusal reaches the store check")
+      assert(said(lines, "error", "broken"), vim.inspect(lines))
+      assert(said(lines, "error", '"nonsense" is not a declared category'), "dam's own line is carried verbatim")
+      assert(said(lines, "error", "the store did not answer"), "the same refusal reaches the store check")
+    end)
   end,
 
   ["reports every declared view dam runs"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    require("damnit").setup({ views = { mine = "path:work" } })
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      require("damnit").setup({ views = { mine = "path:work" } })
 
-    local lines = report(health.check)
+      local lines = report(health.check)
 
-    require("damnit").options.views = {}
-    fake_process.remove(fake)
-
-    assert(said(lines, "ok", 'the view mine runs "path:work"'), vim.inspect(lines))
+      assert(said(lines, "ok", 'the view mine runs "path:work"'), vim.inspect(lines))
+    end)
   end,
 }

@@ -1,11 +1,12 @@
+local with_dam = require("helpers.harness").with_dam
 local fake_process = require("helpers.fake_process")
 local queue_fake = require("helpers.queue_fake")
-local queue, with_fake, entry = queue_fake.queue, queue_fake.with_fake, queue_fake.entry
+local queue, entry = queue_fake.queue, queue_fake.entry
 local damnit = require("damnit")
 
 return {
   ["frees the lane when setup runs while a call is in flight"] = function()
-    with_fake(function()
+    with_dam({}, function()
       local answered, err = false, nil
       queue().submit(entry({ "status", "--json" }, {
         on_done = function(_, failure)
@@ -28,15 +29,15 @@ return {
   end,
 
   ["keeps the running call, its queue and its lane when setup runs mid-call"] = function()
-    with_fake(function(fake)
+    with_dam({}, function(dam)
       queue().submit(entry({ "status", "--json" }))
       fake_process.drain()
 
       local peak = 0
-      local run = fake.run
-      fake.run = function(...)
+      local run = dam.fake.run
+      dam.fake.run = function(...)
         local handle = run(...)
-        peak = math.max(peak, fake.in_flight)
+        peak = math.max(peak, dam.fake.in_flight)
 
         return handle
       end
@@ -48,7 +49,7 @@ return {
         end
       end
 
-      fake.hold = true
+      dam.fake.hold = true
       queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
       queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
 
@@ -69,7 +70,7 @@ return {
   end,
 
   ["runs the queued call when setup lands during the running call's handshake"] = function()
-    with_fake(function(fake)
+    with_dam({}, function(dam)
       local order = {}
       local function noting(name)
         return function(_, failure)
@@ -77,7 +78,7 @@ return {
         end
       end
 
-      fake.hold = true
+      dam.fake.hold = true
       queue().submit(entry({ "status", "--json" }, { label = "a", on_done = noting("a") }))
       queue().submit(entry({ "status", "--json" }, { label = "b", on_done = noting("b") }))
 

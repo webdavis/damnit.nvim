@@ -1,3 +1,4 @@
+local with_dam = require("helpers.harness").with_dam
 local fake_process = require("helpers.fake_process")
 local status_window = require("helpers.status_window")
 
@@ -13,7 +14,7 @@ end
 
 return {
   ["opens a conflict as ours and theirs, side by side and unmodifiable"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("gc", "x", false)
       vim.api.nvim_feedkeys("\r", "x", false)
 
@@ -45,17 +46,17 @@ return {
   end,
 
   ["opens a remote's unpushed commits, newest first"] = function()
-    status_window.with(function(fake)
+    with_dam(status_window.opts(), function(dam)
       vim.api.nvim_feedkeys("gp", "x", false)
       local status_buf = vim.api.nvim_get_current_buf()
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
       vim.api.nvim_feedkeys("\r", "x", false)
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before
+        return #fake_process.argv_log(dam.fake) > before
       end)
 
-      assert(fake_process.argv_log(fake)[before + 1] == "log --json", vim.inspect(fake_process.argv_log(fake)))
+      assert(fake_process.argv_log(dam.fake)[before + 1] == "log --json", vim.inspect(fake_process.argv_log(dam.fake)))
 
       fake_process.settle(function()
         return vim.api.nvim_buf_get_name(0):find("damnit://unpushed/fake", 1, true) ~= nil
@@ -89,33 +90,30 @@ return {
   end,
 
   ["refuses a remote with nothing unpushed rather than reading the log"] = function()
-    status_window.with(function(fake, notifications)
-      local before = #fake_process.argv_log(fake)
+    with_dam(status_window.opts(), function(dam)
+      local before = #fake_process.argv_log(dam.fake)
 
       require("damnit.open").unpushed(require("damnit").app(), { kind = "remote", remote = "flaky", commits = 0 })
 
-      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
-      assert(
-        notifications[#notifications] == "damnit.nvim: this remote has no commit on this line",
-        notifications[#notifications]
-      )
+      assert(#fake_process.argv_log(dam.fake) == before, "nothing was sent")
+      assert(dam.said[#dam.said] == "damnit.nvim: this remote has no commit on this line", dam.said[#dam.said])
     end)
   end,
 
   ["does nothing on a heading or a notice"] = function()
-    status_window.with(function(fake)
+    with_dam(status_window.opts(), function(dam)
       vim.api.nvim_feedkeys("gn", "x", false)
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
       local windows = #vim.api.nvim_list_wins()
       vim.api.nvim_feedkeys("\r", "x", false)
 
-      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(dam.fake) == before, "nothing was sent")
       assert(#vim.api.nvim_list_wins() == windows, "nothing was opened")
     end)
   end,
 
   ["opens the same conflict twice into its one pair of sides"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("gc", "x", false)
       local status_win = vim.api.nvim_get_current_win()
       vim.api.nvim_feedkeys("\r", "x", false)

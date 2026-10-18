@@ -1,4 +1,5 @@
-local TESTS_DIR = require("helpers.paths").TESTS
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 
 local fake_process = require("helpers.fake_process")
 local damnit = require("damnit")
@@ -23,16 +24,10 @@ local function ls_calls(fake)
 end
 
 local function with_the_list_on(fixtures, run)
-  dofile(TESTS_DIR .. "/../plugin/damnit.lua")
-  local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/" .. fixtures })
-
-  local ok, err = pcall(run, fake)
-
-  vim.cmd("silent! %bwipeout!")
-  damnit.options.store = nil
-  fake_process.remove(fake)
-
-  assert(ok, err)
+  dofile(require("helpers.paths").TESTS .. "/../plugin/damnit.lua")
+  with_dam({ fixtures = harness.fixtures(fixtures) }, function(dam)
+    run(dam.fake)
+  end)
 end
 
 local function cursor_to(buf, needle)
@@ -66,7 +61,7 @@ return {
       assert(first:find("buy oat milk", 1, true), first)
 
       damnit.setup({ store = SECOND_STORE })
-      fake.fixtures = TESTS_DIR .. "/fixtures/long"
+      fake.fixtures = harness.fixtures("long")
 
       local second = buffer_text(open_the_list())
       local calls = ls_calls(fake)

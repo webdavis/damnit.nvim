@@ -1,68 +1,28 @@
 local M = {}
 
-local TESTS_DIR = require("helpers.paths").TESTS
-
 local fake_process = require("helpers.fake_process")
-local damnit = require("damnit")
-local function queue()
-  return require("damnit").app().queue
-end
-local views = require("damnit.views")
+local harness = require("helpers.harness")
 
 M.CONFIGURED_WIDTH = 34
 
-local function cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  if queue().running() then
-    queue().cancel()
-  end
-end
-
-local function take_the_default_wrap_rather_than_the_last_cases_status_window()
-  vim.wo.wrap = true
-end
-
-function M.in_its_own_tabpage(opts, body)
-  local options = damnit.options
-  local columns = vim.o.columns
-
-  damnit.options = vim.tbl_deep_extend("force", options, {
-    views = opts.views or { today = "due:today | overdue" },
-    sidebar = {
-      side = opts.side or "left",
-      width = opts.width or M.CONFIGURED_WIDTH,
-      view = opts.view or "today",
-    },
-  })
-
-  local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-  views.reset()
-
-  local notifications = fake.said
-
+local function a_tabpage_wide_enough_for_a_sidebar_and_a_split()
   vim.o.columns = 160
   vim.cmd("tabnew")
-  local tab = vim.api.nvim_get_current_tabpage()
-  take_the_default_wrap_rather_than_the_last_cases_status_window()
+end
 
-  local ok, result = pcall(body, fake)
-
-  vim.cmd("tabclose")
-  if vim.api.nvim_tabpage_is_valid(tab) then
-    vim.api.nvim_set_current_tabpage(tab)
-    vim.cmd("tabclose")
-  end
-
-  vim.o.columns = columns
-  vim.cmd("silent! %bwipeout!")
-
-  cancel_only_a_call_still_in_flight_since_cancelling_none_says_so_aloud()
-  views.reset()
-  damnit.options = options
-  fake_process.remove(fake)
-
-  assert(ok, result)
-
-  return result, notifications
+function M.opts(opts)
+  return {
+    fixtures = harness.fixtures("full"),
+    options = {
+      views = opts.views or { today = "due:today | overdue" },
+      sidebar = {
+        side = opts.side or "left",
+        width = opts.width or M.CONFIGURED_WIDTH,
+        view = opts.view or "today",
+      },
+    },
+    open = a_tabpage_wide_enough_for_a_sidebar_and_a_split,
+  }
 end
 
 function M.wait_until_drawn_from_dams_answer(win)

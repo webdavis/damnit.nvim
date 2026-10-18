@@ -1,3 +1,4 @@
+local with_dam = require("helpers.harness").with_dam
 local app = require("damnit").app()
 
 local sidebar_tab = require("helpers.sidebar_tab")
@@ -9,7 +10,7 @@ end
 
 return {
   ["toggle opens a fixed-width split and a second call closes it"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local before = sidebar_tab.windows_in_this_tabpage()
 
       local win = sidebar.toggle(app)
@@ -28,7 +29,7 @@ return {
   end,
 
   ["the width survives another window opening and an equalizing command"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
@@ -60,7 +61,7 @@ return {
   end,
 
   ["the width comes back once the only window in the tabpage has company"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
@@ -76,13 +77,13 @@ return {
   end,
 
   ["the side comes from config"] = function()
-    sidebar_tab.in_its_own_tabpage({ side = "left" }, function()
+    with_dam(sidebar_tab.opts({ side = "left" }), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       assert(vim.api.nvim_win_get_position(win)[2] == 0, "a left sidebar is not at column 0")
     end)
 
-    sidebar_tab.in_its_own_tabpage({ side = "right" }, function()
+    with_dam(sidebar_tab.opts({ side = "right" }), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local column = vim.api.nvim_win_get_position(win)[2]
@@ -91,29 +92,29 @@ return {
   end,
 
   ["a side it cannot read leaves the layout alone"] = function()
-    local _, notifications = sidebar_tab.in_its_own_tabpage({ side = "up" }, function()
+    local notifications = with_dam(sidebar_tab.opts({ side = "up" }), function()
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle(app)
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
-    end)
+    end).said
 
     assert(#notifications == 1, vim.inspect(notifications))
     assert(notifications[1]:find("sidebar.side", 1, true), notifications[1])
   end,
 
   ["a width that is not a count of columns leaves the layout alone"] = function()
-    local _, notifications = sidebar_tab.in_its_own_tabpage({ width = 0 }, function()
+    local notifications = with_dam(sidebar_tab.opts({ width = 0 }), function()
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle(app)
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
-    end)
+    end).said
 
     assert(#notifications == 1, vim.inspect(notifications))
     assert(notifications[1]:find("sidebar.width", 1, true), notifications[1])
   end,
 
   ["a view in neither the setup nor dam's saved filters leaves the layout alone"] = function()
-    local _, notifications = sidebar_tab.in_its_own_tabpage({ view = "tomorrow" }, function()
+    local notifications = with_dam(sidebar_tab.opts({ view = "tomorrow" }), function()
       local before = sidebar_tab.windows_in_this_tabpage()
       sidebar.toggle(app)
       fake_process.settle(function()
@@ -121,14 +122,14 @@ return {
       end)
 
       assert(sidebar_tab.windows_in_this_tabpage() == before, "the layout changed")
-    end)
+    end).said
 
     assert(#notifications == 1, vim.inspect(notifications))
     assert(notifications[1]:find('no view named "tomorrow"', 1, true), notifications[1])
   end,
 
   ["a sidebar closed with :q leaves no idea of an open one behind"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
@@ -144,7 +145,7 @@ return {
   end,
 
   ["it says it is loading while the first fetch is out"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       local lines = vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(win), 0, -1, false)
 
@@ -154,7 +155,7 @@ return {
   end,
 
   ["toggle in another tabpage opens one there rather than closing the first"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local first = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(first)
 

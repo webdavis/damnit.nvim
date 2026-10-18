@@ -1,40 +1,39 @@
+local with_dam = require("helpers.harness").with_dam
 local fake_process = require("helpers.fake_process")
 
-local function dam()
+local function client()
   return require("damnit").app().dam
 end
 
 local damnit = require("damnit")
 
-local function call_through_a_fake(fake_opts, args)
-  local fake = fake_process.install(fake_opts)
-
+local function answered_by_a_fake(fake_opts, args)
   local answered, data, err = false, nil, nil
-  dam().call(args, nil, function(value, failure)
-    answered, data, err = true, value, failure
-  end)
 
-  fake_process.settle(function()
-    return answered
-  end)
+  local sent = with_dam(fake_opts or {}, function()
+    client().call(args, nil, function(value, failure)
+      answered, data, err = true, value, failure
+    end)
 
-  local log = fake_process.argv_log(fake)
-  fake_process.remove(fake)
+    fake_process.settle(function()
+      return answered
+    end)
+  end).sent
 
-  return data, err, log
+  return data, err, sent
 end
 
 return {
   ["builds an argv with no store flags when neither option is set"] = function()
     damnit.options.store, damnit.options.config = nil, nil
 
-    assert(vim.deep_equal(dam().argv({ "status", "--json" }), { "dam", "status", "--json" }))
+    assert(vim.deep_equal(client().argv({ "status", "--json" }), { "dam", "status", "--json" }))
   end,
 
   ["passes --store and --config through as global flags, before the subcommand"] = function()
     damnit.options.store, damnit.options.config = "/store/dam.db", "/config/dam.toml"
 
-    local argv = dam().argv({ "status", "--json" })
+    local argv = client().argv({ "status", "--json" })
     damnit.options.store, damnit.options.config = nil, nil
 
     assert(
@@ -52,7 +51,7 @@ return {
   end,
 
   ["decodes the JSON dam printed on a clean exit"] = function()
-    local data, err, log = call_through_a_fake(nil, { "status", "--json" })
+    local data, err, log = answered_by_a_fake(nil, { "status", "--json" })
 
     assert(err == nil, err and err.message)
     assert(type(data) == "table" and vim.islist(data.staged), vim.inspect(data))
@@ -60,7 +59,7 @@ return {
   end,
 
   ["calls exit 1 an error and strips dam's own prefix off the line"] = function()
-    local _, err = call_through_a_fake(
+    local _, err = answered_by_a_fake(
       { exit = 1, stderr = "dam: storage: the store is locked" },
       { "add", "78b8950", "--json" }
     )
@@ -84,7 +83,7 @@ return {
         oids = { "98d878013fb0e026d37170e7ceed6707192ae99a", "a9db854060d1943ef9eb9f6d7a8ac0b1ace45d77" },
       },
     })
-    local _, err = call_through_a_fake({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
+    local _, err = answered_by_a_fake({ exit = 4, stderr = document }, { "done", "98d8780", "--json" })
 
     assert(err.kind == "refused", err.kind)
     assert(err.code == 4, tostring(err.code))
@@ -98,7 +97,7 @@ return {
     local document = vim.json.encode({
       error = { kind = "credential", rule = vim.NIL, message = "no credential for todoist", oids = {} },
     })
-    local _, err = call_through_a_fake({ exit = 1, stderr = document }, { "push", "--json" })
+    local _, err = answered_by_a_fake({ exit = 1, stderr = document }, { "push", "--json" })
 
     assert(err.kind == "credential", err.kind)
     assert(err.rule == nil, tostring(err.rule))
@@ -107,7 +106,7 @@ return {
 
   ["carries standard error that is not a document as the message it is"] = function()
     local usage = "error: unrecognized subcommand 'dpne'\n\nUsage: dam <COMMAND>"
-    local _, err = call_through_a_fake({ exit = 2, stderr = usage }, { "dpne", "--json" })
+    local _, err = answered_by_a_fake({ exit = 2, stderr = usage }, { "dpne", "--json" })
 
     assert(err.kind == "usage", err.kind)
     assert(err.code == 2, tostring(err.code))
@@ -116,7 +115,7 @@ return {
   end,
 
   ["says which call failed when dam failed and wrote nothing at all"] = function()
-    local _, err = call_through_a_fake({ exit = 1 }, { "status", "--json" })
+    local _, err = answered_by_a_fake({ exit = 1 }, { "status", "--json" })
 
     assert(err.kind == "error", err.kind)
     assert(err.message == "a dam call failed with exit 1 and said nothing", err.message)
@@ -124,27 +123,26 @@ return {
   end,
 
   ["calls exit 3 cancelled"] = function()
-    local _, err = call_through_a_fake({ exit = 3, stderr = "dam: cancelled" }, { "push", "--json" })
+    local _, err = answered_by_a_fake({ exit = 3, stderr = "dam: cancelled" }, { "push", "--json" })
 
     assert(err.kind == "cancelled", err.kind)
     assert(err.code == 3, tostring(err.code))
   end,
 
   ["calls an undecodable answer on a clean exit malformed rather than raising"] = function()
-    local fake = fake_process.install({ stdout = "not json at all\n" })
+    with_dam({ stdout = "not json at all\n" }, function()
+      local answered, err = false, nil
+      client().call({ "status", "--json" }, nil, function(_, failure)
+        answered, err = true, failure
+      end)
 
-    local answered, err = false, nil
-    dam().call({ "status", "--json" }, nil, function(_, failure)
-      answered, err = true, failure
+      fake_process.settle(function()
+        return answered
+      end)
+
+      assert(err.kind == "malformed", vim.inspect(err))
+      assert(err.plugin == true, "the plugin wrote this one")
     end)
-
-    fake_process.settle(function()
-      return answered
-    end)
-    fake_process.remove(fake)
-
-    assert(err.kind == "malformed", vim.inspect(err))
-    assert(err.plugin == true, "the plugin wrote this one")
   end,
 
   ["reports a dam that is not on PATH instead of raising"] = function()
@@ -153,7 +151,7 @@ return {
     require("damnit").setup({})
 
     local answered, err = false, nil
-    local ok = pcall(dam().call, { "status", "--json" }, nil, function(_, failure)
+    local ok = pcall(client().call, { "status", "--json" }, nil, function(_, failure)
       answered, err = true, failure
     end)
 

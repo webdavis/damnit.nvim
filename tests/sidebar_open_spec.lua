@@ -1,3 +1,4 @@
+local with_dam = require("helpers.harness").with_dam
 local app = require("damnit").app()
 
 local sidebar_tab = require("helpers.sidebar_tab")
@@ -7,7 +8,7 @@ local sidebar = require("damnit.sidebar")
 
 return {
   ["another buffer cannot be opened into the sidebar"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
@@ -20,7 +21,7 @@ return {
   end,
 
   ["opening an object from the sidebar lands beside it, not inside it"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)
@@ -36,7 +37,7 @@ return {
   end,
 
   ["opening an object with the sidebar alone in the tabpage splits rather than erroring"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
 
@@ -57,7 +58,7 @@ return {
   end,
 
   ["gd from the sidebar opens the file beside it"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local root = vim.fs.normalize(vim.fn.tempname())
       vim.fn.mkdir(root .. "/lua", "p")
       local handle = assert(io.open(root .. "/lua/list.lua", "w"))
@@ -83,7 +84,7 @@ return {
   end,
 
   [":Dam list from inside the sidebar opens the view beside it and leaves the sidebar's own"] = function()
-    sidebar_tab.in_its_own_tabpage({}, function()
+    with_dam(sidebar_tab.opts({}), function()
       local win = sidebar.toggle(app)
       sidebar_tab.wait_until_drawn_from_dams_answer(win)
       local held = vim.api.nvim_win_get_buf(win)

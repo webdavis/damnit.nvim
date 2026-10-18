@@ -1,3 +1,5 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local app = require("damnit").app()
 local fake_process = require("helpers.fake_process")
 local poll = require("damnit.poll")
@@ -5,8 +7,6 @@ local recording = require("helpers.said")
 local function queue()
   return require("damnit").app().queue
 end
-
-local TESTS_DIR = require("helpers.paths").TESTS
 
 local TODAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d")
 local YESTERDAY_ON_THE_CLOCK_POLL_COUNTS_READS = os.date("%Y-%m-%d", os.time() - 86400)
@@ -33,21 +33,20 @@ end
 
 return {
   ["asks dam for the open objects due today or earlier, without a pull"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    with_dam({ fixtures = harness.fixtures("full") }, function(dam)
+      poll.refresh(app)
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
 
-    poll.refresh(app)
-    fake_process.settle(function()
-      return queue().running() == nil
+      local line = recorded_ls_line_or_nil(dam.fake)
+      poll.stop()
+
+      assert(
+        line == "ls !done & (due:today | overdue) --no-pull --json",
+        "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
+      )
     end)
-
-    local line = recorded_ls_line_or_nil(fake)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      line == "ls !done & (due:today | overdue) --no-pull --json",
-      "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
-    )
   end,
 
   ["counts what is due and what is overdue"] = function()
@@ -106,59 +105,58 @@ return {
   end,
 
   ["shows the count rather than its own fetch while the poller is reading"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
 
-    poll.refresh(app)
-    local shown = poll.status(app)
+      poll.refresh(app)
+      local shown = poll.status(app)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
+      poll.stop()
+
+      assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
     end)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(shown == "1 due", "the component whose job is the count shows no fetch label of its own: " .. shown)
   end,
 
   ["shows the running operation instead of the count"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
-    poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
+    with_dam({ fixtures = harness.fixtures("full") }, function()
+      poll.apply(app, { open_task_due("aaaa1111", TODAY_ON_THE_CLOCK_POLL_COUNTS_READS) }, nil)
 
-    queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
+      queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
 
-    local shown = poll.status(app)
+      local shown = poll.status(app)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
+      poll.stop()
+
+      assert(
+        shown:match("^dam: push todoist %d+%.%ds$"),
+        "a push in flight outranks a count that has not moved, and stays visible once its window closes: " .. shown
+      )
     end)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      shown:match("^dam: push todoist %d+%.%ds$"),
-      "a push in flight outranks a count that has not moved, and stays visible once its window closes: " .. shown
-    )
   end,
 
   ["leaves the lane alone while another call holds it"] = function()
-    local fake = fake_process.install({ fixtures = TESTS_DIR .. "/fixtures/full" })
+    with_dam({ fixtures = harness.fixtures("full") }, function(dam)
+      queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
+      poll.refresh(app)
 
-    queue().submit({ args = { "push", "--json" }, label = "push todoist", verb = "push", network = true })
-    poll.refresh(app)
+      fake_process.settle(function()
+        return queue().running() == nil
+      end)
 
-    fake_process.settle(function()
-      return queue().running() == nil
+      local line = recorded_ls_line_or_nil(dam.fake)
+      poll.stop()
+
+      assert(
+        line == nil,
+        "a poll queued behind a push would answer about a store the push is still changing: " .. tostring(line)
+      )
     end)
-
-    local line = recorded_ls_line_or_nil(fake)
-    poll.stop()
-    fake_process.remove(fake)
-
-    assert(
-      line == nil,
-      "a poll queued behind a push would answer about a store the push is still changing: " .. tostring(line)
-    )
   end,
 
   ["says nothing about what was already overdue when the first fetch lands"] = function()

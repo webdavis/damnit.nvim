@@ -1,3 +1,5 @@
+local with_dam = require("helpers.harness").with_dam
+local harness = require("helpers.harness")
 local commit_buffer = require("damnit.commit_buffer")
 local fake_process = require("helpers.fake_process")
 local status_window = require("helpers.status_window")
@@ -18,7 +20,7 @@ return {
   end,
 
   ["cc opens a buffer carrying the staged changes as comments"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("cc", "x", false)
 
       local buf = vim.api.nvim_get_current_buf()
@@ -35,25 +37,25 @@ return {
   end,
 
   [":w sends dam commit -m and reports dam's own counts"] = function()
-    status_window.with(function(fake, notifications)
+    with_dam(status_window.opts(), function(dam)
       vim.api.nvim_feedkeys("cc", "x", false)
       local buf = vim.api.nvim_get_current_buf()
       vim.api.nvim_buf_set_lines(buf, 0, 1, false, { "buy the milk" })
 
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
       vim.cmd("write")
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before
+        return #fake_process.argv_log(dam.fake) > before
       end)
 
       assert(
-        fake_process.argv_log(fake)[before + 1] == "commit -m buy the milk --json",
-        vim.inspect(fake_process.argv_log(fake))
+        fake_process.argv_log(dam.fake)[before + 1] == "commit -m buy the milk --json",
+        vim.inspect(fake_process.argv_log(dam.fake))
       )
 
       fake_process.settle(function()
-        return said(notifications, "damnit.nvim: 7257572 committed, 2 changes")
+        return said(dam.said, "damnit.nvim: 7257572 committed, 2 changes")
       end)
 
       assert(not vim.api.nvim_buf_is_valid(buf), "the message buffer is gone once the commit is made")
@@ -61,49 +63,46 @@ return {
   end,
 
   ["counts one change in the singular"] = function()
-    status_window.with(function(fake, notifications)
+    with_dam(status_window.opts({ fixtures = harness.fixtures("one_change") }), function(dam)
       vim.api.nvim_feedkeys("cc", "x", false)
       vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, 1, false, { "buy the oat milk" })
 
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
       vim.cmd("write")
 
       fake_process.settle(function()
-        return #fake_process.argv_log(fake) > before and said(notifications, "damnit.nvim: aa5fbcb committed, 1 change")
+        return #fake_process.argv_log(dam.fake) > before and said(dam.said, "damnit.nvim: aa5fbcb committed, 1 change")
       end)
-    end, require("helpers.paths").TESTS .. "/fixtures/one_change")
+    end)
   end,
 
   ["refuses to commit an empty message and keeps the buffer open"] = function()
-    status_window.with(function(fake, notifications)
+    with_dam(status_window.opts(), function(dam)
       vim.api.nvim_feedkeys("cc", "x", false)
       local buf = vim.api.nvim_get_current_buf()
-      local before = #fake_process.argv_log(fake)
+      local before = #fake_process.argv_log(dam.fake)
 
       vim.cmd("write")
 
-      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(dam.fake) == before, "nothing was sent")
       assert(vim.api.nvim_buf_is_valid(buf), "the buffer stays open to be fixed")
-      assert(
-        notifications[#notifications] == "damnit.nvim: no commit message; the commit was not made",
-        notifications[#notifications]
-      )
+      assert(dam.said[#dam.said] == "damnit.nvim: no commit message; the commit was not made", dam.said[#dam.said])
     end)
   end,
 
   ["says nothing is staged when nothing is"] = function()
-    status_window.with(function(fake, notifications)
-      local before = #fake_process.argv_log(fake)
+    with_dam(status_window.opts({ fixtures = harness.fixtures("default") }), function(dam)
+      local before = #fake_process.argv_log(dam.fake)
       vim.api.nvim_feedkeys("cc", "x", false)
 
-      assert(#fake_process.argv_log(fake) == before, "nothing was sent")
+      assert(#fake_process.argv_log(dam.fake) == before, "nothing was sent")
       assert(vim.bo.filetype == "damstatus", "no message buffer opened")
-      assert(notifications[#notifications] == "damnit.nvim: nothing is staged to commit", notifications[#notifications])
-    end, require("helpers.paths").TESTS .. "/fixtures/default")
+      assert(dam.said[#dam.said] == "damnit.nvim: nothing is staged to commit", dam.said[#dam.said])
+    end)
   end,
 
   ["cc twice keeps the one message buffer and what was typed in it"] = function()
-    status_window.with(function()
+    with_dam(status_window.opts(), function()
       vim.api.nvim_feedkeys("cc", "x", false)
       local buf = vim.api.nvim_get_current_buf()
       vim.api.nvim_buf_set_lines(buf, 0, 1, false, { "buy the milk" })
