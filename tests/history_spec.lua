@@ -20,6 +20,16 @@ local function history_over_the_done_fixtures(run)
 end
 
 return {
+  ["the history's legend names u to reopen and not x to complete"] = function()
+    history_over_the_done_fixtures(function()
+      local win = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_width(win, vim.o.columns)
+      local bar = vim.api.nvim_eval_statusline(vim.wo[win].winbar, { winid = win, use_winbar = true }).str
+
+      assert(bar:gsub("%s+$", "") == "g? help  <CR> open  u reopen  p priority  s due  a add", bar)
+    end)
+  end,
+
   ["asks dam for the done objects in one call"] = function()
     history_over_the_done_fixtures(function(dam)
       local reads = 0

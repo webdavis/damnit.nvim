@@ -4,6 +4,7 @@ local M = {}
 ---@field title string
 ---@field query? string
 ---@field flat? boolean
+---@field expands_to? string
 
 ---@type damnit.ListSpec
 M.COMPLETED = { title = "completed", query = "done", flat = true }
@@ -12,6 +13,7 @@ local one_read = require("damnit.one_read")
 local verbs = require("damnit.dam.verbs")
 
 local dam_filters_this_session = nil
+local dam_filter_queries = {}
 local the_filter_list = one_read.new()
 
 local function declared_views(app)
@@ -60,6 +62,7 @@ function M.load(app, on_loaded)
           dam_filters_this_session = {}
           for _, filter in ipairs(type(data.filters) == "table" and data.filters or {}) do
             dam_filters_this_session[#dam_filters_this_session + 1] = tostring(filter.name)
+            dam_filter_queries[tostring(filter.name)] = type(filter.query) == "string" and filter.query or nil
           end
         end
 
@@ -93,7 +96,7 @@ function M.resolve(app, name)
   end
 
   if vim.tbl_contains(dam_filters_this_session or {}, name) then
-    return { title = name, query = name }
+    return { title = name, query = name, expands_to = dam_filter_queries[name] }
   end
 
   refuse(app, name)
@@ -118,6 +121,7 @@ end
 
 function M.reset()
   dam_filters_this_session = nil
+  dam_filter_queries = {}
   the_filter_list = one_read.new()
 end
 

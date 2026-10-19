@@ -1,5 +1,5 @@
  [No Name]  2 d//l/completed                                                   X
-g? help  <CR> open  x done        │g? help  <CR> open  x done  p priority  s due
+g? help  <CR> open  x done        │g? help  <CR> open  u reopen  p priority
 dam: today  (due:today | overdue) │dam: completed  (done)
                                   │
 - parent  work/parent/            │- parent  work/parent/

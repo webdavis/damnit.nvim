@@ -6,6 +6,7 @@ local TESTS_DIR = require("helpers.paths").TESTS
 dofile(TESTS_DIR .. "/../plugin/damnit.lua")
 
 local fake_process = require("helpers.fake_process")
+local list_buffer = require("helpers.list_buffer")
 local function queue()
   return require("damnit").app().queue
 end
@@ -79,6 +80,15 @@ return {
       end, fake_process.argv_log(dam.fake))
       assert(#filter_lists == 2, vim.inspect(fake_process.argv_log(dam.fake)))
     end)
+  end,
+
+  ["heads a saved filter's list with its query, the way a declared view's list is headed"] = function()
+    for name, header in pairs({ inbox = "dam: inbox  (path:inbox)", work = "dam: work  (path:work/)" }) do
+      with_dam(list_buffer.opts({ views = { work = "path:work/" }, name = name }), function()
+        local first_line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+        assert(first_line == header, first_line)
+      end)
+    end
   end,
 
   ["refuses a name in neither source before any ls, naming both sources"] = function()
