@@ -12,7 +12,7 @@ local function nothing_to_speak_to(err)
 end
 
 local function report_version_and_store(app)
-  local finished, data, err = call(app, verbs.ls(nil, true))
+  local finished, data, err = call(app, verbs.ls())
 
   if not finished then
     vim.health.error(("dam did not answer within %d seconds"):format(ask.DEADLINE_MS / 1000))

@@ -22,15 +22,11 @@ function M.status(full)
   return json(full and { "status", "--full" } or { "status" })
 end
 
-function M.ls(query, no_pull)
+function M.ls(query)
   local argv = { "ls" }
 
   if query ~= nil then
     argv[#argv + 1] = query
-  end
-
-  if no_pull then
-    argv[#argv + 1] = "--no-pull"
   end
 
   return json(argv)

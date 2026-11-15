@@ -105,7 +105,7 @@ function M.refresh(app)
   end
 
   queue.submit({
-    args = verbs.ls(M.QUERY, true),
+    args = verbs.ls(M.QUERY),
     label = "ls",
     background = true,
     on_done = function(data, err)

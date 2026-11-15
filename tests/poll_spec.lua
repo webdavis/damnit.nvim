@@ -37,7 +37,7 @@ return {
       poll.stop()
 
       assert(
-        line == "ls !done & (due:today | overdue) --no-pull --json",
+        line == "ls !done & (due:today | overdue) --json",
         "!done keeps a finished task out of the count, since due:today matches a completed one too: " .. tostring(line)
       )
     end)

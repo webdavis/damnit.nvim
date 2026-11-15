@@ -16,14 +16,13 @@ return {
     says(verbs.status(true), { "status", "--full", "--json" })
   end,
 
-  ["lists by query, without pulling only when asked"] = function()
+  ["lists everything, or by query"] = function()
+    says(verbs.ls(), { "ls", "--json" })
     says(verbs.ls("!done"), { "ls", "!done", "--json" })
-    says(verbs.ls(nil, true), { "ls", "--no-pull", "--json" })
-    says(verbs.ls("due:today", true), { "ls", "due:today", "--no-pull", "--json" })
   end,
 
   ["keeps an empty query as dam's own argument"] = function()
-    says(verbs.ls("", true), { "ls", "", "--no-pull", "--json" })
+    says(verbs.ls(""), { "ls", "", "--json" })
   end,
 
   ["reads one object, the log and the lists dam keeps"] = function()
