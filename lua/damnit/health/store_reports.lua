@@ -30,10 +30,6 @@ function M.remotes(app)
       parts[#parts + 1] = ("narrowed to %s"):format(remote.path)
     end
 
-    if tonumber(remote.stale_seconds) then
-      parts[#parts + 1] = ("stale after %ds, so a read may pull it first"):format(remote.stale_seconds)
-    end
-
     vim.health.ok(table.concat(parts, ", "))
   end
 end
@@ -92,7 +88,7 @@ function M.views(app)
 
   for _, name in ipairs(declared) do
     local query = queries[name]
-    local finished, _, err = call(app, verbs.ls(query, true))
+    local finished, _, err = call(app, verbs.ls(query))
 
     if not finished then
       vim.health.error(("the view %s did not answer"):format(name))

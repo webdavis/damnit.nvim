@@ -56,10 +56,6 @@ return {
 
     assert(said(lines, "ok", "the remote flaky speaks through the flaky helper at flaky::"), vim.inspect(lines))
     assert(said(lines, "ok", "narrowed to work/"), vim.inspect(lines))
-    assert(
-      said(lines, "ok", "stale after 1s, so a read may pull it first"),
-      "a stale remote is the one the poller's --no-pull is there for, so the report names it: " .. vim.inspect(lines)
-    )
     assert(said(lines, "ok", "today"), "dam's own saved filters are named")
 
     for _, line in ipairs(lines) do
